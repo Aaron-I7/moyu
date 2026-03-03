@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useP2PDanmaku } from '@/composables/useP2PDanmaku'
+import { useWebSocketDanmaku } from '@/composables/useWebSocketDanmaku'
 
 const emit = defineEmits<{
   close: []
@@ -9,14 +9,14 @@ const emit = defineEmits<{
 const {
   isConnected,
   isConnecting,
-  onlineUsers,
+  onlineCount,
   danmakuHistory,
   connect,
   sendDanmaku,
   saveLocalUser,
   loadHistory,
   clearHistory
-} = useP2PDanmaku()
+} = useWebSocketDanmaku()
 
 const inputText = ref('')
 const selectedEmoji = ref('💬')
@@ -33,7 +33,7 @@ const canSend = computed(() => {
 
 const connectionStatus = computed(() => {
   if (isConnecting.value) return { text: '连接中...', color: '#FFA500' }
-  if (isConnected.value) return { text: `${onlineUsers.value.length + 1}人在线`, color: '#10B981' }
+  if (isConnected.value) return { text: `${onlineCount.value}人在线`, color: '#10B981' }
   return { text: '未连接', color: '#EF4444' }
 })
 
@@ -49,10 +49,10 @@ function handleConnect() {
   connect()
 }
 
-function handleSend() {
+async function handleSend() {
   if (!canSend.value) return
   
-  const success = sendDanmaku(inputText.value.trim(), selectedEmoji.value)
+  const success = await sendDanmaku(inputText.value.trim(), selectedEmoji.value)
   
   if (success) {
     inputText.value = ''

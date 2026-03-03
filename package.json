@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@iconify/vue": "^5.0.0",
+    "@supabase/supabase-js": "^2.98.0",
     "dayjs": "^1.11.19",
     "howler": "^2.2.4",
     "naive-ui": "^2.43.2",

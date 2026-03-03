@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, reactive } from 'vue'
 import { getRandomDanmaku } from '@/data/danmakuContent'
-import { useP2PDanmaku } from '@/composables/useP2PDanmaku'
+import { useWebSocketDanmaku } from '@/composables/useWebSocketDanmaku'
 
 interface DisplayDanmaku {
   id: string
@@ -23,11 +23,11 @@ const hoveredDanmakuId = ref<string | null>(null)
 
 const {
   isConnected,
-  onlineUsers,
+  onlineCount,
   receivedMessages,
   danmakuEnabled,
   loadDanmakuEnabled
-} = useP2PDanmaku()
+} = useWebSocketDanmaku()
 
 const TRACK_COUNT = 6
 const TRACK_HEIGHT = 60
@@ -259,10 +259,10 @@ onUnmounted(() => {
         <button
           v-if="isConnected"
           class="control-btn control-btn--online"
-          :title="`${onlineUsers.length + 1}人在线`"
+          :title="`${onlineCount}人在线`"
         >
           <span class="online-dot" />
-          <span>{{ onlineUsers.length + 1 }}</span>
+          <span>{{ onlineCount }}</span>
         </button>
         
         <button
