@@ -57,18 +57,26 @@ const handleModuleClick = (module: ModuleConfig) => {
 
 <style scoped lang="scss">
 .page {
-  min-height: 100vh;
-  padding-top: 56px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
 }
 
 .page-inner {
+  flex: 1;
   max-width: 800px;
+  width: 100%;
   margin: 0 auto;
   padding: 24px 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .page-header {
-  margin-bottom: 32px;
+  margin-bottom: 24px;
+  flex-shrink: 0;
   
   h1 {
     font-size: 28px;
@@ -87,6 +95,7 @@ const handleModuleClick = (module: ModuleConfig) => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  flex: 1;
 }
 
 .module-card {

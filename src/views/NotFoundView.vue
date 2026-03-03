@@ -28,7 +28,7 @@ const goHome = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh - 60px);
+  flex: 1;
   
   .content {
     text-align: center;

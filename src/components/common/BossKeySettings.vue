@@ -15,6 +15,26 @@
           <main class="modal-body">
             <div class="setting-section">
               <div class="section-header">
+                <span class="section-icon">💬</span>
+                <div class="section-info">
+                  <h4 class="section-title">弹幕显示</h4>
+                  <p class="section-desc">开启后将在页面顶部显示滚动弹幕</p>
+                </div>
+              </div>
+              <div class="toggle-row">
+                <span class="toggle-label">{{ danmakuEnabled ? '已开启' : '已关闭' }}</span>
+                <button
+                  class="toggle-btn"
+                  :class="{ active: danmakuEnabled }"
+                  @click="toggleDanmaku"
+                >
+                  <span class="toggle-slider" />
+                </button>
+              </div>
+            </div>
+
+            <div class="setting-section">
+              <div class="section-header">
                 <span class="section-icon">⌨️</span>
                 <div class="section-info">
                   <h4 class="section-title">快捷键</h4>
@@ -68,7 +88,9 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import type { BossKeyMode } from '@/stores/bossKey'
+import { useP2PDanmaku } from '@/composables/useP2PDanmaku'
 
 defineProps<{
   visible: boolean
@@ -80,6 +102,8 @@ const emit = defineEmits<{
   changeMode: [mode: BossKeyMode]
 }>()
 
+const { danmakuEnabled, loadDanmakuEnabled, saveDanmakuEnabled } = useP2PDanmaku()
+
 const modes: { value: BossKeyMode; icon: string; label: string; desc: string }[] = [
   { value: 'code', icon: '💻', label: '代码编辑器', desc: 'VS Code 风格' },
   { value: 'excel', icon: '📊', label: 'Excel 表格', desc: '项目进度表' },
@@ -90,6 +114,14 @@ const modes: { value: BossKeyMode; icon: string; label: string; desc: string }[]
 function selectMode(mode: BossKeyMode) {
   emit('changeMode', mode)
 }
+
+function toggleDanmaku() {
+  saveDanmakuEnabled(!danmakuEnabled.value)
+}
+
+onMounted(() => {
+  loadDanmakuEnabled()
+})
 </script>
 
 <style scoped lang="scss">
@@ -247,6 +279,52 @@ function selectMode(mode: BossKeyMode) {
 .mode-desc {
   font-size: 12px;
   color: var(--color-text-secondary);
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--color-background);
+  border-radius: 10px;
+  margin-top: 8px;
+}
+
+.toggle-label {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.toggle-btn {
+  position: relative;
+  width: 48px;
+  height: 26px;
+  background: var(--color-border);
+  border: none;
+  border-radius: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &.active {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark, #059669) 100%);
+  }
+}
+
+.toggle-slider {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease;
+  
+  .toggle-btn.active & {
+    transform: translateX(22px);
+  }
 }
 
 .modal-footer {

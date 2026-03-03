@@ -2,6 +2,7 @@
 import { useWoodenFish } from './composables/useWoodenFish'
 import woodenFishImg from '@/assets/images/wooden-fish/muyu.webp'
 import hammerImg from '@/assets/images/wooden-fish/hammer.png'
+import BaseButton from '@/components/common/BaseButton.vue'
 
 const {
   state,
@@ -62,33 +63,30 @@ const {
 
         <div class="controls">
           <div class="control-row">
-            <button 
-              class="control-btn"
-              :class="{ active: state.autoMode }"
+            <BaseButton 
+              :type="state.autoMode ? 'primary' : 'default'"
               @click="toggleAutoMode"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
               <span>{{ state.autoMode ? '停止' : '自动' }}</span>
-            </button>
+            </BaseButton>
             
-            <button 
-              class="control-btn"
-              :class="{ active: state.soundEnabled }"
+            <BaseButton 
+              :type="state.soundEnabled ? 'primary' : 'default'"
               @click="toggleSound"
             >
               <svg v-if="state.soundEnabled" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
               <svg v-else xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
               <span>音效</span>
-            </button>
+            </BaseButton>
             
-            <button 
-              class="control-btn"
-              :class="{ active: state.vibrationEnabled }"
+            <BaseButton 
+              :type="state.vibrationEnabled ? 'primary' : 'default'"
               @click="toggleVibration"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="M6 12a6 6 0 0 0 12 0"></path><path d="M12 2v2"></path><path d="M12 20v2"></path></svg>
               <span>震动</span>
-            </button>
+            </BaseButton>
           </div>
 
           <div v-if="state.autoMode" class="speed-control">
@@ -103,9 +101,9 @@ const {
             <span>{{ state.autoSpeed }}ms</span>
           </div>
 
-          <button class="reset-btn" @click="resetCount">
+          <BaseButton type="danger" @click="resetCount">
             重置功德
-          </button>
+          </BaseButton>
         </div>
       </div>
     </div>
@@ -269,31 +267,8 @@ const {
 .control-row {
   display: flex;
   gap: 12px;
-}
-
-.control-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
-  border-radius: var(--border-radius);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
-  font-size: 14px;
-  cursor: pointer;
-  transition: var(--transition);
-  
-  &:hover {
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-  }
-  
-  &.active {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
-    color: white;
-  }
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .speed-control {
@@ -334,37 +309,12 @@ const {
   }
 }
 
-.reset-btn {
-  padding: 10px 24px;
-  border-radius: var(--border-radius);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
-  font-size: 14px;
-  cursor: pointer;
-  transition: var(--transition);
-  
-  &:hover {
-    border-color: var(--color-error);
-    color: var(--color-error);
-  }
-}
-
 [data-theme="pixel"] {
   .wooden-fish {
     image-rendering: pixelated;
     
     &:active {
       transform: translate(4px, 4px) scale(0.96);
-    }
-  }
-  
-  .control-btn, .reset-btn {
-    border-radius: 0;
-    border-width: 2px;
-    
-    &.active {
-      box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
     }
   }
   
@@ -386,10 +336,6 @@ const {
   .floating-text {
     text-shadow: 0 0 10px var(--color-primary);
   }
-  
-  .control-btn.active {
-    box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
-  }
 }
 
 @media (max-width: 480px) {
@@ -405,6 +351,10 @@ const {
   
   .stats .stat-item .stat-value {
     font-size: 40px;
+  }
+  
+  .control-row {
+    gap: 8px;
   }
 }
 </style>

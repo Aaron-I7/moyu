@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, computed, ref } from 'vue'
 import { usePetStore } from './stores/pet'
+import BaseButton from '@/components/common/BaseButton.vue'
 import PetSelector from './components/PetSelector.vue'
 import PetRoom from './components/PetRoom.vue'
 import PetDisplay from './components/PetDisplay.vue'
@@ -10,7 +11,6 @@ import ActionPanel from './components/ActionPanel.vue'
 import InteractionLog from './components/InteractionLog.vue'
 import ConfirmModal from './components/ConfirmModal.vue'
 import MoyuStats from './components/MoyuStats.vue'
-import ToolMenu from './components/ToolMenu.vue'
 
 const pet = usePetStore()
 const showSelector = ref(!pet.type)
@@ -63,8 +63,6 @@ onUnmounted(() => pet.stopTimer())
     <PetSelector v-if="showSelector" @select="handlePetSelect" />
 
     <div v-else class="pet-container">
-      <ToolMenu class="tool-menu" />
-      
       <div class="main-area">
         <header class="pet-header">
           <div class="pet-info">
@@ -80,11 +78,16 @@ onUnmounted(() => pet.stopTimer())
               <span class="day-label">DAY</span>
               <span class="day-num">{{ Math.floor(pet.age / 6) + 1 }}</span>
             </div>
-            <button class="reset-btn" @click="handleResetClick" title="重新选择宠物">
+            <BaseButton
+              :icon="true"
+              class="reset-btn"
+              @click="handleResetClick"
+              title="重新选择宠物"
+            >
               <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
                 <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
               </svg>
-            </button>
+            </BaseButton>
           </div>
         </header>
 
@@ -168,26 +171,6 @@ onUnmounted(() => pet.stopTimer())
 
   @media (max-width: 900px) {
     grid-template-columns: 1fr;
-  }
-}
-
-.tool-menu {
-  position: fixed;
-  left: 24px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 50;
-
-  @media (max-width: 1200px) {
-    left: 12px;
-  }
-
-  @media (max-width: 900px) {
-    position: fixed;
-    left: auto;
-    right: 12px;
-    top: 80px;
-    transform: none;
   }
 }
 
@@ -289,23 +272,8 @@ onUnmounted(() => pet.stopTimer())
 }
 
 .reset-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 44px;
   height: 44px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: var(--transition);
-
-  &:hover {
-    background: var(--color-background);
-    color: var(--color-primary);
-    border-color: var(--color-primary);
-  }
 }
 
 .speech-area {

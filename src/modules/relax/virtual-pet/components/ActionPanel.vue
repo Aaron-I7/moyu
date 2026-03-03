@@ -1,23 +1,26 @@
 <template>
   <section class="action-panel">
-    <button
+    <IconButton
       v-for="btn in buttons"
       :key="btn.action"
-      class="action-btn"
-      :class="{ disabled: !btn.enabled, active: btn.active }"
-      :title="btn.tip"
+      :type="btn.active ? 'primary' : 'default'"
       :disabled="!btn.enabled"
+      :active="btn.active"
+      :title="btn.tip"
       @click="handleAction(btn.action)"
     >
-      <SvgIcon :name="btn.icon" :size="18" />
-      <span class="btn-label">{{ btn.label }}</span>
-    </button>
+      <template #icon>
+        <SvgIcon :name="btn.icon" :size="18" />
+      </template>
+      {{ btn.label }}
+    </IconButton>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import SvgIcon from './SvgIcon.vue'
+import IconButton from '@/components/common/IconButton.vue'
 import type { PetType } from '../stores/pet'
 
 type IconName = 'food' | 'smile' | 'bolt' | 'drop' | 'play' | 'feed' | 'bath' | 'paw' | 'moon' | 'sun' | 'feather' | 'walk' | 'carrot'
@@ -99,48 +102,9 @@ const buttons = computed<Button[]>(() => {
   box-shadow: var(--shadow);
 }
 
-.action-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 16px 8px;
-  min-height: 72px;
-  background: var(--color-background);
-  border: 2px solid var(--color-border);
-  border-radius: var(--border-radius);
-  color: var(--color-text);
-  cursor: pointer;
-  transition: var(--transition);
-
-  &:hover:not(:disabled) {
-    background: var(--color-surface);
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow);
+@media (max-width: 600px) {
+  .action-panel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-
-  &:active:not(:disabled) {
-    transform: translateY(0);
-  }
-
-  &.active {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
-    color: white;
-  }
-
-  &.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-.btn-label {
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.2;
 }
 </style>

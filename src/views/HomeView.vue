@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import { useThemeStore } from '@/core/theme'
 
 const router = useRouter()
-const themeStore = useThemeStore()
 
 const mainEntries = [
   { 
@@ -89,33 +87,21 @@ const handleNavigate = (path: string) => {
         </div>
       </div>
     </section>
-
-    <section class="theme-switch">
-      <p class="theme-label">切换主题</p>
-      <div class="theme-buttons">
-        <button 
-          v-for="theme in ['default', 'pixel', 'retro']" 
-          :key="theme"
-          class="theme-btn"
-          :class="{ active: themeStore.currentThemeId === theme }"
-          @click="themeStore.setTheme(theme as 'default' | 'pixel' | 'retro')"
-        >
-          {{ theme === 'default' ? '默认' : theme === 'pixel' ? '像素' : '复古' }}
-        </button>
-      </div>
-    </section>
   </div>
 </template>
 
 <style scoped lang="scss">
 .home-page {
-  min-height: 100vh;
-  padding-top: 56px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
 }
 
 .hero {
-  padding: 60px 24px 40px;
+  padding: 40px 24px 30px;
   text-align: center;
+  flex-shrink: 0;
   
   .hero-content {
     max-width: 480px;
@@ -147,26 +133,38 @@ const handleNavigate = (path: string) => {
 }
 
 .entries {
-  padding: 0 16px 40px;
+  padding: 0 16px 20px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
   
   @media (max-width: 480px) {
-    padding: 0 12px 32px;
+    padding: 0 12px 16px;
   }
 }
 
 .entries-grid {
-  max-width: 600px;
+  width: 60%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  
+  @media (max-width: 768px) {
+    width: 80%;
+  }
+  
+  @media (max-width: 480px) {
+    width: 95%;
+  }
 }
 
 .entry-card {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 20px;
+  padding: 16px 20px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
@@ -183,8 +181,8 @@ const handleNavigate = (path: string) => {
   }
   
   .entry-icon {
-    width: 56px;
-    height: 56px;
+    width: 48px;
+    height: 48px;
     border-radius: 12px;
     display: flex;
     align-items: center;
@@ -196,14 +194,14 @@ const handleNavigate = (path: string) => {
     flex: 1;
     
     h3 {
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 600;
       color: var(--color-text);
-      margin-bottom: 4px;
+      margin-bottom: 2px;
     }
     
     p {
-      font-size: 14px;
+      font-size: 13px;
       color: var(--color-text-secondary);
     }
   }
@@ -215,7 +213,8 @@ const handleNavigate = (path: string) => {
 }
 
 .features {
-  padding: 0 24px 40px;
+  padding: 0 24px 30px;
+  flex-shrink: 0;
   
   .features-list {
     display: flex;
@@ -233,45 +232,6 @@ const handleNavigate = (path: string) => {
     
     @media (max-width: 480px) {
       font-size: 13px;
-    }
-  }
-}
-
-.theme-switch {
-  padding: 0 24px 60px;
-  text-align: center;
-  
-  .theme-label {
-    font-size: 14px;
-    color: var(--color-text-secondary);
-    margin-bottom: 12px;
-  }
-  
-  .theme-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-  }
-  
-  .theme-btn {
-    padding: 8px 20px;
-    border-radius: 8px;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    color: var(--color-text-secondary);
-    font-size: 14px;
-    cursor: pointer;
-    transition: var(--transition);
-    
-    &:hover {
-      border-color: var(--color-primary);
-      color: var(--color-primary);
-    }
-    
-    &.active {
-      background: var(--color-primary);
-      border-color: var(--color-primary);
-      color: white;
     }
   }
 }

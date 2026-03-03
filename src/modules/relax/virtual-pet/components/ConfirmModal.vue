@@ -11,12 +11,12 @@
           <h3 class="modal-title">{{ title }}</h3>
           <p class="modal-message">{{ message }}</p>
           <div class="modal-actions">
-            <button class="btn btn-cancel" @click="$emit('cancel')">
+            <BaseButton type="default" @click="$emit('cancel')">
               取消
-            </button>
-            <button class="btn btn-confirm" @click="$emit('confirm')">
+            </BaseButton>
+            <BaseButton type="primary" @click="$emit('confirm')">
               确认
-            </button>
+            </BaseButton>
           </div>
         </div>
       </div>
@@ -25,6 +25,8 @@
 </template>
 
 <script setup lang="ts">
+import BaseButton from '@/components/common/BaseButton.vue'
+
 defineProps<{
   visible: boolean
   title: string
@@ -90,38 +92,6 @@ defineEmits<{
 .modal-actions {
   display: flex;
   gap: 12px;
-}
-
-.btn {
-  flex: 1;
-  padding: 12px 20px;
-  font-size: 14px;
-  font-weight: 500;
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  transition: var(--transition);
-  border: 1px solid var(--color-border);
-}
-
-.btn-cancel {
-  background: var(--color-background);
-  color: var(--color-text);
-
-  &:hover {
-    background: var(--color-surface);
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-  }
-}
-
-.btn-confirm {
-  background: var(--color-primary);
-  color: white;
-  border-color: var(--color-primary);
-
-  &:hover {
-    opacity: 0.9;
-  }
 }
 
 .modal-enter-active,

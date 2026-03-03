@@ -1,82 +1,88 @@
 <template>
-  <div class="tool-menu" :class="{ expanded: isExpanded }">
-    <button class="menu-toggle" @click="toggleMenu" :title="isExpanded ? '收起菜单' : '展开菜单'">
-      <span class="toggle-icon">{{ isExpanded ? '◀' : '▶' }}</span>
+  <div class="global-tool-menu" :class="{ expanded: isExpanded }">
+    <BaseButton
+      class="menu-toggle"
+      :type="isExpanded ? 'primary' : 'default'"
+      @click="toggleMenu"
+      :title="isExpanded ? '收起菜单' : '展开菜单'"
+    >
+      <Icon :icon="isExpanded ? 'mdi:chevron-left' : 'mdi:chevron-right'" :width="16" />
       <span v-if="isExpanded" class="toggle-text">工具栏</span>
-    </button>
+    </BaseButton>
 
     <Transition name="slide">
       <div v-if="isExpanded" class="menu-content">
         <div class="menu-section">
           <div class="section-title">
-            <span class="section-icon">🎮</span>
+            <Icon icon="mdi:gamepad-variant" :width="16" />
             <span>游戏</span>
           </div>
           <div class="menu-items">
-            <button
+            <div
               v-for="item in gamesModules"
               :key="item.id"
               class="menu-item"
+              :class="{ active: currentRoute === item.route }"
               @click="navigateTo(item.route)"
             >
-              <span class="item-icon">{{ item.icon }}</span>
-              <span class="item-name">{{ item.name }}</span>
-            </button>
+              <Icon :icon="item.icon as string" :width="16" />
+              <span>{{ item.name }}</span>
+            </div>
           </div>
         </div>
 
         <div class="menu-section">
           <div class="section-title">
-            <span class="section-icon">😌</span>
+            <Icon icon="mdi:spa" :width="16" />
             <span>休闲</span>
           </div>
           <div class="menu-items">
-            <button
+            <div
               v-for="item in relaxModules"
               :key="item.id"
               class="menu-item"
               :class="{ active: currentRoute === item.route }"
               @click="navigateTo(item.route)"
             >
-              <span class="item-icon">{{ item.icon }}</span>
-              <span class="item-name">{{ item.name }}</span>
-            </button>
+              <Icon :icon="item.icon as string" :width="16" />
+              <span>{{ item.name }}</span>
+            </div>
           </div>
         </div>
 
         <div class="menu-section">
           <div class="section-title">
-            <span class="section-icon">🛠️</span>
+            <Icon icon="mdi:tools" :width="16" />
             <span>工具</span>
           </div>
           <div class="menu-items">
-            <button
+            <div
               v-for="item in toolsModules"
               :key="item.id"
               class="menu-item"
               @click="navigateTo(item.route)"
             >
-              <span class="item-icon">{{ item.icon }}</span>
-              <span class="item-name">{{ item.name }}</span>
-            </button>
+              <Icon :icon="item.icon as string" :width="16" />
+              <span>{{ item.name }}</span>
+            </div>
           </div>
         </div>
 
         <div class="menu-section">
           <div class="section-title">
-            <span class="section-icon">📚</span>
+            <Icon icon="mdi:book-open-page-variant" :width="16" />
             <span>阅读</span>
           </div>
           <div class="menu-items">
-            <button
+            <div
               v-for="item in readingModules"
               :key="item.id"
               class="menu-item"
               @click="navigateTo(item.route)"
             >
-              <span class="item-icon">{{ item.icon }}</span>
-              <span class="item-name">{{ item.name }}</span>
-            </button>
+              <Icon :icon="item.icon as string" :width="16" />
+              <span>{{ item.name }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -87,6 +93,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { Icon } from '@iconify/vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import moduleRegistry from '@/core/module/registry'
 
 const router = useRouter()
@@ -110,44 +118,40 @@ function navigateTo(path: string) {
 </script>
 
 <style scoped lang="scss">
-.tool-menu {
+.global-tool-menu {
+  position: fixed;
+  left: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 100;
   display: flex;
   align-items: flex-start;
   gap: 0;
   transition: all 0.3s ease;
-}
 
-.menu-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: var(--shadow);
+  @media (max-width: 1200px) {
+    left: 12px;
+  }
 
-  &:hover {
-    background: var(--color-primary);
-    color: white;
-    border-color: var(--color-primary);
+  @media (max-width: 900px) {
+    left: auto;
+    right: 12px;
+    top: 80px;
+    transform: none;
   }
 }
 
-.toggle-icon {
-  font-size: 12px;
-  transition: transform 0.3s ease;
+.menu-toggle {
+  box-shadow: var(--shadow);
+
+  .toggle-text {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
 }
 
-.toggle-text {
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.tool-menu.expanded .menu-toggle {
+.global-tool-menu.expanded .menu-toggle {
   border-radius: var(--border-radius) 0 0 var(--border-radius);
   border-right: none;
 }
@@ -183,14 +187,10 @@ function navigateTo(path: string) {
   border-bottom: 1px solid var(--color-border);
 }
 
-.section-icon {
-  font-size: 14px;
-}
-
 .menu-items {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .menu-item {
@@ -198,35 +198,22 @@ function navigateTo(path: string) {
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  background: transparent;
-  border: none;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: left;
-  width: 100%;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: var(--transition);
 
   &:hover {
     background: var(--color-background);
+    color: var(--color-text);
   }
 
   &.active {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.15) 100%);
+    background: rgba(16, 185, 129, 0.1);
     color: var(--color-primary);
   }
-}
-
-.item-icon {
-  font-size: 16px;
-  flex-shrink: 0;
-}
-
-.item-name {
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .slide-enter-active,
@@ -241,11 +228,11 @@ function navigateTo(path: string) {
 }
 
 @media (max-width: 900px) {
-  .tool-menu {
+  .global-tool-menu {
     flex-direction: column;
   }
 
-  .tool-menu.expanded .menu-toggle {
+  .global-tool-menu.expanded .menu-toggle {
     border-radius: var(--border-radius) var(--border-radius) 0 0;
     border-right: 1px solid var(--color-border);
     border-bottom: none;

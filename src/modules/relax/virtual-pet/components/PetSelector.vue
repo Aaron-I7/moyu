@@ -12,7 +12,7 @@
       </header>
 
       <div class="pet-grid">
-        <button
+        <div
           v-for="pet in petOptions"
           :key="pet.type"
           class="pet-card"
@@ -34,7 +34,7 @@
           <div class="pet-traits">
             <span v-for="trait in pet.traits" :key="trait" class="trait-tag">{{ trait }}</span>
           </div>
-        </button>
+        </div>
       </div>
 
       <div class="name-section" v-if="selectedPet">
@@ -49,20 +49,24 @@
         />
       </div>
 
-      <button
-        class="confirm-btn"
+      <BaseButton
+        type="primary"
+        size="large"
+        block
         :disabled="!selectedPet"
+        class="confirm-btn"
         @click="confirm"
       >
         <span class="btn-icon">🐾</span>
         开始陪伴
-      </button>
+      </BaseButton>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import type { PetType } from '../stores/pet'
 import { PET_CONFIGS } from '../stores/pet'
 import CatPet from './pets/CatPet.vue'
@@ -293,41 +297,11 @@ function confirm() {
 }
 
 .confirm-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
   max-width: 400px;
   margin: 0 auto;
-  padding: 16px 32px;
-  font-size: 16px;
-  font-weight: 600;
-  color: white;
-  background: var(--color-primary);
-  border: none;
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  transition: var(--transition);
-  box-shadow: var(--shadow);
 
   .btn-icon {
     font-size: 18px;
-  }
-
-  &:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
-  }
-
-  &:active:not(:disabled) {
-    transform: translateY(0);
-  }
-
-  &:disabled {
-    background: var(--color-border);
-    cursor: not-allowed;
-    color: var(--color-text-secondary);
   }
 }
 </style>
