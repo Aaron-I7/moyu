@@ -338,19 +338,19 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 20px;
+  padding: 8px 16px;
   background: linear-gradient(
     135deg,
-    rgba(0, 0, 0, 0.7) 0%,
-    rgba(20, 20, 40, 0.8) 100%
+    rgba(0, 0, 0, 0.5) 0%,
+    rgba(20, 20, 40, 0.6) 100%
   );
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 24px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   box-shadow: 
-    0 4px 20px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
 }
@@ -388,13 +388,13 @@ onUnmounted(() => {
 }
 
 .danmaku-emoji {
-  font-size: 24px;
+  font-size: 20px;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
   line-height: 1;
 }
 
 .danmaku-text {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--color);
   text-shadow: 
@@ -404,7 +404,7 @@ onUnmounted(() => {
 }
 
 .danmaku-author {
-  font-size: 14px;
+  font-size: 12px;
   color: rgba(255, 255, 255, 0.8);
   margin-left: 8px;
   padding-left: 12px;
