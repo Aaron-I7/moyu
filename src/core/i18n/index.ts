@@ -37,21 +37,16 @@ export const localeMetaMap: Record<AppLocale, LocaleMeta> = {
 }
 
 const localeStorageKey = 'moyu-locale'
-
-const localeLoaders: Record<AppLocale, () => Promise<{ default: Record<string, unknown> }>> = {
-  en: async () => ({ default: en }),
-  zh: async () => ({ default: zh })
+const localeMessages: Record<AppLocale, Record<string, unknown>> = {
+  en,
+  zh
 }
-
-const loadedLocales = new Set<AppLocale>()
 
 export const i18n = createI18n({
   legacy: false,
   locale: defaultLocale,
   fallbackLocale: defaultLocale,
-  messages: {
-    // 初始不预设 messages，强制走 loadLocaleMessages
-  } as any
+  messages: localeMessages as any
 }) as any
 
 export function getStoredLocale(): AppLocale {
@@ -79,31 +74,7 @@ export function getLocaleFromPathname(pathname: string): AppLocale | null {
 }
 
 export async function loadLocaleMessages(locale: AppLocale): Promise<void> {
-  // 增加调试日志
-  console.log(`[i18n] Loading locale: ${locale}`)
-  
-  if (loadedLocales.has(locale)) {
-    console.log(`[i18n] Locale ${locale} already loaded`)
-    return
-  }
-  
-  try {
-    const loader = localeLoaders[locale]
-    if (!loader) {
-      console.error(`[i18n] No loader found for locale: ${locale}`)
-      return
-    }
-    
-    const localeModule = await loader()
-    const messages = localeModule.default || localeModule
-    
-    console.log(`[i18n] Loaded messages for ${locale}:`, Object.keys(messages))
-    
-    ;(i18n.global as any).setLocaleMessage(locale, messages)
-    loadedLocales.add(locale)
-  } catch (e) {
-    console.error(`[i18n] Failed to load locale ${locale}:`, e)
-  }
+  ;(i18n.global as any).setLocaleMessage(locale, localeMessages[locale] || localeMessages[defaultLocale])
 }
 
 export function applyDocumentLocale(locale: AppLocale): void {

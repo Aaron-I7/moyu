@@ -11,7 +11,6 @@ import PrivacyConsentBanner from '@/components/common/PrivacyConsentBanner.vue'
 import UsageReminder from '@/components/common/UsageReminder.vue'
 import AdSlot from '@/components/common/AdSlot.vue'
 import { bindGestureNavigation } from '@/composables/useGestureNavigation'
-// import { createEnTextGuard } from '@/core/i18n/enTextGuard'
 import { applyRouteSeo } from '@/core/seo'
 import { adsConfig } from '@/core/ads/config'
 
@@ -19,7 +18,6 @@ const router = useRouter()
 const route = useRoute()
 const { locale } = useI18n({ useScope: 'global' })
 const appMainRef = ref<HTMLElement | null>(null)
-// const enTextGuard = createEnTextGuard()
 const showAds = computed(() => adsConfig.enabled && route.name !== 'NotFound' && route.name !== 'LegacyPath')
 
 let cleanupGesture: (() => void) | null = null
@@ -28,29 +26,15 @@ onMounted(() => {
   if (appMainRef.value) {
     cleanupGesture = bindGestureNavigation(appMainRef.value, router)
   }
-  /*
-  if (locale.value === 'en') {
-    enTextGuard.start()
-  }
-  */
 })
 
 onUnmounted(() => {
   cleanupGesture?.()
-  // enTextGuard.stop()
 })
 
 watch(
   () => locale.value,
   () => {
-    /*
-    if (value === 'en') {
-      enTextGuard.start()
-      enTextGuard.runFullSanitize()
-    } else {
-      enTextGuard.stop()
-    }
-    */
     applyRouteSeo(router.currentRoute.value)
   }
 )
