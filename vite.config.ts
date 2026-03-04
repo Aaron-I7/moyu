@@ -4,8 +4,9 @@ import { resolve } from 'path'
 
 export default defineConfig(() => {
   const repository = process.env.GITHUB_REPOSITORY || ''
-  const repositoryName = repository.split('/')[1]
-  const pagesBase = repositoryName ? `/${repositoryName}/` : '/'
+  const repositoryName = repository.split('/')[1] || ''
+  const isUserPage = repositoryName.endsWith('.github.io')
+  const pagesBase = isUserPage ? '/' : `/${repositoryName}/`
   const base = process.env.GITHUB_ACTIONS === 'true' ? pagesBase : '/'
 
   return {

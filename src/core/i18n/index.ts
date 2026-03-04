@@ -1,5 +1,6 @@
 import { createI18n } from 'vue-i18n'
 import en from './locales/en'
+import zh from './locales/zh'
 
 export type AppLocale = 'en' | 'zh'
 
@@ -36,19 +37,21 @@ export const localeMetaMap: Record<AppLocale, LocaleMeta> = {
 
 const localeStorageKey = 'moyu-locale'
 
+// 使用静态导入，防止 GH Pages 路径问题导致 chunk 加载失败
 const localeLoaders: Record<AppLocale, () => Promise<{ default: Record<string, unknown> }>> = {
   en: async () => ({ default: en }),
-  zh: () => import('./locales/zh')
+  zh: async () => ({ default: zh })
 }
 
-const loadedLocales = new Set<AppLocale>(['en'])
+const loadedLocales = new Set<AppLocale>(['en', 'zh'])
 
 export const i18n = createI18n({
   legacy: false,
   locale: 'en' as AppLocale,
   fallbackLocale: 'en' as AppLocale,
   messages: {
-    en
+    en,
+    zh
   } as any
 }) as any
 
