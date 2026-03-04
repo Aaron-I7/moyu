@@ -2,8 +2,6 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 
-import { cloudflare } from "@cloudflare/vite-plugin";
-
 export default defineConfig(() => {
   const repository = process.env.GITHUB_REPOSITORY || ''
   const repositoryName = repository.split('/')[1] || ''
@@ -12,8 +10,7 @@ export default defineConfig(() => {
   const normalizedPagesBase = pagesBase.endsWith('/') ? pagesBase : `${pagesBase}/`
 
   const isGitHubActions = process.env.GITHUB_ACTIONS === 'true'
-  const isCloudflare = process.env.CF_PAGES === '1'
-  const base = (isGitHubActions ? normalizedPagesBase : (isCloudflare ? '/' : '/'))
+  const base = isGitHubActions ? normalizedPagesBase : '/'
 
   return {
     base,
@@ -23,7 +20,7 @@ export default defineConfig(() => {
       __INTLIFY_PROD_DEVTOOLS__: false,
       __INTLIFY_DROP_MESSAGE_COMPILER__: false
     },
-    plugins: [vue(), cloudflare()],
+    plugins: [vue()],
     resolve: {
       alias: {
         '@': resolve(__dirname, 'src')
@@ -46,5 +43,5 @@ export default defineConfig(() => {
         }
       }
     }
-  };
+  }
 })
