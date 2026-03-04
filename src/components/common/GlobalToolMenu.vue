@@ -101,7 +101,7 @@ import { resolveModuleName } from '@/core/module/i18n'
 
 const router = useRouter()
 const route = useRoute()
-const { t } = useI18n()
+const { t } = useI18n({ useScope: 'global' })
 const isExpanded = ref(false)
 
 const currentRoute = computed(() => route.path)

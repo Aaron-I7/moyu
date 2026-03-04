@@ -11,7 +11,7 @@ import { availableLocales, localeMetaMap, setLocale, type AppLocale } from '@/co
 
 const router = useRouter()
 const route = useRoute()
-const { t, locale } = useI18n()
+const { t, locale } = useI18n({ useScope: 'global' })
 const themeStore = useThemeStore()
 const bossKeyStore = useBossKeyStore()
 

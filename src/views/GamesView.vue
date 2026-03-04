@@ -8,7 +8,7 @@ import type { ModuleConfig } from '@/core/module/types'
 import { resolveModuleDescription, resolveModuleName, resolveModuleTags } from '@/core/module/i18n'
 
 const router = useRouter()
-const { t } = useI18n()
+const { t } = useI18n({ useScope: 'global' })
 
 const games = computed(() => moduleRegistry.getByCategory('games'))
 

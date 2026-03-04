@@ -17,7 +17,7 @@ import { adsConfig } from '@/core/ads/config'
 
 const router = useRouter()
 const route = useRoute()
-const { locale } = useI18n()
+const { locale } = useI18n({ useScope: 'global' })
 const appMainRef = ref<HTMLElement | null>(null)
 const enTextGuard = createEnTextGuard()
 const showAds = computed(() => adsConfig.enabled && route.name !== 'NotFound')
