@@ -38,8 +38,9 @@ function ensureJsonLd(id: string, payload: Record<string, unknown>) {
 }
 
 function getLocalizedPath(path: string, locale: AppLocale) {
-  const query = locale === 'en' ? '' : `?lang=${locale}`
-  return `${siteUrl}${path}${query}`
+  const normalized = path.replace(/^\/(en|zh)(?=\/|$)/, '')
+  const suffix = normalized || '/'
+  return `${siteUrl}/${locale}${suffix === '/' ? '' : suffix}`
 }
 
 export function applyRouteSeo(route: RouteLocationNormalizedLoaded) {

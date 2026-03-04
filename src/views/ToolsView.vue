@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import moduleRegistry from '@/core/module/registry'
 import ModuleIcon from '@/components/common/ModuleIcon.vue'
@@ -8,12 +8,14 @@ import type { ModuleConfig } from '@/core/module/types'
 import { resolveModuleDescription, resolveModuleName, resolveModuleTags } from '@/core/module/i18n'
 
 const router = useRouter()
+const route = useRoute()
 const { t } = useI18n({ useScope: 'global' })
+const currentLocale = computed(() => (route.params.locale === 'zh' ? 'zh' : 'en'))
 
 const tools = computed(() => moduleRegistry.getByCategory('tools'))
 
 const handleModuleClick = (module: ModuleConfig) => {
-  router.push(module.route)
+  router.push(`/${currentLocale.value}${module.route}`)
 }
 </script>
 

@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { useI18n } from 'vue-i18n'
 
 const router = useRouter()
+const route = useRoute()
 const { t } = useI18n({ useScope: 'global' })
 
 const goHome = () => {
-  router.push('/')
+  const locale = route.params.locale === 'zh' ? 'zh' : 'en'
+  router.push(`/${locale}`)
 }
 </script>
 

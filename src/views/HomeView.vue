@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { useI18n } from 'vue-i18n'
 
 const router = useRouter()
+const route = useRoute()
 const { t } = useI18n({ useScope: 'global' })
+const currentLocale = computed(() => (route.params.locale === 'zh' ? 'zh' : 'en'))
 
 const mainEntries = computed(() => [
   {
@@ -46,7 +48,8 @@ const heroHighlights = computed(() => [
 ])
 
 const handleNavigate = (path: string) => {
-  router.push(path)
+  const normalized = path === '/' ? '' : path
+  router.push(`/${currentLocale.value}${normalized}`)
 }
 </script>
 

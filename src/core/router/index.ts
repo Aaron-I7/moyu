@@ -1,26 +1,28 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import moduleRegistry from '../module/registry'
 
+const localePath = '/:locale(en|zh)'
+
 function generateModuleRoutes(): RouteRecordRaw[] {
   const routes: RouteRecordRaw[] = []
   const modules = moduleRegistry.getAll()
 
   routes.push({
-    path: '/games',
+    path: `${localePath}/games`,
     name: 'Games',
     component: () => import('@/views/GamesView.vue'),
     meta: { title: 'Games', titleKey: 'routeTitle.games', descriptionKey: 'seo.routes.games.description' }
   })
 
   routes.push({
-    path: '/relax',
+    path: `${localePath}/relax`,
     name: 'Relax',
     component: () => import('@/views/RelaxView.vue'),
     meta: { title: 'Recharge', titleKey: 'routeTitle.relax', descriptionKey: 'seo.routes.relax.description' }
   })
 
   routes.push({
-    path: '/tools',
+    path: `${localePath}/tools`,
     name: 'Tools',
     component: () => import('@/views/ToolsView.vue'),
     meta: { title: 'Tools', titleKey: 'routeTitle.tools', descriptionKey: 'seo.routes.tools.description' }
@@ -28,7 +30,7 @@ function generateModuleRoutes(): RouteRecordRaw[] {
 
   modules.forEach(module => {
     routes.push({
-      path: module.route,
+      path: `${localePath}${module.route}`,
       name: module.id,
       component: module.component,
       meta: {
@@ -46,15 +48,24 @@ function generateModuleRoutes(): RouteRecordRaw[] {
 const baseRoutes: RouteRecordRaw[] = [
   {
     path: '/',
+    redirect: '/en'
+  },
+  {
+    path: localePath,
     name: 'Home',
     component: () => import('@/views/HomeView.vue'),
     meta: { title: 'Home', titleKey: 'routeTitle.home', descriptionKey: 'seo.routes.home.description' }
   },
   {
-    path: '/:pathMatch(.*)*',
+    path: `${localePath}/:pathMatch(.*)*`,
     name: 'NotFound',
     component: () => import('@/views/NotFoundView.vue'),
     meta: { title: 'Page Not Found', titleKey: 'routeTitle.notFound', descriptionKey: 'seo.routes.notFound.description' }
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'LegacyPath',
+    component: () => import('@/views/NotFoundView.vue')
   }
 ]
 

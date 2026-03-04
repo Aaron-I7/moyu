@@ -20,6 +20,7 @@ const showLocaleMenu = ref(false)
 const showShareMenu = ref(false)
 const showBossKeySettings = ref(false)
 const isMobileMenuOpen = ref(false)
+const localePrefixRegex = /^\/(en|zh)(?=\/|$)/
 
 const navItems = computed(() => [
   { path: '/', label: t('nav.home'), icon: 'mdi:home' },
@@ -45,14 +46,24 @@ const bossKeyModeLabels: Record<string, string> = {
 }
 
 const currentBossKeyLabel = computed(() => t(bossKeyModeLabels[bossKeyStore.mode] || 'bossKey.modes.code'))
+const currentLocale = computed<AppLocale>(() => (route.params.locale === 'zh' ? 'zh' : 'en'))
+const routePathWithoutLocale = computed(() => {
+  const path = route.path.replace(localePrefixRegex, '')
+  return path || '/'
+})
 
 const isActive = (path: string) => {
-  if (path === '/') return route.path === '/'
-  return route.path.startsWith(path)
+  if (path === '/') return routePathWithoutLocale.value === '/'
+  return routePathWithoutLocale.value.startsWith(path)
+}
+
+const buildLocalizedPath = (path: string, nextLocale = currentLocale.value) => {
+  const normalized = path === '/' ? '' : path
+  return `/${nextLocale}${normalized}`
 }
 
 const handleNavigate = (path: string) => {
-  router.push(path)
+  router.push(buildLocalizedPath(path))
   isMobileMenuOpen.value = false
 }
 
@@ -64,6 +75,11 @@ const selectTheme = (themeId: ThemeId) => {
 const selectLocale = async (nextLocale: AppLocale) => {
   await setLocale(nextLocale)
   locale.value = nextLocale
+  await router.replace({
+    path: buildLocalizedPath(routePathWithoutLocale.value, nextLocale),
+    query: route.query,
+    hash: route.hash
+  })
   showLocaleMenu.value = false
 }
 </script>

@@ -3,6 +3,7 @@ import en from './locales/en'
 import zh from './locales/zh'
 
 export type AppLocale = 'en' | 'zh'
+export const defaultLocale: AppLocale = 'en'
 
 export interface LocaleMeta {
   code: AppLocale
@@ -37,7 +38,6 @@ export const localeMetaMap: Record<AppLocale, LocaleMeta> = {
 
 const localeStorageKey = 'moyu-locale'
 
-// 使用静态导入，防止 GH Pages 路径问题导致 chunk 加载失败
 const localeLoaders: Record<AppLocale, () => Promise<{ default: Record<string, unknown> }>> = {
   en: async () => ({ default: en }),
   zh: async () => ({ default: zh })
@@ -60,7 +60,20 @@ export function getStoredLocale(): AppLocale {
   if (stored && stored in localeMetaMap) {
     return stored
   }
-  return 'en'
+  return defaultLocale
+}
+
+export function getLocaleFromPathname(pathname: string): AppLocale | null {
+  const base = (import.meta.env.BASE_URL as string).replace(/\/+$/, '')
+  let normalized = pathname
+  if (base && base !== '/' && normalized.startsWith(base)) {
+    normalized = normalized.slice(base.length)
+  }
+  const segment = normalized.split('/').filter(Boolean)[0]
+  if (segment === 'en' || segment === 'zh') {
+    return segment
+  }
+  return null
 }
 
 export async function loadLocaleMessages(locale: AppLocale): Promise<void> {
@@ -88,7 +101,7 @@ export async function setLocale(locale: AppLocale): Promise<void> {
 }
 
 export async function initializeI18n(): Promise<void> {
-  const locale = getStoredLocale()
+  const locale = getLocaleFromPathname(window.location.pathname) || getStoredLocale()
   await setLocale(locale)
 }
 

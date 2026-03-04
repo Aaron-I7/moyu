@@ -103,8 +103,13 @@ const router = useRouter()
 const route = useRoute()
 const { t } = useI18n({ useScope: 'global' })
 const isExpanded = ref(false)
+const localePrefixRegex = /^\/(en|zh)(?=\/|$)/
+const currentLocale = computed(() => (route.params.locale === 'zh' ? 'zh' : 'en'))
 
-const currentRoute = computed(() => route.path)
+const currentRoute = computed(() => {
+  const path = route.path.replace(localePrefixRegex, '')
+  return path || '/'
+})
 
 const gamesModules = computed(() => moduleRegistry.getByCategory('games'))
 const relaxModules = computed(() => moduleRegistry.getByCategory('relax'))
@@ -116,7 +121,8 @@ function toggleMenu() {
 }
 
 function navigateTo(path: string) {
-  router.push(path)
+  const normalized = path === '/' ? '' : path
+  router.push(`/${currentLocale.value}${normalized}`)
 }
 </script>
 
