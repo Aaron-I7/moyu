@@ -1,0 +1,165 @@
+{
+  "app": {
+    "name": "摸鱼吧",
+    "titleSuffix": "全球打工人碎片放松平台",
+    "heroSubtitle": "5分钟以内快速休闲专注",
+    "heroDescription": "面向全球年轻打工人：即开即用、隐私优先、可随时抽离。"
+  },
+  "nav": {
+    "home": "首页",
+    "relax": "休闲",
+    "games": "游戏",
+    "tools": "工具",
+    "reading": "阅读"
+  },
+  "category": {
+    "games": "游戏",
+    "relax": "休闲",
+    "tools": "工具",
+    "reading": "阅读"
+  },
+  "header": {
+    "bossMode": "隐身模式",
+    "menuExpand": "展开菜单",
+    "menuCollapse": "收起菜单",
+    "language": "语言",
+    "voice": "语音",
+    "share": "分享",
+    "accessibility": "无障碍",
+    "fontScale": "字体大小"
+  },
+  "theme": {
+    "day": "白天",
+    "night": "黑夜",
+    "pixel": "像素"
+  },
+  "home": {
+    "features": {
+      "instant": "秒开即用",
+      "privacy": "隐私优先",
+      "adaptive": "自适应布局",
+      "free": "永久免费"
+    },
+    "strategyTitle": "今日内容策略",
+    "strategySubtitle": "结合本地节假日、通勤时段与工作节奏动态推荐。",
+    "recommendNow": "当前建议",
+    "avoidNow": "当前避免",
+    "holidayFocus": "节日语境",
+    "commuteFocus": "通勤语境",
+    "rhythmFocus": "工作节奏"
+  },
+  "views": {
+    "gamesTitle": "游戏",
+    "gamesDesc": "低压力小游戏，快速休闲心情与专注。",
+    "relaxTitle": "休闲",
+    "relaxDesc": "温和互动，帮助你在任务间快速降压。",
+    "toolsTitle": "工具",
+    "toolsDesc": "轻量实用工具，提升专注与工作效率。",
+    "readingDesc": "本地书籍轻阅读，保持平稳节奏。",
+    "emptyGame": "暂无游戏",
+    "emptyGameDesc": "正在准备国际化适配后的新内容。",
+    "emptyRelax": "暂无休闲模块",
+    "emptyRelaxDesc": "休闲类内容正在进行全球本地化改造。",
+    "emptyTools": "暂无工具",
+    "emptyToolsDesc": "更多国际化工具即将上线。"
+  },
+  "routeTitle": {
+    "home": "首页",
+    "games": "游戏",
+    "relax": "休闲",
+    "tools": "工具",
+    "reading": "阅读",
+    "notFound": "页面未找到"
+  },
+  "seo": {
+    "defaultDescription": "Breakflow 是一个轻量碎片放松平台，包含游戏、解压、工具与本地阅读模块。",
+    "routes": {
+      "home": {
+        "description": "发现适合快速恢复专注与降压的碎片化休息内容。"
+      },
+      "games": {
+        "description": "体验低压力小游戏，帮助你在短休中快速恢复状态。"
+      },
+      "relax": {
+        "description": "通过温和互动和轻冥想组件缓解任务间压力。"
+      },
+      "tools": {
+        "description": "使用轻量效率工具，支持日常专注与快速处理任务。"
+      },
+      "notFound": {
+        "description": "当前页面不存在，可返回 Breakflow 首页继续浏览。"
+      }
+    }
+  },
+  "notFound": {
+    "title": "页面未找到",
+    "backHome": "返回首页"
+  },
+  "toolMenu": {
+    "title": "工作台导航"
+  },
+  "bossKey": {
+    "title": "隐身模式设置",
+    "danmaku": "顶部弹幕",
+    "danmakuDesc": "开启后在页面顶部显示浮动信息流。",
+    "danmakuOn": "已开启",
+    "danmakuOff": "已关闭",
+    "hotkey": "快捷键",
+    "hotkeyDesc": "按 Esc 可快速切换到隐身工作界面。",
+    "camouflage": "隐身界面",
+    "camouflageDesc": "选择触发隐身模式时显示的界面。",
+    "tips": "使用提示",
+    "tipsDesc": "被打断时按 Esc 切换，再按一次 Esc 返回。",
+    "done": "完成",
+    "modes": {
+      "code": "代码编辑器",
+      "excel": "电子表格",
+      "forum": "技术论坛",
+      "terminal": "终端"
+    },
+    "modeDesc": {
+      "code": "VS Code 风格",
+      "excel": "进度报表",
+      "forum": "社区资讯流",
+      "terminal": "PowerShell 风格"
+    }
+  },
+  "share": {
+    "title": "分享",
+    "subtitle": "把这个摸鱼工具分享给你的同事和朋友。",
+    "x": "分享到 X",
+    "tiktok": "打开 TikTok",
+    "instagram": "打开 Instagram",
+    "copy": "复制链接",
+    "copied": "链接已复制",
+    "failed": "分享失败，请稍后再试。"
+  },
+  "privacy": {
+    "title": "隐私与数据选择",
+    "desc": "仅在你同意时启用可选分析与个性化（符合 GDPR/CCPA）。",
+    "essential": "必要功能",
+    "analytics": "分析统计",
+    "personalization": "个性化",
+    "social": "社交分享",
+    "acceptAll": "全部同意",
+    "rejectOptional": "拒绝可选项",
+    "save": "保存选择",
+    "manage": "管理设置"
+  },
+  "usageReminder": {
+    "title": "该休息一下了",
+    "desc": "你已连续使用较长时间，建议起身活动、补水并放松眼睛。",
+    "action": "我去休息",
+    "snooze": "稍后提醒"
+  },
+  "locale": {
+    "en": "English",
+    "zh": "中文"
+  },
+  "voice": {
+    "unsupported": "当前浏览器不支持语音控制。",
+    "start": "开始监听",
+    "stop": "停止监听",
+    "listening": "语音监听中，可说「首页、游戏、工具、阅读、休闲」。"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "title": "White Noise Mixer",
+  "subtitle": "Pick sounds, tune volume, and stay in a calm flow.",
+  "stopAll": "Stop all",
+  "nowPlaying": "Now playing",
+  "timers": {
+    "0": "Off",
+    "5": "5 min",
+    "15": "15 min",
+    "30": "30 min",
+    "60": "60 min"
+  },
+  "sounds": {
+    "rain": "Rain",
+    "wind": "Wind",
+    "thunder": "Thunder",
+    "fire": "Fireplace",
+    "cafe": "Cafe",
+    "ocean": "Ocean",
+    "birds": "Birds",
+    "night": "Night"
+  }
+}

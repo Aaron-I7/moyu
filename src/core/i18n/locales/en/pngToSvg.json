@@ -1,0 +1,37 @@
+{
+  "title": "PNG to SVG",
+  "subtitle": "Convert PNG images into SVG vectors with flexible modes.",
+  "uploadText": "Click or drop PNG files here",
+  "uploadHint": "PNG format only",
+  "preview": "Preview",
+  "options": "Conversion options",
+  "optionColorMode": "Color mode",
+  "optionDetail": "Detail level",
+  "optionThreshold": "Threshold",
+  "optionStroke": "Stroke width",
+  "converting": "Converting...",
+  "start": "Start conversion",
+  "result": "Result",
+  "originalImage": "Original",
+  "svgPreview": "SVG preview",
+  "size": "Dimensions",
+  "originalSize": "Original size",
+  "svgSize": "SVG size",
+  "sizeChange": "Size change",
+  "download": "Download SVG",
+  "copy": "Copy SVG",
+  "copied": "Copied!",
+  "colorMode": {
+    "color": "Color",
+    "grayscale": "Grayscale",
+    "blackwhite": "Black & White"
+  },
+  "detail": {
+    "low": "Low (small file)",
+    "medium": "Medium (balanced)",
+    "high": "High (more detail)"
+  },
+  "errorLoad": "Failed to load image.",
+  "errorCanvas": "Failed to get canvas context.",
+  "errorConvert": "Conversion failed."
+}

@@ -1,0 +1,32 @@
+{
+  "pixelFishing": {
+    "name": "像素钓场",
+    "description": "沉浸式像素钓鱼，5大钓点与40种鱼类可探索。",
+    "tags": ["像素", "钓鱼", "放松", "收集"]
+  },
+  "woodenFish": {
+    "name": "节奏轻敲",
+    "description": "通过节奏敲击调节呼吸，快速缓解压力。",
+    "tags": ["解压", "专注", "冥想"]
+  },
+  "virtualPet": {
+    "name": "电子宠物",
+    "description": "在工作日里照顾一位小小陪伴者。",
+    "tags": ["宠物", "习惯", "陪伴"]
+  },
+  "whiteNoise": {
+    "name": "白噪音混音",
+    "description": "混合环境声，适配专注、通勤与睡眠。",
+    "tags": ["专注", "睡眠", "环境声"]
+  },
+  "pngToSvg": {
+    "name": "PNG 转 SVG",
+    "description": "将 PNG 素材快速转换为可缩放矢量图。",
+    "tags": ["图片", "转换", "矢量"]
+  },
+  "reading": {
+    "name": "小说阅读",
+    "description": "支持本地 TXT 文件的轻量阅读器。",
+    "tags": ["阅读", "小说"]
+  }
+}
