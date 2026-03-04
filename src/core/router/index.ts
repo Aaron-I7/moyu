@@ -51,7 +51,7 @@ const baseRoutes: RouteRecordRaw[] = [
     redirect: '/en'
   },
   {
-    path: localePath,
+    path: `${localePath}`,
     name: 'Home',
     component: () => import('@/views/HomeView.vue'),
     meta: { title: 'Home', titleKey: 'routeTitle.home', descriptionKey: 'seo.routes.home.description' }

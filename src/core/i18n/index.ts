@@ -47,8 +47,8 @@ const loadedLocales = new Set<AppLocale>(['en', 'zh'])
 
 export const i18n = createI18n({
   legacy: false,
-  locale: 'en' as AppLocale,
-  fallbackLocale: 'en' as AppLocale,
+  locale: defaultLocale,
+  fallbackLocale: defaultLocale,
   messages: {
     en,
     zh
@@ -69,9 +69,12 @@ export function getLocaleFromPathname(pathname: string): AppLocale | null {
   if (base && base !== '/' && normalized.startsWith(base)) {
     normalized = normalized.slice(base.length)
   }
-  const segment = normalized.split('/').filter(Boolean)[0]
-  if (segment === 'en' || segment === 'zh') {
-    return segment
+  const parts = normalized.split('/').filter(Boolean)
+  if (parts.length > 0) {
+    const segment = parts[0]
+    if (segment === 'en' || segment === 'zh') {
+      return segment
+    }
   }
   return null
 }

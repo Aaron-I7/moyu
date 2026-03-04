@@ -6,6 +6,11 @@ const localeRegex = /^\/(en|zh)(?=\/|$)/
 
 export function setupRouterGuards(router: Router): void {
   router.beforeEach(async to => {
+    // 忽略 404 路由
+    if (to.name === 'NotFound') {
+      return
+    }
+
     if (!localeRegex.test(to.path)) {
       return {
         path: `/en${to.path === '/' ? '' : to.path}`,
@@ -15,7 +20,7 @@ export function setupRouterGuards(router: Router): void {
       }
     }
     const routeLocale = to.params.locale as AppLocale
-    if ((i18n.global.locale as any).value !== routeLocale) {
+    if (routeLocale && (i18n.global.locale as any).value !== routeLocale) {
       await setLocale(routeLocale)
     }
     applyRouteSeo(to)

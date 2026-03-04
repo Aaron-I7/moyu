@@ -75,7 +75,7 @@ const selectTheme = (themeId: ThemeId) => {
 const selectLocale = async (nextLocale: AppLocale) => {
   await setLocale(nextLocale)
   locale.value = nextLocale
-  await router.replace({
+  await router.push({
     path: buildLocalizedPath(routePathWithoutLocale.value, nextLocale),
     query: route.query,
     hash: route.hash
