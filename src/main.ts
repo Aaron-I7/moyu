@@ -16,12 +16,12 @@ import '@/modules/reading'
 import router from './core/router'
 
 async function bootstrap() {
-  await initializeI18n()
-
   const app = createApp(App)
   const pinia = createPinia()
   app.use(pinia)
   app.use(i18n)
+
+  await initializeI18n()
 
   const themeStore = useThemeStore()
   themeStore.loadTheme()
