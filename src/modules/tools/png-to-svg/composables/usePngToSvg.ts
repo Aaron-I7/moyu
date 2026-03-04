@@ -1,8 +1,10 @@
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { ConversionOptions, ConversionResult, PathData } from '../types'
 import { defaultOptions, detailPresets } from '../types'
 
 export function usePngToSvg() {
+  const { t } = useI18n()
   const isConverting = ref(false)
   const progress = ref(0)
   const error = ref<string | null>(null)
@@ -11,7 +13,7 @@ export function usePngToSvg() {
     return new Promise((resolve, reject) => {
       const img = new Image()
       img.onload = () => resolve(img)
-      img.onerror = () => reject(new Error('图片加载失败'))
+      img.onerror = () => reject(new Error(t('pngToSvg.errorLoad')))
       img.src = URL.createObjectURL(file)
     })
   }
@@ -21,7 +23,7 @@ export function usePngToSvg() {
     canvas.width = img.width
     canvas.height = img.height
     const ctx = canvas.getContext('2d')
-    if (!ctx) throw new Error('无法获取Canvas上下文')
+    if (!ctx) throw new Error(t('pngToSvg.errorCanvas'))
     ctx.drawImage(img, 0, 0)
     return ctx.getImageData(0, 0, img.width, img.height)
   }
@@ -214,7 +216,7 @@ export function usePngToSvg() {
         svgSize: new Blob([svg]).size
       }
     } catch (e) {
-      error.value = e instanceof Error ? e.message : '转换失败'
+      error.value = e instanceof Error ? e.message : t('pngToSvg.errorConvert')
       isConverting.value = false
       return null
     }

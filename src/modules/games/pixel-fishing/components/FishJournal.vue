@@ -4,6 +4,7 @@
  * 像素风暗色百科面板
  */
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { usePixelFishingStore } from '../stores/pixelFishing'
 import { FISH_DATA } from '../data/fish'
 import { SPOTS } from '../data/spots'
@@ -14,14 +15,15 @@ const emit = defineEmits<{
 }>()
 
 const store = usePixelFishingStore()
+const { t, locale } = useI18n()
 
 type FilterTab = 'all' | 'stream' | 'lake' | 'river' | 'coast' | 'deep-sea'
 const activeTab = ref<FilterTab>('all')
 const selectedFish = ref<typeof filteredFish.value[0] | null>(null)
 
 const tabs: { key: FilterTab; label: string }[] = [
-  { key: 'all', label: '全 部' },
-  ...SPOTS.map(s => ({ key: s.id as FilterTab, label: s.name }))
+  { key: 'all', label: t('pixelFishing.journal.all') },
+  ...SPOTS.map(s => ({ key: s.id as FilterTab, label: t(`pixelFishing.spots.${s.id}.name`, s.name) }))
 ]
 
 const filteredFish = computed(() => {
@@ -66,6 +68,40 @@ function openBaike(url: string | undefined) {
     window.open(url, '_blank')
   }
 }
+
+function displayFishName(name: string, scientificName?: string): string {
+  if (locale.value === 'en') {
+    return scientificName || name
+  }
+  return name
+}
+
+function displayFishDesc(desc: string): string {
+  if (locale.value === 'en') {
+    return t('pixelFishing.journal.descFallback')
+  }
+  return desc
+}
+
+function displayFishMeta(label: 'habitat' | 'diet' | 'funFact', value?: string): string {
+  if (!value) return ''
+  if (locale.value !== 'en') return value
+  if (label === 'habitat') return 'Localized habitat details are being prepared.'
+  if (label === 'diet') return 'Localized diet details are being prepared.'
+  return 'Localized fun facts are being prepared.'
+}
+
+function rarityLabel(rarity: keyof typeof RARITY_NAMES): string {
+  if (locale.value !== 'en') return RARITY_NAMES[rarity] || 'Common'
+  const map: Record<keyof typeof RARITY_NAMES, string> = {
+    common: 'Common',
+    uncommon: 'Uncommon',
+    rare: 'Rare',
+    epic: 'Epic',
+    legendary: 'Legendary'
+  }
+  return map[rarity] || 'Common'
+}
 </script>
 
 <template>
@@ -75,7 +111,7 @@ function openBaike(url: string | undefined) {
       <div class="journal-header">
         <div class="header-left">
           <span class="header-icon">📖</span>
-          <h2 class="journal-title">鱼类图鉴</h2>
+          <h2 class="journal-title">{{ t('pixelFishing.journal.title') }}</h2>
         </div>
         <div class="header-right">
           <span class="progress-text">
@@ -118,7 +154,7 @@ function openBaike(url: string | undefined) {
             <img
               v-if="fish.caught && fish.imageUrl"
               :src="fish.imageUrl"
-              :alt="fish.name"
+              :alt="displayFishName(fish.name, fish.scientificName)"
               class="fish-img"
               @error="handleImageError"
             />
@@ -127,24 +163,24 @@ function openBaike(url: string | undefined) {
           </div>
           <div class="fish-info">
             <div class="fish-name-row">
-              <span class="fish-name">{{ fish.caught ? fish.name : '???' }}</span>
+              <span class="fish-name">{{ fish.caught ? displayFishName(fish.name, fish.scientificName) : t('pixelFishing.journal.unknown') }}</span>
               <span
                 v-if="fish.caught"
                 class="fish-rarity"
                 :style="{ color: RARITY_COLORS[fish.rarity] }"
               >
-                {{ RARITY_NAMES[fish.rarity] }}
+                {{ rarityLabel(fish.rarity) }}
               </span>
             </div>
             <template v-if="fish.caught && fish.entry">
-              <p class="fish-desc">{{ fish.description }}</p>
+              <p class="fish-desc">{{ displayFishDesc(fish.description) }}</p>
               <div class="fish-stats">
                 <span>× {{ fish.entry.count }}</span>
                 <span>📏 {{ fish.entry.maxSize?.toFixed(1) }} cm</span>
                 <span>⚖ {{ formatWeight(fish.entry.maxWeight ?? 0) }}</span>
               </div>
             </template>
-            <p v-else class="fish-not-caught">尚未捕获</p>
+            <p v-else class="fish-not-caught">{{ t('pixelFishing.journal.notCaught') }}</p>
           </div>
         </div>
       </div>
@@ -164,7 +200,7 @@ function openBaike(url: string | undefined) {
           <img
             v-if="selectedFish.imageUrl"
             :src="selectedFish.imageUrl"
-            :alt="selectedFish.name"
+            :alt="displayFishName(selectedFish.name, selectedFish.scientificName)"
             @error="handleImageError"
           />
         </div>
@@ -172,41 +208,41 @@ function openBaike(url: string | undefined) {
         <!-- 鱼类信息 -->
         <div class="detail-info">
           <h3 class="detail-name" :style="{ color: RARITY_COLORS[selectedFish.rarity] }">
-            {{ selectedFish.name }}
+            {{ displayFishName(selectedFish.name, selectedFish.scientificName) }}
           </h3>
           <p v-if="selectedFish.scientificName" class="detail-scientific">
             {{ selectedFish.scientificName }}
           </p>
-          <p class="detail-desc">{{ selectedFish.description }}</p>
+          <p class="detail-desc">{{ displayFishDesc(selectedFish.description) }}</p>
 
           <div class="detail-stats">
             <div class="detail-stat">
-              <span class="detail-stat__label">稀有度</span>
+              <span class="detail-stat__label">{{ t('pixelFishing.journal.rarity') }}</span>
               <span class="detail-stat__value" :style="{ color: RARITY_COLORS[selectedFish.rarity] }">
-                {{ RARITY_NAMES[selectedFish.rarity] }}
+                {{ rarityLabel(selectedFish.rarity) }}
               </span>
             </div>
             <div class="detail-stat">
-              <span class="detail-stat__label">尺寸范围</span>
+              <span class="detail-stat__label">{{ t('pixelFishing.journal.sizeRange') }}</span>
               <span class="detail-stat__value">{{ selectedFish.sizeRange[0] }}-{{ selectedFish.sizeRange[1] }} cm</span>
             </div>
             <div class="detail-stat">
-              <span class="detail-stat__label">重量范围</span>
+              <span class="detail-stat__label">{{ t('pixelFishing.journal.weightRange') }}</span>
               <span class="detail-stat__value">{{ formatWeight(selectedFish.weightRange[0]) }} - {{ formatWeight(selectedFish.weightRange[1]) }}</span>
             </div>
             <div v-if="selectedFish.entry" class="detail-stat">
-              <span class="detail-stat__label">捕获次数</span>
-              <span class="detail-stat__value">{{ selectedFish.entry.count }} 次</span>
+              <span class="detail-stat__label">{{ t('pixelFishing.journal.catchCount') }}</span>
+              <span class="detail-stat__value">{{ selectedFish.entry.count }} {{ t('pixelFishing.journal.countUnit') }}</span>
             </div>
           </div>
 
           <div v-if="selectedFish.habitat || selectedFish.diet" class="detail-extra">
-            <p v-if="selectedFish.habitat"><strong>栖息地：</strong>{{ selectedFish.habitat }}</p>
-            <p v-if="selectedFish.diet"><strong>食性：</strong>{{ selectedFish.diet }}</p>
+            <p v-if="selectedFish.habitat"><strong>{{ t('pixelFishing.journal.habitat') }}：</strong>{{ displayFishMeta('habitat', selectedFish.habitat) }}</p>
+            <p v-if="selectedFish.diet"><strong>{{ t('pixelFishing.journal.diet') }}：</strong>{{ displayFishMeta('diet', selectedFish.diet) }}</p>
           </div>
 
           <p v-if="selectedFish.funFact" class="detail-funfact">
-            💡 {{ selectedFish.funFact }}
+            💡 {{ displayFishMeta('funFact', selectedFish.funFact) }}
           </p>
 
           <button
@@ -214,7 +250,7 @@ function openBaike(url: string | undefined) {
             class="detail-baike"
             @click="openBaike(selectedFish.baikeUrl)"
           >
-            📖 查看百度百科
+            📖 {{ t('pixelFishing.journal.moreInfo') }}
           </button>
         </div>
       </div>

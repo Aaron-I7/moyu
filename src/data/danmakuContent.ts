@@ -1,3 +1,5 @@
+import { i18n } from '@/core/i18n'
+
 export interface DanmakuItem {
   id: number
   content: string
@@ -5,7 +7,7 @@ export interface DanmakuItem {
   emoji?: string
 }
 
-export const DANMAKU_CONTENT: DanmakuItem[] = [
+const DANMAKU_CONTENT_ZH: DanmakuItem[] = [
   {
     id: 1,
     content: '工作累了？试试 20-20-20 法则：每20分钟看20英尺外的物体20秒',
@@ -128,11 +130,39 @@ export const DANMAKU_CONTENT: DanmakuItem[] = [
   }
 ]
 
+const DANMAKU_CONTENT_EN: DanmakuItem[] = [
+  { id: 1, content: 'Eye break tip: try the 20-20-20 rule.', category: 'tip', emoji: '👀' },
+  { id: 2, content: 'When someone says "easy task", smile and breathe.', category: 'humor', emoji: '😊' },
+  { id: 3, content: 'Short breaks often improve creativity.', category: 'relax', emoji: '💡' },
+  { id: 4, content: 'Stand up, stretch, and get some water.', category: 'tip', emoji: '🚶' },
+  { id: 5, content: 'Great progress today. Keep going!', category: 'motivation', emoji: '⭐' },
+  { id: 6, content: 'Classic dev lines: easy, almost done, tested.', category: 'humor', emoji: '😂' },
+  { id: 7, content: 'Slow down a little, focus gets better.', category: 'relax', emoji: '🧘' },
+  { id: 8, content: 'Blink reminder: avoid dry eyes.', category: 'tip', emoji: '👁️' },
+  { id: 9, content: 'Code can wait, your health cannot.', category: 'motivation', emoji: '🍚' },
+  { id: 10, content: 'Bug fixing vs new features: the eternal race.', category: 'humor', emoji: '🐛' },
+  { id: 11, content: 'Take a short noon rest if possible.', category: 'relax', emoji: '😴' },
+  { id: 12, content: 'Keyboard sounds are your private soundtrack.', category: 'humor', emoji: '🎹' },
+  { id: 13, content: 'Pause hard problems; ideas return during breaks.', category: 'tip', emoji: '✨' },
+  { id: 14, content: 'You have worked hard. Time for a break.', category: 'motivation', emoji: '⏰' },
+  { id: 15, content: 'Small feature requests are rarely small.', category: 'humor', emoji: '😤' },
+  { id: 16, content: 'Look outside for a moment and reset.', category: 'relax', emoji: '🌳' },
+  { id: 17, content: 'Hydration reminder: drink water now.', category: 'tip', emoji: '💧' },
+  { id: 18, content: 'Choose calm over arguments in review chats.', category: 'humor', emoji: '🎯' },
+  { id: 19, content: 'Every bug fixed is skill earned.', category: 'motivation', emoji: '💪' },
+  { id: 20, content: 'Breaks are fuel for better work.', category: 'relax', emoji: '🐟' }
+]
+
+export function getDanmakuContent(): DanmakuItem[] {
+  return (i18n.global.locale as any).value === 'en' ? DANMAKU_CONTENT_EN : DANMAKU_CONTENT_ZH
+}
+
 export function getRandomDanmaku(): DanmakuItem {
-  const index = Math.floor(Math.random() * DANMAKU_CONTENT.length)
-  return DANMAKU_CONTENT[index]!
+  const content = getDanmakuContent()
+  const index = Math.floor(Math.random() * content.length)
+  return content[index]!
 }
 
 export function getDanmakuByCategory(category: DanmakuItem['category']): DanmakuItem[] {
-  return DANMAKU_CONTENT.filter(item => item.category === category)
+  return getDanmakuContent().filter(item => item.category === category)
 }

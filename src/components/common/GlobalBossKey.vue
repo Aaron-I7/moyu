@@ -5,7 +5,7 @@
         <div class="boss-key-content">
           <component :is="currentModeComponent" />
         </div>
-        <div class="hint">按 <kbd>Esc</kbd> 或点击任意处返回</div>
+        <div class="hint">Press <kbd>Esc</kbd> or click anywhere to return</div>
       </div>
     </Transition>
   </Teleport>
@@ -75,8 +75,8 @@ const CodeEditor = defineComponent({
           ]),
         ]),
         h('div', { class: 'fake-actions' }, [
-          h('span', { class: 'fake-btn' }, '拆分'),
-          h('span', { class: 'fake-btn' }, '更多'),
+          h('span', { class: 'fake-btn' }, 'Split'),
+          h('span', { class: 'fake-btn' }, 'More'),
         ]),
       ]),
       h('main', { class: 'fake-content' }, [
@@ -95,7 +95,7 @@ const CodeEditor = defineComponent({
         h('span', { class: 'footer-item' }, 'TypeScript'),
         h('span', { class: 'footer-item' }, 'UTF-8'),
         h('span', { class: 'footer-item' }, 'LF'),
-        h('span', { class: 'footer-item' }, '空格: 2'),
+        h('span', { class: 'footer-item' }, 'Spaces: 2'),
       ]),
     ])
   },
@@ -107,27 +107,27 @@ const ExcelSheet = defineComponent({
     const columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
     const rows = 20
     const cellData: Record<string, string> = {
-      'A1': '项目名称', 'B1': '负责人', 'C1': '进度', 'D1': '预算', 'E1': '实际支出', 'F1': '状态', 'G1': '截止日期', 'H1': '备注',
-      'A2': '用户管理系统', 'B2': '张三', 'C2': '85%', 'D2': '¥50,000', 'E2': '¥42,500', 'F2': '进行中', 'G2': '2024-03-15', 'H2': '待测试',
-      'A3': '数据分析平台', 'B3': '李四', 'C3': '60%', 'D3': '¥80,000', 'E3': '¥48,000', 'F3': '进行中', 'G3': '2024-04-01', 'H3': '',
-      'A4': '移动端适配', 'B4': '王五', 'C4': '100%', 'D4': '¥30,000', 'E4': '¥28,500', 'F4': '已完成', 'G4': '2024-02-28', 'H4': '已验收',
-      'A5': 'API接口优化', 'B5': '赵六', 'C5': '40%', 'D5': '¥25,000', 'E5': '¥10,000', 'F5': '进行中', 'G5': '2024-03-20', 'H5': '',
-      'A6': '安全审计', 'B6': '钱七', 'C6': '20%', 'D6': '¥15,000', 'E6': '¥3,000', 'F6': '进行中', 'G6': '2024-04-15', 'H6': '待第三方',
+      'A1': 'Project', 'B1': 'Owner', 'C1': 'Progress', 'D1': 'Budget', 'E1': 'Spent', 'F1': 'Status', 'G1': 'Due Date', 'H1': 'Notes',
+      'A2': 'User Management', 'B2': 'Alex', 'C2': '85%', 'D2': '¥50,000', 'E2': '¥42,500', 'F2': 'In progress', 'G2': '2024-03-15', 'H2': 'Pending test',
+      'A3': 'Analytics Platform', 'B3': 'Robin', 'C3': '60%', 'D3': '¥80,000', 'E3': '¥48,000', 'F3': 'In progress', 'G3': '2024-04-01', 'H3': '',
+      'A4': 'Mobile Adaptation', 'B4': 'Taylor', 'C4': '100%', 'D4': '¥30,000', 'E4': '¥28,500', 'F4': 'Done', 'G4': '2024-02-28', 'H4': 'Accepted',
+      'A5': 'API Optimization', 'B5': 'Jordan', 'C5': '40%', 'D5': '¥25,000', 'E5': '¥10,000', 'F5': 'In progress', 'G5': '2024-03-20', 'H5': '',
+      'A6': 'Security Audit', 'B6': 'Morgan', 'C6': '20%', 'D6': '¥15,000', 'E6': '¥3,000', 'F6': 'In progress', 'G6': '2024-04-15', 'H6': 'Waiting vendor',
       'A7': '', 'B7': '', 'C7': '', 'D7': '', 'E7': '', 'F7': '', 'G7': '', 'H7': '',
-      'A8': '合计', 'B8': '', 'C8': '', 'D8': '¥200,000', 'E8': '¥132,000', 'F8': '', 'G8': '', 'H8': '',
+      'A8': 'Total', 'B8': '', 'C8': '', 'D8': '¥200,000', 'E8': '¥132,000', 'F8': '', 'G8': '', 'H8': '',
     }
 
     return () => h('div', { class: 'fake-excel' }, [
       h('header', { class: 'excel-header' }, [
         h('div', { class: 'excel-toolbar' }, [
-          h('span', { class: 'toolbar-btn' }, '文件'),
-          h('span', { class: 'toolbar-btn' }, '编辑'),
-          h('span', { class: 'toolbar-btn' }, '视图'),
-          h('span', { class: 'toolbar-btn' }, '插入'),
-          h('span', { class: 'toolbar-btn' }, '格式'),
-          h('span', { class: 'toolbar-btn' }, '数据'),
+          h('span', { class: 'toolbar-btn' }, 'File'),
+          h('span', { class: 'toolbar-btn' }, 'Edit'),
+          h('span', { class: 'toolbar-btn' }, 'View'),
+          h('span', { class: 'toolbar-btn' }, 'Insert'),
+          h('span', { class: 'toolbar-btn' }, 'Format'),
+          h('span', { class: 'toolbar-btn' }, 'Data'),
         ]),
-        h('div', { class: 'excel-title' }, '项目进度跟踪表.xlsx - Excel'),
+        h('div', { class: 'excel-title' }, 'Project Progress Tracker.xlsx - Excel'),
       ]),
       h('div', { class: 'excel-content' }, [
         h('table', { class: 'excel-table' }, [
@@ -173,35 +173,35 @@ const TechForum = defineComponent({
   name: 'TechForum',
   setup() {
     const posts = [
-      { id: 1, title: 'Vue 3 Composition API 最佳实践分享', author: '前端小王', replies: 128, views: 2847, time: '10分钟前', tag: '精华' },
-      { id: 2, title: 'TypeScript 5.0 新特性深度解析', author: 'TS爱好者', replies: 89, views: 1563, time: '25分钟前', tag: '技术' },
-      { id: 3, title: '微前端架构实战经验总结', author: '架构师老李', replies: 256, views: 5421, time: '1小时前', tag: '精华' },
-      { id: 4, title: 'Node.js 性能优化技巧汇总', author: '后端达人', replies: 67, views: 892, time: '2小时前', tag: '技术' },
-      { id: 5, title: 'React vs Vue 2024年度对比', author: '技术选型', replies: 312, views: 6789, time: '3小时前', tag: '讨论' },
-      { id: 6, title: 'CSS Grid 布局完全指南', author: 'CSS大师', replies: 45, views: 654, time: '4小时前', tag: '教程' },
-      { id: 7, title: 'Webpack 5 模块联邦实战', author: '打包专家', replies: 78, views: 1234, time: '5小时前', tag: '技术' },
-      { id: 8, title: '前端安全防护最佳实践', author: '安全卫士', replies: 156, views: 3456, time: '6小时前', tag: '精华' },
+      { id: 1, title: 'Vue 3 Composition API Best Practices', author: 'Frontend Alex', replies: 128, views: 2847, time: '10 min ago', tag: 'featured' },
+      { id: 2, title: 'TypeScript 5.0 Deep Dive', author: 'TS Fan', replies: 89, views: 1563, time: '25 min ago', tag: 'tech' },
+      { id: 3, title: 'Micro-Frontend Architecture Notes', author: 'Architect Lee', replies: 256, views: 5421, time: '1 hour ago', tag: 'featured' },
+      { id: 4, title: 'Node.js Performance Tuning Tips', author: 'Backend Pro', replies: 67, views: 892, time: '2 hours ago', tag: 'tech' },
+      { id: 5, title: 'React vs Vue in 2024', author: 'Tech Choice', replies: 312, views: 6789, time: '3 hours ago', tag: 'discussion' },
+      { id: 6, title: 'Complete CSS Grid Guide', author: 'CSS Master', replies: 45, views: 654, time: '4 hours ago', tag: 'guide' },
+      { id: 7, title: 'Webpack 5 Module Federation in Practice', author: 'Build Expert', replies: 78, views: 1234, time: '5 hours ago', tag: 'tech' },
+      { id: 8, title: 'Frontend Security Best Practices', author: 'Security Guard', replies: 156, views: 3456, time: '6 hours ago', tag: 'featured' },
     ]
 
     return () => h('div', { class: 'fake-forum' }, [
       h('header', { class: 'forum-header' }, [
-        h('div', { class: 'forum-logo' }, '技术社区'),
+        h('div', { class: 'forum-logo' }, 'Tech Community'),
         h('div', { class: 'forum-nav' }, [
-          h('span', { class: 'nav-item active' }, '首页'),
-          h('span', { class: 'nav-item' }, '精华'),
-          h('span', { class: 'nav-item' }, '分享'),
-          h('span', { class: 'nav-item' }, '问答'),
-          h('span', { class: 'nav-item' }, '招聘'),
+          h('span', { class: 'nav-item active' }, 'Home'),
+          h('span', { class: 'nav-item' }, 'Featured'),
+          h('span', { class: 'nav-item' }, 'Share'),
+          h('span', { class: 'nav-item' }, 'Q&A'),
+          h('span', { class: 'nav-item' }, 'Jobs'),
         ]),
         h('div', { class: 'forum-user' }, [
           h('span', { class: 'user-avatar' }, '👤'),
-          h('span', { class: 'user-name' }, '开发者'),
+          h('span', { class: 'user-name' }, 'Ops Team'),
         ]),
       ]),
       h('main', { class: 'forum-content' }, [
         h('div', { class: 'forum-sidebar' }, [
           h('div', { class: 'sidebar-section' }, [
-            h('h4', {}, '热门标签'),
+            h('h4', {}, 'Hot Tags'),
             h('div', { class: 'tag-list' }, [
               h('span', { class: 'tag' }, 'Vue'),
               h('span', { class: 'tag' }, 'React'),
@@ -215,15 +215,15 @@ const TechForum = defineComponent({
             posts.map(post => 
               h('div', { class: 'post-item', key: post.id }, [
                 h('div', { class: 'post-info' }, [
-                  post.tag === '精华' 
-                    ? h('span', { class: 'post-tag-jing' }, '精')
+                  post.tag === 'featured' 
+                    ? h('span', { class: 'post-tag-jing' }, 'F')
                     : h('span', { class: 'post-tag' }, post.tag.charAt(0)),
                   h('span', { class: 'post-title' }, post.title),
                 ]),
                 h('div', { class: 'post-meta' }, [
                   h('span', {}, post.author),
-                  h('span', {}, `${post.replies}回复`),
-                  h('span', {}, `${post.views}浏览`),
+                  h('span', {}, `${post.replies} replies`),
+                  h('span', {}, `${post.views} views`),
                   h('span', {}, post.time),
                 ]),
               ])
@@ -239,28 +239,28 @@ const Terminal = defineComponent({
   name: 'Terminal',
   setup() {
     const lines = [
-      { type: 'prompt', text: 'PS C:\\Projects\\myapp> npm run dev' },
+      { type: 'prompt', text: 'PS C:\\Workspace\\ops> Get-Process' },
       { type: 'output', text: '' },
-      { type: 'info', text: '> myapp@1.0.0 dev' },
-      { type: 'info', text: '> vite' },
+      { type: 'info', text: 'Handles  NPM(K)    PM(K)      WS(K)     CPU(s)     Id  SI ProcessName' },
+      { type: 'info', text: '-----  ------    -----      -----     ------     --  -- -----------' },
       { type: 'output', text: '' },
-      { type: 'success', text: '  VITE v5.1.0  ready in 234 ms' },
+      { type: 'success', text: '   105      13    24560      39344      12.32   4320   1 Teams' },
       { type: 'output', text: '' },
-      { type: 'info', text: '  ➜  Local:   http://localhost:5173/' },
-      { type: 'info', text: '  ➜  Network: http://192.168.1.100:5173/' },
-      { type: 'info', text: '  ➜  press h + enter to show help' },
+      { type: 'info', text: '    88      10    18220      30188       4.15   7812   1 Outlook' },
+      { type: 'info', text: '    76       8    16544      27612       2.34   9236   1 Excel' },
+      { type: 'info', text: '    66       7    12320      21804       1.41   3356   1 OneDrive' },
       { type: 'output', text: '' },
-      { type: 'prompt', text: 'PS C:\\Projects\\myapp> git status' },
-      { type: 'output', text: 'On branch main' },
-      { type: 'output', text: 'Your branch is up to date with \'origin/main\'.' },
+      { type: 'prompt', text: 'PS C:\\Workspace\\ops> Get-Date' },
+      { type: 'output', text: 'Tuesday, March 03, 2026 10:24:08 AM' },
       { type: 'output', text: '' },
-      { type: 'output', text: 'Changes not staged for commit:' },
-      { type: 'output', text: '  (use "git add <file>..." to update what will be committed)' },
-      { type: 'output', text: '  (use "git restore <file>..." to discard changes in working directory)' },
-      { type: 'output', text: '        modified:   src/components/Header.vue' },
-      { type: 'output', text: '        modified:   src/stores/user.ts' },
       { type: 'output', text: '' },
-      { type: 'prompt', text: 'PS C:\\Projects\\myapp> _' },
+      { type: 'output', text: 'Daily operations status: normal' },
+      { type: 'output', text: 'Scheduled reports: synced' },
+      { type: 'output', text: 'Workspace checks: passed' },
+      { type: 'output', text: 'Pending items: 2 (documentation review)' },
+      { type: 'output', text: 'Next sync window: 14:00' },
+      { type: 'output', text: '' },
+      { type: 'prompt', text: 'PS C:\\Workspace\\ops> _' },
     ]
 
     return () => h('div', { class: 'fake-terminal' }, [

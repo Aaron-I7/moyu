@@ -4,7 +4,7 @@
       <div v-if="visible" class="settings-overlay" @click.self="$emit('close')">
         <div class="settings-modal">
           <header class="modal-header">
-            <h3 class="modal-title">🛡️ 老板键设置</h3>
+            <h3 class="modal-title">🛡️ {{ t('bossKey.title') }}</h3>
             <button class="close-btn" @click="$emit('close')">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                 <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
@@ -17,12 +17,12 @@
               <div class="section-header">
                 <span class="section-icon">💬</span>
                 <div class="section-info">
-                  <h4 class="section-title">弹幕显示</h4>
-                  <p class="section-desc">开启后将在页面顶部显示滚动弹幕</p>
+                  <h4 class="section-title">{{ t('bossKey.danmaku') }}</h4>
+                  <p class="section-desc">{{ t('bossKey.danmakuDesc') }}</p>
                 </div>
               </div>
               <div class="toggle-row">
-                <span class="toggle-label">{{ danmakuEnabled ? '已开启' : '已关闭' }}</span>
+                <span class="toggle-label">{{ danmakuEnabled ? t('bossKey.danmakuOn') : t('bossKey.danmakuOff') }}</span>
                 <button
                   class="toggle-btn"
                   :class="{ active: danmakuEnabled }"
@@ -37,8 +37,8 @@
               <div class="section-header">
                 <span class="section-icon">⌨️</span>
                 <div class="section-info">
-                  <h4 class="section-title">快捷键</h4>
-                  <p class="section-desc">按 <kbd>Esc</kbd> 键快速切换伪装界面</p>
+                  <h4 class="section-title">{{ t('bossKey.hotkey') }}</h4>
+                  <p class="section-desc">{{ t('bossKey.hotkeyDesc') }}</p>
                 </div>
               </div>
             </div>
@@ -47,8 +47,8 @@
               <div class="section-header">
                 <span class="section-icon">🎭</span>
                 <div class="section-info">
-                  <h4 class="section-title">伪装界面</h4>
-                  <p class="section-desc">选择老板键触发时显示的伪装界面</p>
+                  <h4 class="section-title">{{ t('bossKey.camouflage') }}</h4>
+                  <p class="section-desc">{{ t('bossKey.camouflageDesc') }}</p>
                 </div>
               </div>
 
@@ -61,8 +61,8 @@
                   @click="selectMode(mode.value)"
                 >
                   <span class="mode-icon">{{ mode.icon }}</span>
-                  <span class="mode-name">{{ mode.label }}</span>
-                  <span class="mode-desc">{{ mode.desc }}</span>
+                  <span class="mode-name">{{ t(mode.labelKey) }}</span>
+                  <span class="mode-desc">{{ t(mode.descKey) }}</span>
                 </button>
               </div>
             </div>
@@ -71,15 +71,15 @@
               <div class="section-header">
                 <span class="section-icon">💡</span>
                 <div class="section-info">
-                  <h4 class="section-title">使用技巧</h4>
-                  <p class="section-desc">当老板走近时，快速按 Esc 键即可切换到工作界面，再次按 Esc 键返回</p>
+                  <h4 class="section-title">{{ t('bossKey.tips') }}</h4>
+                  <p class="section-desc">{{ t('bossKey.tipsDesc') }}</p>
                 </div>
               </div>
             </div>
           </main>
 
           <footer class="modal-footer">
-            <button class="btn btn-primary" @click="$emit('close')">完成</button>
+            <button class="btn btn-primary" @click="$emit('close')">{{ t('bossKey.done') }}</button>
           </footer>
         </div>
       </div>
@@ -89,8 +89,9 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { BossKeyMode } from '@/stores/bossKey'
-import { useP2PDanmaku } from '@/composables/useP2PDanmaku'
+import { useRealtimeDanmaku } from '@/composables/useRealtimeDanmaku'
 
 defineProps<{
   visible: boolean
@@ -102,13 +103,14 @@ const emit = defineEmits<{
   changeMode: [mode: BossKeyMode]
 }>()
 
-const { danmakuEnabled, loadDanmakuEnabled, saveDanmakuEnabled } = useP2PDanmaku()
+const { t } = useI18n()
+const { danmakuEnabled, loadDanmakuEnabled, saveDanmakuEnabled } = useRealtimeDanmaku()
 
-const modes: { value: BossKeyMode; icon: string; label: string; desc: string }[] = [
-  { value: 'code', icon: '💻', label: '代码编辑器', desc: 'VS Code 风格' },
-  { value: 'excel', icon: '📊', label: 'Excel 表格', desc: '项目进度表' },
-  { value: 'forum', icon: '💬', label: '技术论坛', desc: '技术社区风格' },
-  { value: 'terminal', icon: '⬛', label: '终端命令', desc: 'PowerShell 风格' },
+const modes: { value: BossKeyMode; icon: string; labelKey: string; descKey: string }[] = [
+  { value: 'code', icon: '💻', labelKey: 'bossKey.modes.code', descKey: 'bossKey.modeDesc.code' },
+  { value: 'excel', icon: '📊', labelKey: 'bossKey.modes.excel', descKey: 'bossKey.modeDesc.excel' },
+  { value: 'forum', icon: '💬', labelKey: 'bossKey.modes.forum', descKey: 'bossKey.modeDesc.forum' },
+  { value: 'terminal', icon: '⬛', labelKey: 'bossKey.modes.terminal', descKey: 'bossKey.modeDesc.terminal' }
 ]
 
 function selectMode(mode: BossKeyMode) {

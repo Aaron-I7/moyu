@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { Icon } from '@iconify/vue'
+import { useI18n } from 'vue-i18n'
 import type { Book } from './types'
 import { useTxtParser } from './composables/useReader'
 
 const { parse, isParsing, error } = useTxtParser()
+const { locale } = useI18n()
+const isEn = computed(() => locale.value === 'en')
 
 const currentBook = ref<Book | null>(null)
 const currentChapterIndex = ref(0)
@@ -75,8 +78,8 @@ const goToChapter = (index: number) => {
         @dragenter.prevent
       >
         <Icon icon="mdi:file-document-outline" :width="64" />
-        <h2>选择小说文件</h2>
-        <p>支持 txt 格式，拖拽或点击上传</p>
+        <h2>{{ isEn ? 'Choose a text file' : '选择小说文件' }}</h2>
+        <p>{{ isEn ? 'Supports .txt, drag or click to upload' : '支持 txt 格式，拖拽或点击上传' }}</p>
         <label class="upload-btn">
           <input 
             type="file" 
@@ -84,9 +87,9 @@ const goToChapter = (index: number) => {
             @change="handleFileSelect"
             hidden
           />
-          <span>选择文件</span>
+          <span>{{ isEn ? 'Select file' : '选择文件' }}</span>
         </label>
-        <p v-if="isParsing" class="status">正在解析...</p>
+        <p v-if="isParsing" class="status">{{ isEn ? 'Parsing...' : '正在解析...' }}</p>
         <p v-if="error" class="error">{{ error }}</p>
       </div>
     </div>
@@ -97,7 +100,7 @@ const goToChapter = (index: number) => {
         <div class="header-actions">
           <button @click="showChapterList = !showChapterList">
             <Icon icon="mdi:format-list-bulleted" :width="20" />
-            <span>目录</span>
+            <span>{{ isEn ? 'Contents' : '目录' }}</span>
           </button>
           <button @click="currentBook = null">
             <Icon icon="mdi:close" :width="20" />
@@ -124,21 +127,21 @@ const goToChapter = (index: number) => {
           @click="prevChapter"
         >
           <Icon icon="mdi:chevron-left" :width="20" />
-          上一章
+          {{ isEn ? 'Previous' : '上一章' }}
         </button>
         <span>{{ currentChapterIndex + 1 }} / {{ currentBook.chapters.length }}</span>
         <button 
           :disabled="currentChapterIndex === currentBook.chapters.length - 1"
           @click="nextChapter"
         >
-          下一章
+          {{ isEn ? 'Next' : '下一章' }}
           <Icon icon="mdi:chevron-right" :width="20" />
         </button>
       </div>
 
       <div v-if="showChapterList" class="chapter-list-overlay" @click="showChapterList = false">
         <div class="chapter-list" @click.stop>
-          <h4>目录</h4>
+          <h4>{{ isEn ? 'Contents' : '目录' }}</h4>
           <div class="chapters">
             <div 
               v-for="(chapter, index) in currentBook.chapters" 

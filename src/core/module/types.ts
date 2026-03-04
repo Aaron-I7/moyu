@@ -6,8 +6,15 @@ export type IconType = 'svg' | 'iconify' | 'image' | 'component'
 
 export interface ModuleMeta {
   title: string
+  titleKey?: string
   keywords?: string[]
   description?: string
+}
+
+export interface ModuleI18nConfig {
+  nameKey?: string
+  descriptionKey?: string
+  tagKeys?: string[]
 }
 
 export interface ModuleConfig {
@@ -21,6 +28,7 @@ export interface ModuleConfig {
   route: string
   component: () => Promise<Component>
   meta?: ModuleMeta
+  i18n?: ModuleI18nConfig
   enabled?: boolean
   order?: number
   [key: string]: unknown

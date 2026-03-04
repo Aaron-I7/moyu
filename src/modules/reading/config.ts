@@ -2,10 +2,10 @@ import type { ModuleConfig } from '@/core/module/types'
 
 const readingConfig: ModuleConfig = {
   id: 'reading',
-  name: '小说阅读',
-  description: '本地小说阅读器，支持 txt 格式',
+  name: 'Novel Reader',
+  description: 'A lightweight local TXT reader for focused breaks.',
   category: 'reading',
-  tags: ['阅读', '小说'],
+  tags: ['reading', 'novel'],
   icon: 'mdi:book-open-page-variant',
   iconType: 'iconify',
   route: '/reading',
@@ -14,7 +14,13 @@ const readingConfig: ModuleConfig = {
     return mod.default
   },
   meta: {
-    title: '小说阅读 - 摸鱼吧'
+    title: 'Novel Reader - Breakflow',
+    titleKey: 'modules.reading.name'
+  },
+  i18n: {
+    nameKey: 'modules.reading.name',
+    descriptionKey: 'modules.reading.description',
+    tagKeys: ['modules.reading.tags.0', 'modules.reading.tags.1']
   },
   enabled: true,
   order: 1

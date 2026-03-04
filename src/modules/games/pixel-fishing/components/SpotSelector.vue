@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { usePixelFishingStore } from '../stores/pixelFishing'
 import { SPOTS } from '../data/spots'
 
 const store = usePixelFishingStore()
+const { t } = useI18n()
 
 const emit = defineEmits<{
   select: [spotId: string]
@@ -41,6 +43,9 @@ const envEmoji: Record<string, string> = {
   coast: '🌅',
   'deep-sea': '🔱'
 }
+
+const spotName = (id: string, fallback: string) => t(`pixelFishing.spots.${id}.name`, fallback)
+const spotDesc = (id: string, fallback: string) => t(`pixelFishing.spots.${id}.desc`, fallback)
 </script>
 
 <template>
@@ -48,10 +53,10 @@ const envEmoji: Record<string, string> = {
     <div class="spot-header">
       <h2 class="spot-title">
         <span class="title-icon">🎣</span>
-        像素钓场
+        {{ t('pixelFishing.selector.title') }}
       </h2>
       <p class="spot-subtitle">
-        已探索 {{ store.state.unlockedSpotIds.length }}/{{ SPOTS.length }} 个钓场
+        {{ t('pixelFishing.selector.explored') }} {{ store.state.unlockedSpotIds.length }}/{{ SPOTS.length }}
       </p>
     </div>
 
@@ -59,7 +64,7 @@ const envEmoji: Record<string, string> = {
       <label class="switch-label">
         <input type="checkbox" v-model="unlockAll" class="switch-input" />
         <span class="switch-slider" />
-        <span class="switch-text">{{ unlockAll ? '已解锁全部' : '解锁全部钓场' }}</span>
+        <span class="switch-text">{{ unlockAll ? t('pixelFishing.selector.unlockedAll') : t('pixelFishing.selector.unlockAll') }}</span>
       </label>
     </div>
 
@@ -84,7 +89,7 @@ const envEmoji: Record<string, string> = {
 
         <div class="card-body">
           <div class="card-name-row">
-            <h3 class="card-name">{{ spot.name }}</h3>
+            <h3 class="card-name">{{ spotName(spot.id, spot.name) }}</h3>
             <div class="difficulty-dots">
               <span
                 v-for="n in 5"
@@ -94,16 +99,16 @@ const envEmoji: Record<string, string> = {
               />
             </div>
           </div>
-          <p class="card-desc">{{ spot.description }}</p>
+          <p class="card-desc">{{ spotDesc(spot.id, spot.description) }}</p>
           <div class="card-tags">
-            <span class="tag tag--fish">🐟 {{ spot.availableFishIds.length }} 种</span>
+            <span class="tag tag--fish">🐟 {{ spot.availableFishIds.length }} {{ t('pixelFishing.selector.species') }}</span>
             <span class="tag tag--diff">⚡ Lv.{{ spot.difficulty }}</span>
           </div>
         </div>
 
         <div v-if="!spot.unlocked" class="card-lock">
           <span class="lock-icon">🔒</span>
-          <span class="lock-need">钓 {{ spot.unlockCondition }} 条鱼解锁</span>
+          <span class="lock-need">{{ t('pixelFishing.selector.unlockNeed') }} {{ spot.unlockCondition }} {{ t('pixelFishing.selector.fishCount') }}</span>
           <div class="lock-bar">
             <div class="lock-bar-fill" :style="{ width: `${spot.progress * 100}%` }" />
           </div>
@@ -119,25 +124,25 @@ const envEmoji: Record<string, string> = {
     <div class="stat-bar">
       <div class="stat-item">
         <span class="stat-icon">🐟</span>
-        <span class="stat-label">累计</span>
+        <span class="stat-label">{{ t('pixelFishing.selector.total') }}</span>
         <span class="stat-val">{{ store.totalCatch }}</span>
       </div>
       <div class="stat-divider" />
       <div class="stat-item">
         <span class="stat-icon">📖</span>
-        <span class="stat-label">图鉴</span>
+        <span class="stat-label">{{ t('pixelFishing.selector.journal') }}</span>
         <span class="stat-val">{{ store.caughtCount }}/{{ store.totalFishSpecies }}</span>
       </div>
       <div class="stat-divider" />
       <div class="stat-item">
         <span class="stat-icon">💰</span>
-        <span class="stat-label">金币</span>
+        <span class="stat-label">{{ t('pixelFishing.selector.coins') }}</span>
         <span class="stat-val">{{ store.coins }}</span>
       </div>
       <div class="stat-divider" />
       <div class="stat-item">
         <span class="stat-icon">⭐</span>
-        <span class="stat-label">等级</span>
+        <span class="stat-label">{{ t('pixelFishing.selector.level') }}</span>
         <span class="stat-val">Lv.{{ store.level }}</span>
       </div>
     </div>

@@ -5,29 +5,29 @@
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
           <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
         </svg>
-        互动记录
+        {{ isEn ? 'Activity Log' : '互动记录' }}
       </h3>
-      <span class="log-count">共 {{ count }} 次</span>
+      <span class="log-count">{{ isEn ? `${count} total` : `共 ${count} 次` }}</span>
     </header>
 
     <div class="log-content">
-      <div v-if="interactions.length === 0" class="empty-state">
+      <div v-if="props.interactions.length === 0" class="empty-state">
         <span class="empty-icon">📝</span>
-        <p>暂无互动记录</p>
+        <p>{{ isEn ? 'No activity yet' : '暂无互动记录' }}</p>
       </div>
 
       <TransitionGroup v-else name="list" tag="ul" class="log-list">
         <li
-          v-for="item in interactions"
+          v-for="item in props.interactions"
           :key="item.id"
           class="log-item"
         >
           <span class="item-icon">{{ getActionIcon(item.action) }}</span>
           <div class="item-content">
             <span class="item-action">{{ getActionLabel(item.action) }}</span>
-            <span v-if="item.detail" class="item-detail">{{ item.detail }}</span>
+            <span v-if="item.detail" class="item-detail">{{ isEn ? getActionDetail(item.action) : item.detail }}</span>
           </div>
-          <span class="item-time">{{ item.timeAgo }}</span>
+            <span class="item-time">{{ formatTimeAgo(item.timestamp) }}</span>
         </li>
       </TransitionGroup>
     </div>
@@ -35,6 +35,9 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
 interface InteractionItem {
   id: string
   action: string
@@ -43,10 +46,12 @@ interface InteractionItem {
   timeAgo: string
 }
 
-defineProps<{
+const props = defineProps<{
   interactions: InteractionItem[]
   count: number
 }>()
+const { locale } = useI18n()
+const isEn = computed(() => locale.value === 'en')
 
 function getActionIcon(action: string): string {
   const icons: Record<string, string> = {
@@ -64,16 +69,50 @@ function getActionIcon(action: string): string {
 
 function getActionLabel(action: string): string {
   const labels: Record<string, string> = {
-    adopt: '领养',
-    feed: '喂食',
-    play: '玩耍',
-    pet: '抚摸',
-    sleep: '睡觉',
-    wakeUp: '醒来',
-    bath: '洗澡',
-    special: '特殊互动',
+    adopt: isEn.value ? 'Adopt' : '领养',
+    feed: isEn.value ? 'Feed' : '喂食',
+    play: isEn.value ? 'Play' : '玩耍',
+    pet: isEn.value ? 'Pet' : '抚摸',
+    sleep: isEn.value ? 'Sleep' : '睡觉',
+    wakeUp: isEn.value ? 'Wake up' : '醒来',
+    bath: isEn.value ? 'Bath' : '洗澡',
+    special: isEn.value ? 'Special' : '特殊互动',
   }
   return labels[action] || action
+}
+
+function getActionDetail(action: string): string {
+  const details: Record<string, string> = {
+    adopt: 'New companion joined',
+    feed: 'Meal completed',
+    play: 'Play session done',
+    pet: 'Pat and comfort',
+    sleep: 'Started sleeping',
+    wakeUp: 'Woke up',
+    bath: 'Bath completed',
+    special: 'Special interaction'
+  }
+  return details[action] || 'Interaction'
+}
+
+function formatTimeAgo(timestamp: number): string {
+  const seconds = Math.floor((Date.now() - timestamp) / 1000)
+  if (isEn.value) {
+    if (seconds < 60) return 'just now'
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) return `${minutes}m ago`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `${hours}h ago`
+    const days = Math.floor(hours / 24)
+    return `${days}d ago`
+  }
+  if (seconds < 60) return '刚刚'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}分钟前`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}小时前`
+  const days = Math.floor(hours / 24)
+  return `${days}天前`
 }
 </script>
 

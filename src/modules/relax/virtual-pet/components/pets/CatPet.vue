@@ -7,7 +7,7 @@
     :class="['pet-svg', state, randomAction]"
     style="image-rendering: pixelated; overflow: visible"
     role="img"
-    :aria-label="`猫咪 — ${state}`"
+    :aria-label="`cat — ${state}`"
   >
     <g class="tail" :class="tailClass">
       <rect x="144" y="88" width="8" height="48" :fill="color" />

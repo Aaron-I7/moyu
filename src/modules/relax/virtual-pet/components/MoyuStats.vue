@@ -3,14 +3,20 @@
     <div class="status-display" :class="{ working: isWorking }">
       <span class="status-emoji">{{ isWorking ? '🐟' : '🌙' }}</span>
       <div class="status-info">
-        <span class="status-label">{{ isWorking ? '工作中' : '休息中' }}</span>
-        <span class="status-desc">{{ isWorking ? '摸鱼时间到~' : '好好休息吧' }}</span>
+        <span class="status-label">{{ isWorking ? (isEn ? 'Working' : '工作中') : (isEn ? 'Resting' : '休息中') }}</span>
+        <span class="status-desc">{{ isWorking ? (isEn ? 'Take a mindful break' : '摸鱼时间到~') : (isEn ? 'Have a nice rest' : '好好休息吧') }}</span>
       </div>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { locale } = useI18n()
+const isEn = computed(() => locale.value === 'en')
+
 defineProps<{
   isWorking: boolean
 }>()

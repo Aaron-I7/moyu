@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, reactive } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getRandomDanmaku } from '@/data/danmakuContent'
-import { useWebSocketDanmaku } from '@/composables/useWebSocketDanmaku'
+import { useRealtimeDanmaku } from '@/composables/useRealtimeDanmaku'
 
 interface DisplayDanmaku {
   id: string
@@ -20,6 +21,8 @@ interface DisplayDanmaku {
 const isPaused = ref(false)
 const danmakuList = ref<DisplayDanmaku[]>([])
 const hoveredDanmakuId = ref<string | null>(null)
+const { locale } = useI18n()
+const isEn = () => locale.value === 'en'
 
 const {
   isConnected,
@@ -27,7 +30,7 @@ const {
   receivedMessages,
   danmakuEnabled,
   loadDanmakuEnabled
-} = useWebSocketDanmaku()
+} = useRealtimeDanmaku()
 
 const TRACK_COUNT = 6
 const TRACK_HEIGHT = 60
@@ -148,6 +151,7 @@ function togglePause() {
 }
 
 let systemTimer: number | null = null
+const SYSTEM_DANMAKU_INTERVAL = 3 * 60 * 1000
 
 function scheduleSystemDanmaku() {
   if (systemTimer) {
@@ -159,7 +163,7 @@ function scheduleSystemDanmaku() {
   systemTimer = window.setTimeout(() => {
     addSystemDanmaku()
     scheduleSystemDanmaku()
-  }, 8000 + Math.random() * 12000)
+  }, SYSTEM_DANMAKU_INTERVAL)
 }
 
 function processPendingMessages() {
@@ -188,7 +192,7 @@ onMounted(() => {
     setTimeout(() => {
       addSystemDanmaku()
       scheduleSystemDanmaku()
-    }, 2000)
+    }, SYSTEM_DANMAKU_INTERVAL)
   }
 })
 
@@ -247,9 +251,9 @@ onUnmounted(() => {
           <Transition name="tooltip-fade">
             <div v-if="danmaku.isHovered" class="danmaku-tooltip">
               <span class="tooltip-time">
-                {{ new Date(danmaku.timestamp).toLocaleTimeString('zh-CN') }}
+                {{ new Date(danmaku.timestamp).toLocaleTimeString(locale === 'en' ? 'en-US' : 'zh-CN') }}
               </span>
-              <span v-if="danmaku.isUser" class="tooltip-badge">用户弹幕</span>
+              <span v-if="danmaku.isUser" class="tooltip-badge">{{ isEn() ? 'User' : '用户弹幕' }}</span>
             </div>
           </Transition>
         </div>
@@ -259,7 +263,7 @@ onUnmounted(() => {
         <button
           v-if="isConnected"
           class="control-btn control-btn--online"
-          :title="`${onlineCount}人在线`"
+          :title="isEn() ? `${onlineCount} online` : `${onlineCount}人在线`"
         >
           <span class="online-dot" />
           <span>{{ onlineCount }}</span>
@@ -267,7 +271,7 @@ onUnmounted(() => {
         
         <button
           class="control-btn"
-          :title="isPaused ? '继续播放' : '暂停'"
+          :title="isPaused ? (isEn() ? 'Resume' : '继续播放') : (isEn() ? 'Pause' : '暂停')"
           @click="togglePause"
         >
           <span v-if="isPaused">▶</span>

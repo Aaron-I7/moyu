@@ -1,46 +1,49 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
+import { useI18n } from 'vue-i18n'
 
 const router = useRouter()
+const { t } = useI18n()
 
-const mainEntries = [
-  { 
-    path: '/relax', 
-    label: '休闲', 
-    icon: 'mdi:spa', 
-    color: '#8B5CF6',
-    desc: '放松身心，享受悠闲时光'
+const mainEntries = computed(() => [
+  {
+    path: '/relax',
+    label: t('nav.relax'),
+    icon: 'mdi:spa',
+    color: '#5B7BFF',
+    desc: t('views.relaxDesc')
   },
-  { 
-    path: '/games', 
-    label: '游戏', 
-    icon: 'mdi:gamepad-variant', 
-    color: '#10B981',
-    desc: '解压小游戏，放松一下'
+  {
+    path: '/games',
+    label: t('nav.games'),
+    icon: 'mdi:gamepad-variant',
+    color: '#2B6EF2',
+    desc: t('views.gamesDesc')
   },
-  { 
-    path: '/tools', 
-    label: '工具', 
-    icon: 'mdi:tools', 
-    color: '#3B82F6',
-    desc: '实用小工具，提升效率'
+  {
+    path: '/tools',
+    label: t('nav.tools'),
+    icon: 'mdi:tools',
+    color: '#0EA5E9',
+    desc: t('views.toolsDesc')
   },
-  { 
-    path: '/reading', 
-    label: '阅读', 
-    icon: 'mdi:book-open-page-variant', 
-    color: '#F59E0B',
-    desc: '本地小说，随时阅读'
+  {
+    path: '/reading',
+    label: t('nav.reading'),
+    icon: 'mdi:book-open-page-variant',
+    color: '#1D4ED8',
+    desc: t('views.readingDesc')
   }
-]
+])
 
-const features = [
-  { icon: 'mdi:lightning-bolt', text: '秒开加载' },
-  { icon: 'mdi:shield-check', text: '隐私安全' },
-  { icon: 'mdi:cellphone', text: '多端适配' },
-  { icon: 'mdi:heart', text: '完全免费' }
-]
+const heroHighlights = computed(() => [
+  t('home.features.instant'),
+  t('home.features.privacy'),
+  t('home.features.adaptive'),
+  t('home.features.free')
+])
 
 const handleNavigate = (path: string) => {
   router.push(path)
@@ -51,42 +54,38 @@ const handleNavigate = (path: string) => {
   <div class="home-page">
     <section class="hero">
       <div class="hero-content">
-        <h1 class="hero-title">摸鱼吧</h1>
-        <p class="hero-subtitle">碎片时光好去处</p>
-        <p class="hero-desc">无需登录，即开即用，用完即走</p>
+        <p class="hero-kicker">{{ t('app.titleSuffix') }}</p>
+        <h1 class="hero-title">{{ t('app.name') }}</h1>
+        <p class="hero-desc">{{ t('app.heroDescription') }}</p>
+        <div class="hero-highlights">
+          <span v-for="item in heroHighlights" :key="item">{{ item }}</span>
+        </div>
       </div>
     </section>
 
     <section class="entries">
       <div class="entries-grid">
-        <div 
-          v-for="entry in mainEntries" 
+        <div
+          v-for="(entry, index) in mainEntries"
           :key="entry.path"
           class="entry-card"
+          :style="{ '--entry-color': entry.color }"
           @click="handleNavigate(entry.path)"
         >
-          <div class="entry-icon" :style="{ backgroundColor: entry.color + '15', color: entry.color }">
-            <Icon :icon="entry.icon" :width="32" />
+          <div class="entry-head">
+            <div class="entry-icon" :style="{ backgroundColor: entry.color + '15', color: entry.color }">
+              <Icon :icon="entry.icon" :width="28" />
+            </div>
+            <h3>{{ entry.label }}</h3>
+            <span class="entry-badge">{{ String(index + 1).padStart(2, '0') }}</span>
           </div>
           <div class="entry-content">
-            <h3>{{ entry.label }}</h3>
             <p>{{ entry.desc }}</p>
-          </div>
-          <div class="entry-arrow">
-            <Icon icon="mdi:arrow-right" :width="20" />
           </div>
         </div>
       </div>
     </section>
 
-    <section class="features">
-      <div class="features-list">
-        <div v-for="feature in features" :key="feature.text" class="feature-item">
-          <Icon :icon="feature.icon" :width="18" />
-          <span>{{ feature.text }}</span>
-        </div>
-      </div>
-    </section>
   </div>
 </template>
 
@@ -95,88 +94,144 @@ const handleNavigate = (path: string) => {
   display: flex;
   flex-direction: column;
   flex: 1;
-  overflow: hidden;
+  overflow: auto;
+  gap: 18px;
+  max-width: 1120px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px 8px 30px;
 }
 
 .hero {
-  padding: 40px 24px 30px;
-  text-align: center;
+  padding: 10px 18px 2px;
+  text-align: start;
   flex-shrink: 0;
   
   .hero-content {
-    max-width: 480px;
-    margin: 0 auto;
+    max-width: 100%;
+    margin: 0;
+    background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    padding: clamp(20px, 3.2vw, 32px);
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+
+    &::after {
+      content: '';
+      position: absolute;
+      width: 280px;
+      height: 280px;
+      right: -120px;
+      top: -140px;
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+      pointer-events: none;
+    }
+  }
+
+  .hero-kicker {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-primary);
+    margin-bottom: 10px;
   }
   
   .hero-title {
-    font-size: 42px;
-    font-weight: 700;
+    font-size: clamp(34px, 5.2vw, 58px);
+    font-weight: 600;
+    letter-spacing: -0.02em;
     color: var(--color-text);
-    margin-bottom: 8px;
-    
-    @media (max-width: 480px) {
-      font-size: 36px;
-    }
+    margin-bottom: 10px;
+    line-height: 0.98;
   }
-  
-  .hero-subtitle {
-    font-size: 20px;
-    color: var(--color-primary);
-    font-weight: 500;
-    margin-bottom: 12px;
-  }
-  
+
   .hero-desc {
-    font-size: 15px;
+    font-size: 14px;
     color: var(--color-text-secondary);
+    max-width: 60ch;
+    line-height: 1.65;
+    margin-bottom: 14px;
+  }
+
+  .hero-highlights {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    span {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      border: 1px solid var(--color-border);
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+    }
   }
 }
 
 .entries {
-  padding: 0 16px 20px;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-  
-  @media (max-width: 480px) {
-    padding: 0 12px 16px;
-  }
+  padding: 0 18px;
 }
 
 .entries-grid {
-  width: 60%;
+  width: 100%;
   margin: 0 auto;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   
-  @media (max-width: 768px) {
-    width: 80%;
-  }
-  
-  @media (max-width: 480px) {
-    width: 95%;
+  @media (max-width: 760px) {
+    grid-template-columns: 1fr;
   }
 }
 
 .entry-card {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px 20px;
-  background: var(--color-surface);
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
   cursor: pointer;
   transition: var(--transition);
+  box-shadow: var(--shadow);
+  min-height: 140px;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: var(--entry-color);
+    opacity: 0.8;
+  }
   
   &:hover {
-    border-color: var(--color-primary);
-    
-    .entry-arrow {
-      transform: translateX(4px);
-      color: var(--color-primary);
+    border-color: color-mix(in srgb, var(--entry-color) 45%, var(--color-border));
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px color-mix(in srgb, var(--entry-color) 18%, transparent);
+  }
+
+  .entry-head {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+
+    h3 {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--color-text);
+      letter-spacing: -0.01em;
+      line-height: 1;
     }
   }
   
@@ -189,100 +244,84 @@ const handleNavigate = (path: string) => {
     justify-content: center;
     flex-shrink: 0;
   }
-  
-  .entry-content {
-    flex: 1;
-    
-    h3 {
-      font-size: 17px;
-      font-weight: 600;
-      color: var(--color-text);
-      margin-bottom: 2px;
-    }
-    
-    p {
-      font-size: 13px;
-      color: var(--color-text-secondary);
-    }
+
+  .entry-badge {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: color-mix(in srgb, var(--entry-color) 80%, var(--color-text-secondary));
+    background: color-mix(in srgb, var(--entry-color) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--entry-color) 30%, transparent);
+    border-radius: 999px;
+    padding: 4px 8px;
   }
   
-  .entry-arrow {
+  .entry-content p {
+    font-size: 14px;
     color: var(--color-text-secondary);
-    transition: var(--transition);
+    line-height: 1.6;
+    max-width: 36ch;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  @media (max-width: 760px) {
+    min-height: 128px;
+
+    .entry-head h3 {
+      font-size: 22px;
+    }
   }
 }
 
-.features {
-  padding: 0 24px 30px;
-  flex-shrink: 0;
-  
-  .features-list {
-    display: flex;
-    justify-content: center;
-    gap: 24px;
-    flex-wrap: wrap;
+[data-theme="night"] {
+  .hero .hero-content,
+  .entry-card {
+    background: color-mix(in srgb, var(--color-surface) 82%, transparent);
+    border-color: color-mix(in srgb, var(--color-border) 92%, #0a1220);
   }
-  
-  .feature-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 14px;
-    color: var(--color-text-secondary);
-    
-    @media (max-width: 480px) {
-      font-size: 13px;
-    }
+
+  .hero .hero-content::after {
+    background: color-mix(in srgb, var(--color-secondary) 18%, transparent);
+  }
+
+  .hero .hero-highlights span {
+    background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+  }
+
+  .entry-card .entry-icon {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, white 18%, transparent);
   }
 }
 
 [data-theme="pixel"] {
-  .hero-title {
-    font-family: 'Press Start 2P', cursive;
-    font-size: 28px;
-    
-    @media (max-width: 480px) {
-      font-size: 24px;
-    }
-  }
-  
+  .hero .hero-content,
   .entry-card {
     border-radius: 0;
     border-width: 2px;
-    
-    &:hover {
-      box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
-    }
-    
-    .entry-icon {
-      border-radius: 0;
-    }
+    box-shadow: none;
   }
-  
-  .theme-btn {
+
+  .hero .hero-content::after {
+    display: none;
+  }
+
+  .hero .hero-highlights span,
+  .entry-card .entry-badge {
     border-radius: 0;
     border-width: 2px;
-    
-    &.active {
-      box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
-    }
+  }
+
+  .entry-card .entry-icon {
+    border-radius: 0;
+    border: 2px solid var(--color-border);
+  }
+
+  .entry-card:hover {
+    transform: translate(-2px, -2px);
   }
 }
 
-[data-theme="retro"] {
-  .hero-title {
-    text-shadow: 0 0 20px var(--color-primary);
-  }
-  
-  .entry-card {
-    &:hover {
-      border-color: var(--color-primary);
-      box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
-    }
-  }
-  
-  .theme-btn.active {
-    box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
-  }
-}
 </style>

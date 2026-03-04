@@ -22,6 +22,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import SvgIcon from './SvgIcon.vue'
 
 type IconName = 'food' | 'smile' | 'bolt' | 'drop'
@@ -32,12 +33,14 @@ const props = defineProps({
   energy: { type: Number, default: 100 },
   cleanliness: { type: Number, default: 100 },
 })
+const { locale } = useI18n()
+const isEn = computed(() => locale.value === 'en')
 
 const attrs = computed(() => [
-  { key: 'hunger', icon: 'food' as IconName, label: '饱腹', value: props.hunger },
-  { key: 'happiness', icon: 'smile' as IconName, label: '快乐', value: props.happiness },
-  { key: 'energy', icon: 'bolt' as IconName, label: '体力', value: props.energy },
-  { key: 'cleanliness', icon: 'drop' as IconName, label: '清洁', value: props.cleanliness },
+  { key: 'hunger', icon: 'food' as IconName, label: isEn.value ? 'Hunger' : '饱腹', value: props.hunger },
+  { key: 'happiness', icon: 'smile' as IconName, label: isEn.value ? 'Mood' : '快乐', value: props.happiness },
+  { key: 'energy', icon: 'bolt' as IconName, label: isEn.value ? 'Energy' : '体力', value: props.energy },
+  { key: 'cleanliness', icon: 'drop' as IconName, label: isEn.value ? 'Clean' : '清洁', value: props.cleanliness },
 ])
 
 function valueClass(value: number) {

@@ -1,4 +1,5 @@
 import type { PetType } from '../stores/pet'
+import { i18n } from '@/core/i18n'
 
 const catMessages: Record<string, string[]> = {
   idle: ['摸鱼中...', '老板不在~喵~', '带薪撸猫真香~', '今天天气不错~喵', '工作？什么工作？喵~', '铲屎官你来啦~', '摸鱼摸鱼~喵~'],
@@ -49,7 +50,32 @@ const defaultMessages: Record<PetType, string[]> = {
 }
 
 export function usePetMessages() {
+  function getEnglishMessage(state: string, petType: PetType): string {
+    const petNameMap: Record<PetType, string> = {
+      cat: 'kitty',
+      dog: 'pup',
+      rabbit: 'bunny'
+    }
+    const petName = petNameMap[petType]
+    const stateMap: Record<string, string[]> = {
+      idle: [`Chilling with my ${petName} vibe.`, 'Quiet focus mode.', 'Tiny break, big smile.'],
+      happy: ['I feel great!', 'This is a good moment.', 'Thank you for caring!'],
+      hungry: ['I am getting hungry.', 'Snack time maybe?', 'Could I have a little treat?'],
+      tired: ['I feel sleepy now.', 'Need a short rest.', 'Can we slow down a bit?'],
+      sleeping: ['Zzz...', 'Dreaming softly.', 'Resting mode.'],
+      playing: ['That was fun!', 'Play time is the best.', 'More fun, please!'],
+      eating: ['Yummy!', 'That tastes good.', 'Thanks for the food!'],
+      bathing: ['Fresh and clean!', 'Bath time feels nice.', 'So refreshing.'],
+      special: ['That was special!', 'I love this activity.', 'Let us do it again.']
+    }
+    const list = stateMap[state] ?? stateMap.idle ?? ['...']
+    return list[Math.floor(Math.random() * list.length)] || '...'
+  }
+
   function getMessage(state: string, petType: PetType = 'cat'): string {
+    if ((i18n.global.locale as any).value === 'en') {
+      return getEnglishMessage(state, petType)
+    }
     const messages = petMessages[petType]
     const list = messages[state]
     if (!list || list.length === 0) {

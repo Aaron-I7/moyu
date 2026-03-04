@@ -2,6 +2,8 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { setupRouterGuards } from './core/router/guards'
 import { useThemeStore } from './core/theme'
+import { useAccessibilityStore } from './core/accessibility'
+import { i18n, initializeI18n } from './core/i18n'
 import App from './App.vue'
 
 import './assets/styles/global.scss'
@@ -13,16 +15,23 @@ import '@/modules/reading'
 
 import router from './core/router'
 
-const app = createApp(App)
+async function bootstrap() {
+  await initializeI18n()
 
-const pinia = createPinia()
-app.use(pinia)
+  const app = createApp(App)
+  const pinia = createPinia()
+  app.use(pinia)
+  app.use(i18n)
 
-const themeStore = useThemeStore()
-themeStore.setTheme('default')
+  const themeStore = useThemeStore()
+  themeStore.loadTheme()
 
-app.use(router)
+  const accessibilityStore = useAccessibilityStore()
+  accessibilityStore.loadScale()
 
-setupRouterGuards(router)
+  app.use(router)
+  setupRouterGuards(router)
+  app.mount('#app')
+}
 
-app.mount('#app')
+bootstrap()

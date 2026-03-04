@@ -4,10 +4,10 @@
       class="menu-toggle"
       :type="isExpanded ? 'primary' : 'default'"
       @click="toggleMenu"
-      :title="isExpanded ? '收起菜单' : '展开菜单'"
+      :title="isExpanded ? t('header.menuCollapse') : t('header.menuExpand')"
     >
       <Icon :icon="isExpanded ? 'mdi:chevron-left' : 'mdi:chevron-right'" :width="16" />
-      <span v-if="isExpanded" class="toggle-text">工具栏</span>
+      <span v-if="isExpanded" class="toggle-text">{{ t('toolMenu.title') }}</span>
     </BaseButton>
 
     <Transition name="slide">
@@ -15,7 +15,7 @@
         <div class="menu-section">
           <div class="section-title">
             <Icon icon="mdi:gamepad-variant" :width="16" />
-            <span>游戏</span>
+            <span>{{ t('category.games') }}</span>
           </div>
           <div class="menu-items">
             <div
@@ -26,7 +26,7 @@
               @click="navigateTo(item.route)"
             >
               <Icon :icon="item.icon as string" :width="16" />
-              <span>{{ item.name }}</span>
+              <span>{{ resolveModuleName(t, item) }}</span>
             </div>
           </div>
         </div>
@@ -34,7 +34,7 @@
         <div class="menu-section">
           <div class="section-title">
             <Icon icon="mdi:spa" :width="16" />
-            <span>休闲</span>
+            <span>{{ t('category.relax') }}</span>
           </div>
           <div class="menu-items">
             <div
@@ -45,7 +45,7 @@
               @click="navigateTo(item.route)"
             >
               <Icon :icon="item.icon as string" :width="16" />
-              <span>{{ item.name }}</span>
+              <span>{{ resolveModuleName(t, item) }}</span>
             </div>
           </div>
         </div>
@@ -53,7 +53,7 @@
         <div class="menu-section">
           <div class="section-title">
             <Icon icon="mdi:tools" :width="16" />
-            <span>工具</span>
+            <span>{{ t('category.tools') }}</span>
           </div>
           <div class="menu-items">
             <div
@@ -63,7 +63,7 @@
               @click="navigateTo(item.route)"
             >
               <Icon :icon="item.icon as string" :width="16" />
-              <span>{{ item.name }}</span>
+              <span>{{ resolveModuleName(t, item) }}</span>
             </div>
           </div>
         </div>
@@ -71,7 +71,7 @@
         <div class="menu-section">
           <div class="section-title">
             <Icon icon="mdi:book-open-page-variant" :width="16" />
-            <span>阅读</span>
+            <span>{{ t('category.reading') }}</span>
           </div>
           <div class="menu-items">
             <div
@@ -81,7 +81,7 @@
               @click="navigateTo(item.route)"
             >
               <Icon :icon="item.icon as string" :width="16" />
-              <span>{{ item.name }}</span>
+              <span>{{ resolveModuleName(t, item) }}</span>
             </div>
           </div>
         </div>
@@ -93,12 +93,15 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Icon } from '@iconify/vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import moduleRegistry from '@/core/module/registry'
+import { resolveModuleName } from '@/core/module/i18n'
 
 const router = useRouter()
 const route = useRoute()
+const { t } = useI18n()
 const isExpanded = ref(false)
 
 const currentRoute = computed(() => route.path)
@@ -120,7 +123,7 @@ function navigateTo(path: string) {
 <style scoped lang="scss">
 .global-tool-menu {
   position: fixed;
-  left: 24px;
+  inset-inline-start: 24px;
   top: 50%;
   transform: translateY(-50%);
   z-index: 100;
@@ -130,13 +133,13 @@ function navigateTo(path: string) {
   transition: all 0.3s ease;
 
   @media (max-width: 1200px) {
-    left: 12px;
+    inset-inline-start: 12px;
   }
 
   @media (max-width: 900px) {
-    left: auto;
-    right: 12px;
-    top: 80px;
+    inset-inline-start: 12px;
+    top: auto;
+    bottom: 84px;
     transform: none;
   }
 }
@@ -243,5 +246,10 @@ function navigateTo(path: string) {
     min-width: auto;
     max-height: 50vh;
   }
+}
+
+[dir="rtl"] .slide-enter-from,
+[dir="rtl"] .slide-leave-to {
+  transform: translateX(10px);
 }
 </style>

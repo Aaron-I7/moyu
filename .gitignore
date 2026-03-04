@@ -55,9 +55,8 @@ Desktop.ini
 .temp
 .tmp
 
-# Design documents
-*.md
-!README.md
+# Markdown documents
+!*.md
 
 # Trae skills
 .trae

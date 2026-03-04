@@ -12,10 +12,10 @@
           <p class="modal-message">{{ message }}</p>
           <div class="modal-actions">
             <BaseButton type="default" @click="$emit('cancel')">
-              取消
+              {{ isEn ? 'Cancel' : '取消' }}
             </BaseButton>
             <BaseButton type="primary" @click="$emit('confirm')">
-              确认
+              {{ isEn ? 'Confirm' : '确认' }}
             </BaseButton>
           </div>
         </div>
@@ -25,7 +25,11 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import BaseButton from '@/components/common/BaseButton.vue'
+const { locale } = useI18n()
+const isEn = computed(() => locale.value === 'en')
 
 defineProps<{
   visible: boolean

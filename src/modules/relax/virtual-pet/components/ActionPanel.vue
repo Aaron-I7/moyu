@@ -19,6 +19,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import SvgIcon from './SvgIcon.vue'
 import IconButton from '@/components/common/IconButton.vue'
 import type { PetType } from '../stores/pet'
@@ -45,6 +46,8 @@ const emit = defineEmits<{
   (e: 'bath'): void
   (e: 'special'): void
 }>()
+const { locale } = useI18n()
+const isEn = computed(() => locale.value === 'en')
 
 interface Button {
   action: ActionName
@@ -66,26 +69,34 @@ function handleAction(action: ActionName) {
 const specialButton = computed<{ action: ActionName; icon: IconName; label: string; tip: string }>(() => {
   switch (props.petType) {
     case 'cat':
-      return { action: 'special', icon: 'feather', label: '逗弄', tip: '用羽毛逗它玩' }
+      return isEn.value
+        ? { action: 'special', icon: 'feather', label: 'Tease', tip: 'Play with a feather toy' }
+        : { action: 'special', icon: 'feather', label: '逗弄', tip: '用羽毛逗它玩' }
     case 'dog':
-      return { action: 'special', icon: 'walk', label: '遛狗', tip: '带它出去散步' }
+      return isEn.value
+        ? { action: 'special', icon: 'walk', label: 'Walk', tip: 'Go for a short walk' }
+        : { action: 'special', icon: 'walk', label: '遛狗', tip: '带它出去散步' }
     case 'rabbit':
-      return { action: 'special', icon: 'carrot', label: '喂零食', tip: '给它吃胡萝卜' }
+      return isEn.value
+        ? { action: 'special', icon: 'carrot', label: 'Treat', tip: 'Give a carrot snack' }
+        : { action: 'special', icon: 'carrot', label: '喂零食', tip: '给它吃胡萝卜' }
     default:
-      return { action: 'special', icon: 'paw', label: '互动', tip: '和它互动' }
+      return isEn.value
+        ? { action: 'special', icon: 'paw', label: 'Interact', tip: 'Interact with your pet' }
+        : { action: 'special', icon: 'paw', label: '互动', tip: '和它互动' }
   }
 })
 
 const buttons = computed<Button[]>(() => {
   return [
-    { action: 'feed', icon: 'feed', label: '喂食', enabled: props.canFeed, tip: props.canFeed ? '喂食' : '现在不能喂食' },
-    { action: 'play', icon: 'play', label: '玩耍', enabled: props.canPlay, tip: props.canPlay ? '玩耍' : '体力不足' },
-    { action: 'pet', icon: 'paw', label: '抚摸', enabled: props.canPet, tip: props.canPet ? '抚摸' : '正在睡觉' },
+    { action: 'feed', icon: 'feed', label: isEn.value ? 'Feed' : '喂食', enabled: props.canFeed, tip: props.canFeed ? (isEn.value ? 'Feed' : '喂食') : (isEn.value ? 'Cannot feed now' : '现在不能喂食') },
+    { action: 'play', icon: 'play', label: isEn.value ? 'Play' : '玩耍', enabled: props.canPlay, tip: props.canPlay ? (isEn.value ? 'Play' : '玩耍') : (isEn.value ? 'Low energy' : '体力不足') },
+    { action: 'pet', icon: 'paw', label: isEn.value ? 'Pet' : '抚摸', enabled: props.canPet, tip: props.canPet ? (isEn.value ? 'Pet' : '抚摸') : (isEn.value ? 'Sleeping now' : '正在睡觉') },
     { ...specialButton.value, enabled: !props.isSleeping },
     props.isSleeping
-      ? { action: 'wakeUp', icon: 'sun', label: '唤醒', enabled: true, tip: '叫醒它', active: true }
-      : { action: 'sleep', icon: 'moon', label: '睡觉', enabled: props.canSleep, tip: '让它休息' },
-    { action: 'bath', icon: 'bath', label: '洗澡', enabled: props.canBath, tip: props.canBath ? '洗澡' : '正在睡觉' },
+      ? { action: 'wakeUp', icon: 'sun', label: isEn.value ? 'Wake' : '唤醒', enabled: true, tip: isEn.value ? 'Wake up' : '叫醒它', active: true }
+      : { action: 'sleep', icon: 'moon', label: isEn.value ? 'Sleep' : '睡觉', enabled: props.canSleep, tip: isEn.value ? 'Let it rest' : '让它休息' },
+    { action: 'bath', icon: 'bath', label: isEn.value ? 'Bath' : '洗澡', enabled: props.canBath, tip: props.canBath ? (isEn.value ? 'Bath' : '洗澡') : (isEn.value ? 'Sleeping now' : '正在睡觉') },
   ]
 })
 </script>
