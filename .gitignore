@@ -60,3 +60,9 @@ Desktop.ini
 
 # Trae skills
 .trae
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
