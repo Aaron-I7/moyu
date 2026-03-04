@@ -269,9 +269,20 @@ export function usePixiRenderer(canvasRef: Ref<HTMLCanvasElement | null>) {
     const canvas = app.value.canvas as HTMLCanvasElement
     const logicW = BASE_WIDTH * PIXEL_SCALE
     const logicH = BASE_HEIGHT * PIXEL_SCALE
+    
+    // 计算缩放比例，保持长宽比
     const ratio = Math.min(width / logicW, height / logicH)
-    canvas.style.width = `${logicW * ratio}px`
-    canvas.style.height = `${logicH * ratio}px`
+    
+    // 实际渲染尺寸
+    const finalW = logicW * ratio
+    const finalH = logicH * ratio
+    
+    // 更新 Canvas 样式尺寸
+    canvas.style.width = `${finalW}px`
+    canvas.style.height = `${finalH}px`
+    
+    // 使用 margin 居中，而非 marginTop/marginLeft，因为外层已经是 flex center
+    canvas.style.margin = 'auto'
   }
 
   function cleanupSprites() {

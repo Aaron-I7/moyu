@@ -7,7 +7,6 @@ import GlobalBossKey from '@/components/common/GlobalBossKey.vue'
 import GlobalToolMenu from '@/components/common/GlobalToolMenu.vue'
 import GlobalDanmaku from '@/components/common/GlobalDanmaku.vue'
 import DanmakuFab from '@/components/common/DanmakuFab.vue'
-import PrivacyConsentBanner from '@/components/common/PrivacyConsentBanner.vue'
 import UsageReminder from '@/components/common/UsageReminder.vue'
 import AdSlot from '@/components/common/AdSlot.vue'
 import { bindGestureNavigation } from '@/composables/useGestureNavigation'
@@ -53,7 +52,7 @@ watch(
     <GlobalToolMenu />
     <GlobalBossKey />
     <DanmakuFab />
-    <PrivacyConsentBanner />
+    <!-- PrivacyConsentBanner 已移除 -->
     <UsageReminder />
   </div>
 </template>

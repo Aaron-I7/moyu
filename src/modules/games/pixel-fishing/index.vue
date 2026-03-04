@@ -284,14 +284,14 @@ onUnmounted(() => {
 .pixel-fishing {
   position: relative;
   width: 100%;
-  min-height: calc(100vh - 56px);
-  margin-top: 56px;
+  height: calc(100vh - 120px); /* 减去顶部导航和底部间距，确保不溢出 */
   display: flex;
   align-items: center;
   justify-content: center;
   background: #0F0A1F;
-  overflow: visible;
+  overflow: hidden; /* 禁止滚动 */
   user-select: none;
+  border-radius: 16px; /* 可选：给大背景一点圆角使其更自然 */
 }
 
 .canvas-wrapper {
@@ -299,28 +299,18 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  min-height: calc(100vh - 56px);
-  // 内框暗色渐变装饰
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 1;
-    box-shadow: inset 0 0 80px 20px rgba(10, 6, 24, 0.5);
-  }
+  width: 80%;
+  height: 80%;
+  margin: auto;
+  /* 移除边框和背景色，保持纯净 */
 }
 
 .pixel-canvas {
   display: block;
+  /* 由 JS 动态计算尺寸 */
   image-rendering: pixelated;
   image-rendering: crisp-edges;
-  border: 3px solid #1E1438;
+  /* 移除 Canvas 自身的边框和阴影 */
   border-radius: 4px;
-  box-shadow:
-    0 0 0 1px rgba(106, 90, 174, 0.15),
-    0 4px 24px rgba(0, 0, 0, 0.6),
-    0 0 60px rgba(106, 90, 174, 0.06);
 }
 </style>
