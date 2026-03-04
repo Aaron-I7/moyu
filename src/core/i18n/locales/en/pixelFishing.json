@@ -1,0 +1,78 @@
+{
+  "hud": {
+    "idle": "[ Space ] Cast line",
+    "casting": "Casting...",
+    "waiting": "Waiting for a bite...",
+    "biting": "Fish on! Press Space now!",
+    "timing": "Stop the pointer in zone!",
+    "back": "Back",
+    "switchView": "Switch view (V)",
+    "thirdPerson": "Third-person",
+    "firstPerson": "First-person",
+    "journal": "Journal (J)",
+    "mute": "Mute (M)"
+  },
+  "selector": {
+    "title": "Pixel Fishing",
+    "explored": "Explored spots",
+    "unlockAll": "Unlock all spots",
+    "unlockedAll": "All unlocked",
+    "species": "species",
+    "unlockNeed": "Catch",
+    "fishCount": "fish to unlock",
+    "total": "Total",
+    "journal": "Journal",
+    "coins": "Coins",
+    "level": "Level"
+  },
+  "spots": {
+    "stream": { "name": "Forest Stream", "desc": "Clear mountain stream, ideal for beginners." },
+    "lake": { "name": "Quiet Lake", "desc": "Misty lake with lilies and calm surface." },
+    "river": { "name": "Mountain River", "desc": "Fast current waters that demand stronger timing." },
+    "coast": { "name": "Sunset Coast", "desc": "A lighthouse coast with rich tidal species." },
+    "deep-sea": { "name": "Abyssal Sea", "desc": "Dark deep sea where rare giants may appear." }
+  },
+  "timing": {
+    "keep": "✓ Keep steady!",
+    "clickFast": "⚡ Tap quickly to keep tension!",
+    "combo": " combo",
+    "perfect": "★ Perfect ★",
+    "good": "◆ Good ◆",
+    "miss": "✗ Miss",
+    "hint": "◈ Press Space / Click to stop ◈"
+  },
+  "journal": {
+    "title": "Fish Journal",
+    "all": "All",
+    "unknown": "???",
+    "notCaught": "Not caught yet",
+    "descFallback": "Detailed profile available after localization updates.",
+    "rarity": "Rarity",
+    "sizeRange": "Size range",
+    "weightRange": "Weight range",
+    "catchCount": "Catch count",
+    "countUnit": "times",
+    "habitat": "Habitat",
+    "diet": "Diet",
+    "moreInfo": "More information"
+  },
+  "result": {
+    "unknownSpot": "Unknown spot",
+    "firstCatch": "First discovery",
+    "size": "Size",
+    "weight": "Weight",
+    "value": "Value",
+    "spot": "Spot",
+    "time": "Time",
+    "combo": "Combo",
+    "comboUnit": "x",
+    "habitat": "Habitat",
+    "diet": "Diet",
+    "funFact": "Fun fact",
+    "moreInfo": "More info",
+    "continue": "Keep fishing",
+    "failTitle": "The fish escaped...",
+    "failHint": "Don't worry, the next catch will be bigger!",
+    "retry": "Try again"
+  }
+}

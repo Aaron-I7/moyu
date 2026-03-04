@@ -4,6 +4,7 @@
  * 精美多图层设计，展示丰富的鱼类信息
  */
 import { computed, ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { Fish, CatchRecord } from '../types'
 import { RARITY_COLORS, RARITY_NAMES } from '../constants'
 import { SPOTS } from '../data/spots'
@@ -21,6 +22,7 @@ const emit = defineEmits<{
 
 const imageLoaded = ref(false)
 const imageError = ref(false)
+const { t, locale } = useI18n()
 
 const rarityGlow = computed(() => {
   if (!props.fish) return ''
@@ -29,15 +31,15 @@ const rarityGlow = computed(() => {
 })
 
 const spotName = computed(() => {
-  if (!props.record?.spotId) return '未知钓点'
+  if (!props.record?.spotId) return t('pixelFishing.result.unknownSpot')
   const spot = SPOTS.find(s => s.id === props.record?.spotId)
-  return spot?.name || '未知钓点'
+  return spot ? t(`pixelFishing.spots.${spot.id}.name`, spot.name) : t('pixelFishing.result.unknownSpot')
 })
 
 const catchTime = computed(() => {
   if (!props.record?.timestamp) return ''
   const date = new Date(props.record.timestamp)
-  return date.toLocaleString('zh-CN', {
+  return date.toLocaleString(locale.value === 'en' ? 'en-US' : 'zh-CN', {
     month: 'numeric',
     day: 'numeric',
     hour: '2-digit',
@@ -69,6 +71,43 @@ function handleImageError() {
   imageError.value = true
 }
 
+const fishName = computed(() => {
+  if (!props.fish) return ''
+  if (locale.value === 'en') {
+    return props.fish.scientificName || props.fish.name
+  }
+  return props.fish.name
+})
+
+const fishDesc = computed(() => {
+  if (!props.fish) return ''
+  if (locale.value === 'en') {
+    return t('pixelFishing.journal.descFallback')
+  }
+  return props.fish.description
+})
+
+const rarityLabel = computed(() => {
+  if (!props.fish) return ''
+  if (locale.value !== 'en') return RARITY_NAMES[props.fish.rarity]
+  const map: Record<string, string> = {
+    common: 'Common',
+    uncommon: 'Uncommon',
+    rare: 'Rare',
+    epic: 'Epic',
+    legendary: 'Legendary'
+  }
+  return map[props.fish.rarity] || 'Common'
+})
+
+function metaText(type: 'habitat' | 'diet' | 'funFact', value?: string): string {
+  if (!value) return ''
+  if (locale.value !== 'en') return value
+  if (type === 'habitat') return 'Localized habitat details are being prepared.'
+  if (type === 'diet') return 'Localized diet details are being prepared.'
+  return 'Localized fun facts are being prepared.'
+}
+
 onMounted(() => {
   imageLoaded.value = false
   imageError.value = false
@@ -76,7 +115,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="result-overlay" @click="onClose">
+    <div class="result-overlay" @click="onClose">
     <!-- 背景粒子装饰 -->
     <div class="bg-particles">
       <span v-for="i in 12" :key="i" class="particle" :style="{ '--delay': i * 0.1 + 's' }" />
@@ -104,8 +143,10 @@ onMounted(() => {
                 <img
                   v-if="fish.imageUrl && !imageError"
                   :src="fish.imageUrl"
-                  :alt="fish.name"
+                  :alt="fishName"
                   referrerpolicy="no-referrer"
+                  loading="lazy"
+                  decoding="async"
                   :class="['fish-img', { 'fish-img--loaded': imageLoaded }]"
                   @load="handleImageLoad"
                   @error="handleImageError"
@@ -124,7 +165,7 @@ onMounted(() => {
             <!-- 新物种标记 -->
             <div v-if="isNew" class="new-badge">
               <span class="new-badge__icon">✦</span>
-              <span class="new-badge__text">首次发现</span>
+              <span class="new-badge__text">{{ t('pixelFishing.result.firstCatch') }}</span>
               <span class="new-badge__icon">✦</span>
             </div>
             
@@ -134,7 +175,7 @@ onMounted(() => {
               :style="{ background: RARITY_COLORS[fish.rarity] }"
             >
               <span class="rarity-badge__gem">◆</span>
-              <span class="rarity-badge__text">{{ RARITY_NAMES[fish.rarity] }}</span>
+              <span class="rarity-badge__text">{{ rarityLabel }}</span>
             </div>
           </div>
 
@@ -143,7 +184,7 @@ onMounted(() => {
             <!-- 鱼名标题 -->
             <div class="fish-header">
               <h2 class="fish-name" :style="{ color: RARITY_COLORS[fish.rarity] }">
-                {{ fish.name }}
+                {{ fishName }}
               </h2>
               <p v-if="fish.scientificName" class="scientific-name">
                 {{ fish.scientificName }}
@@ -151,50 +192,50 @@ onMounted(() => {
             </div>
 
             <!-- 基础描述 -->
-            <p class="fish-desc">{{ fish.description }}</p>
+            <p class="fish-desc">{{ fishDesc }}</p>
 
             <!-- 钓获数据卡片 -->
             <div class="catch-data-grid">
               <div class="data-card">
                 <span class="data-card__icon">📏</span>
                 <div class="data-card__content">
-                  <span class="data-card__label">尺寸</span>
+                  <span class="data-card__label">{{ t('pixelFishing.result.size') }}</span>
                   <span class="data-card__value">{{ record.size }} <small>cm</small></span>
                 </div>
               </div>
               <div class="data-card">
                 <span class="data-card__icon">⚖️</span>
                 <div class="data-card__content">
-                  <span class="data-card__label">重量</span>
+                  <span class="data-card__label">{{ t('pixelFishing.result.weight') }}</span>
                   <span class="data-card__value">{{ record.weight }} <small>kg</small></span>
                 </div>
               </div>
               <div class="data-card">
                 <span class="data-card__icon">💰</span>
                 <div class="data-card__content">
-                  <span class="data-card__label">价值</span>
+                  <span class="data-card__label">{{ t('pixelFishing.result.value') }}</span>
                   <span class="data-card__value data-card__value--gold">{{ record.value }}</span>
                 </div>
               </div>
               <div class="data-card">
                 <span class="data-card__icon">📍</span>
                 <div class="data-card__content">
-                  <span class="data-card__label">钓点</span>
+                  <span class="data-card__label">{{ t('pixelFishing.result.spot') }}</span>
                   <span class="data-card__value data-card__value--small">{{ spotName }}</span>
                 </div>
               </div>
               <div class="data-card">
                 <span class="data-card__icon">🕐</span>
                 <div class="data-card__content">
-                  <span class="data-card__label">时间</span>
+                  <span class="data-card__label">{{ t('pixelFishing.result.time') }}</span>
                   <span class="data-card__value data-card__value--small">{{ catchTime }}</span>
                 </div>
               </div>
               <div v-if="record.combo >= 2" class="data-card">
                 <span class="data-card__icon">🔥</span>
                 <div class="data-card__content">
-                  <span class="data-card__label">连击</span>
-                  <span class="data-card__value">{{ record.combo }}连</span>
+                  <span class="data-card__label">{{ t('pixelFishing.result.combo') }}</span>
+                  <span class="data-card__value">{{ record.combo }}{{ t('pixelFishing.result.comboUnit') }}</span>
                 </div>
               </div>
             </div>
@@ -204,15 +245,15 @@ onMounted(() => {
               <div v-if="fish.habitat" class="detail-row">
                 <span class="detail-row__icon">🏠</span>
                 <div class="detail-row__content">
-                  <span class="detail-row__label">栖息地</span>
-                  <span class="detail-row__value">{{ fish.habitat }}</span>
+                  <span class="detail-row__label">{{ t('pixelFishing.result.habitat') }}</span>
+                  <span class="detail-row__value">{{ metaText('habitat', fish.habitat) }}</span>
                 </div>
               </div>
               <div v-if="fish.diet" class="detail-row">
                 <span class="detail-row__icon">🍽️</span>
                 <div class="detail-row__content">
-                  <span class="detail-row__label">食性</span>
-                  <span class="detail-row__value">{{ fish.diet }}</span>
+                  <span class="detail-row__label">{{ t('pixelFishing.result.diet') }}</span>
+                  <span class="detail-row__value">{{ metaText('diet', fish.diet) }}</span>
                 </div>
               </div>
             </div>
@@ -221,9 +262,9 @@ onMounted(() => {
             <div v-if="fish.funFact" class="fun-fact-card">
               <div class="fun-fact-card__header">
                 <span class="fun-fact-card__icon">💡</span>
-                <span class="fun-fact-card__title">趣味知识</span>
+                <span class="fun-fact-card__title">{{ t('pixelFishing.result.funFact') }}</span>
               </div>
-              <p class="fun-fact-card__text">{{ fish.funFact }}</p>
+              <p class="fun-fact-card__text">{{ metaText('funFact', fish.funFact) }}</p>
             </div>
 
             <!-- 操作按钮 -->
@@ -234,11 +275,11 @@ onMounted(() => {
                 @click="openBaike(fish.baikeUrl)"
               >
                 <span class="btn__icon">📖</span>
-                <span>百度百科</span>
+                <span>{{ t('pixelFishing.result.moreInfo') }}</span>
               </button>
               <button class="btn btn--primary" @click="onClose">
                 <span class="btn__icon">▶</span>
-                <span>继续钓鱼</span>
+                <span>{{ t('pixelFishing.result.continue') }}</span>
               </button>
             </div>
           </div>
@@ -256,11 +297,11 @@ onMounted(() => {
             <span class="fail-icon">💨</span>
             <div class="fail-ripple" />
           </div>
-          <h3 class="fail-title">鱼跑了...</h3>
-          <p class="fail-hint">别灰心，下次一定能钓到大鱼！</p>
+          <h3 class="fail-title">{{ t('pixelFishing.result.failTitle') }}</h3>
+          <p class="fail-hint">{{ t('pixelFishing.result.failHint') }}</p>
           <button class="btn btn--fail" @click="onClose">
             <span class="btn__icon">▶</span>
-            <span>再来一次</span>
+            <span>{{ t('pixelFishing.result.retry') }}</span>
           </button>
         </div>
       </template>

@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useWebSocketDanmaku } from '@/composables/useWebSocketDanmaku'
+import { useI18n } from 'vue-i18n'
+import { useRealtimeDanmaku } from '@/composables/useRealtimeDanmaku'
 
 const emit = defineEmits<{
   close: []
 }>()
+const { locale } = useI18n()
+const isEn = computed(() => locale.value === 'en')
 
 const {
   isConnected,
@@ -16,7 +19,7 @@ const {
   saveLocalUser,
   loadHistory,
   clearHistory
-} = useWebSocketDanmaku()
+} = useRealtimeDanmaku()
 
 const inputText = ref('')
 const selectedEmoji = ref('💬')
@@ -32,9 +35,9 @@ const canSend = computed(() => {
 })
 
 const connectionStatus = computed(() => {
-  if (isConnecting.value) return { text: '连接中...', color: '#FFA500' }
-  if (isConnected.value) return { text: `${onlineCount.value}人在线`, color: '#10B981' }
-  return { text: '未连接', color: '#EF4444' }
+  if (isConnecting.value) return { text: isEn.value ? 'Connecting...' : '连接中...', color: '#FFA500' }
+  if (isConnected.value) return { text: isEn.value ? `${onlineCount.value} online` : `${onlineCount.value}人在线`, color: '#10B981' }
+  return { text: isEn.value ? 'Offline' : '未连接', color: '#EF4444' }
 })
 
 const sortedHistory = computed(() => {
@@ -76,7 +79,7 @@ function handleKeydown(e: KeyboardEvent) {
 
 function formatTime(timestamp: number) {
   const date = new Date(timestamp)
-  return date.toLocaleString('zh-CN', {
+  return date.toLocaleString(locale.value === 'en' ? 'en-US' : 'zh-CN', {
     month: 'numeric',
     day: 'numeric',
     hour: '2-digit',
@@ -85,7 +88,7 @@ function formatTime(timestamp: number) {
 }
 
 function handleClearHistory() {
-  if (confirm('确定要清空所有弹幕记录吗？')) {
+  if (confirm(isEn.value ? 'Clear all danmaku records?' : '确定要清空所有弹幕记录吗？')) {
     clearHistory()
   }
 }
@@ -100,13 +103,13 @@ onMounted(() => {
     <div class="panel-header">
       <div class="header-left">
         <span class="panel-icon">💬</span>
-        <h3 class="panel-title">发送弹幕</h3>
+        <h3 class="panel-title">{{ isEn ? 'Send Danmaku' : '发送弹幕' }}</h3>
       </div>
       <div class="header-right">
         <button
           class="header-btn"
           :class="{ 'header-btn--active': showHistory }"
-          title="弹幕记录"
+          :title="isEn ? 'History' : '弹幕记录'"
           @click="showHistory = !showHistory"
         >
           📋
@@ -126,13 +129,13 @@ onMounted(() => {
             class="clear-btn"
             @click="handleClearHistory"
           >
-            清空
+            {{ isEn ? 'Clear' : '清空' }}
           </button>
         </div>
         
         <div v-if="danmakuHistory.length === 0" class="history-empty">
           <span class="empty-icon">📭</span>
-          <p class="empty-text">暂无记录</p>
+          <p class="empty-text">{{ isEn ? 'No records' : '暂无记录' }}</p>
         </div>
         
         <div v-else class="history-list">
@@ -160,13 +163,13 @@ onMounted(() => {
         <div v-if="!isConnected && !isConnecting" class="connect-section">
           <button class="connect-btn" @click="handleConnect">
             <span>🔗</span>
-            <span>连接网络</span>
+            <span>{{ isEn ? 'Connect' : '连接网络' }}</span>
           </button>
         </div>
 
         <div v-if="isConnecting" class="connecting-section">
           <div class="loading-spinner" />
-          <span>连接中...</span>
+          <span>{{ isEn ? 'Connecting...' : '连接中...' }}</span>
         </div>
 
         <div v-if="isConnected" class="input-area">
@@ -197,7 +200,7 @@ onMounted(() => {
               v-model="inputText"
               type="text"
               class="text-input"
-              placeholder="说点什么..."
+              :placeholder="isEn ? 'Say something...' : '说点什么...'"
               maxlength="100"
               @keydown="handleKeydown"
             />
@@ -208,7 +211,7 @@ onMounted(() => {
               :disabled="!canSend"
               @click="handleSend"
             >
-              发送
+              {{ isEn ? 'Send' : '发送' }}
             </button>
           </div>
           
@@ -218,18 +221,18 @@ onMounted(() => {
         <div class="settings-section">
           <button class="settings-btn" @click="showSettings = !showSettings">
             <span>⚙️</span>
-            <span>设置</span>
+            <span>{{ isEn ? 'Settings' : '设置' }}</span>
           </button>
           
           <Transition name="slide">
             <div v-if="showSettings" class="settings-panel">
               <div class="setting-item">
-                <label class="setting-label">昵称</label>
+                <label class="setting-label">{{ isEn ? 'Nickname' : '昵称' }}</label>
                 <input
                   v-model="tempUserName"
                   type="text"
                   class="setting-input"
-                  placeholder="你的昵称"
+                  :placeholder="isEn ? 'Your nickname' : '你的昵称'"
                   maxlength="20"
                 />
               </div>

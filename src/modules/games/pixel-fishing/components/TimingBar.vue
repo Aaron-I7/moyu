@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useTimingBar } from '../composables/useTimingBar'
 import type { Fish, TimingResult } from '../types'
 import { RARITY_COLORS, RARITY_NAMES } from '../constants'
@@ -7,6 +8,26 @@ import { RARITY_COLORS, RARITY_NAMES } from '../constants'
 const props = defineProps<{
   fish: Fish
 }>()
+const { t, locale } = useI18n()
+
+const fishName = computed(() => {
+  if (locale.value === 'en') {
+    return props.fish.scientificName || props.fish.name
+  }
+  return props.fish.name
+})
+
+const rarityLabel = computed(() => {
+  if (locale.value !== 'en') return RARITY_NAMES[props.fish.rarity]
+  const map: Record<keyof typeof RARITY_NAMES, string> = {
+    common: 'Common',
+    uncommon: 'Uncommon',
+    rare: 'Rare',
+    epic: 'Epic',
+    legendary: 'Legendary'
+  }
+  return map[props.fish.rarity]
+})
 
 const emit = defineEmits<{
   result: [value: TimingResult]
@@ -120,9 +141,9 @@ function getResultClass(r: TimingResult | null): string {
           class="rarity-gem"
           :style="{ background: RARITY_COLORS[fish.rarity] }"
         />
-        <span class="timing-fish-name">{{ fish.name }}</span>
+        <span class="timing-fish-name">{{ fishName }}</span>
         <span class="rarity-tag" :style="{ color: RARITY_COLORS[fish.rarity], borderColor: RARITY_COLORS[fish.rarity] }">
-          {{ RARITY_NAMES[fish.rarity] }}
+          {{ rarityLabel }}
         </span>
       </div>
 
@@ -148,7 +169,7 @@ function getResultClass(r: TimingResult | null): string {
           <div class="tension-timer-fill" :style="{ width: (1 - tensionProgress) * 100 + '%' }" />
         </div>
         <p class="tension-hint" :class="{ 'tension-hint--good': tensionInZone }">
-          {{ tensionInZone ? '✓ 保持住!' : '⚡ 快速点击保持张力!' }}
+          {{ tensionInZone ? t('pixelFishing.timing.keep') : t('pixelFishing.timing.clickFast') }}
         </p>
       </div>
 
@@ -180,16 +201,16 @@ function getResultClass(r: TimingResult | null): string {
       </div>
 
       <div v-if="combo.count >= 2" class="combo-display">
-        <span class="combo-count">{{ combo.count }}连击</span>
+        <span class="combo-count">{{ combo.count }}{{ t('pixelFishing.timing.combo') }}</span>
         <span class="combo-multiplier">x{{ combo.multiplier.toFixed(1) }}</span>
       </div>
 
       <div v-if="result && !isTensionMode" class="timing-result" :class="`timing-result--${result}`">
-        {{ result === 'perfect' ? '★ 完美 ★' : result === 'good' ? '◆ 不错 ◆' : '✗ 失误' }}
+        {{ result === 'perfect' ? t('pixelFishing.timing.perfect') : result === 'good' ? t('pixelFishing.timing.good') : t('pixelFishing.timing.miss') }}
       </div>
 
       <p v-else-if="!isTensionMode" class="timing-hint">
-        ◈ 按 空格 / 点击 停下指针 ◈
+        {{ t('pixelFishing.timing.hint') }}
       </p>
     </div>
   </div>

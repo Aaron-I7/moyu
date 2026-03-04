@@ -2,6 +2,7 @@ import { reactive, ref, onUnmounted, onMounted } from 'vue'
 import type { WoodenFishState, FloatingText } from '../types'
 import { meritTexts } from '../types'
 import knockSound from '@/assets/media/wooden-fish/sound.mp3'
+import { i18n } from '@/core/i18n'
 
 export function useWoodenFish() {
   const state = reactive<WoodenFishState>({
@@ -48,7 +49,9 @@ export function useWoodenFish() {
   }
 
   const addFloatingText = (x: number, y: number) => {
-    const randomText = meritTexts[Math.floor(Math.random() * meritTexts.length)] || '功德 +1'
+    const englishTexts = ['Merit +1', 'Calm mind', 'Steady breath', 'Stay gentle', 'Kind focus', 'Flow state', 'Good vibes', 'Peaceful reset']
+    const textPool = (i18n.global.locale as any).value === 'en' ? englishTexts : meritTexts
+    const randomText = textPool[Math.floor(Math.random() * textPool.length)] || ((i18n.global.locale as any).value === 'en' ? 'Merit +1' : '功德 +1')
     const id = ++textId
     
     floatingTexts.value.push({

@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import { useI18n } from 'vue-i18n'
 import { useWhiteNoise } from './composables/useWhiteNoise'
+
+const { t } = useI18n()
 
 const {
   state,
@@ -14,13 +17,16 @@ const {
   setTimer,
   formatTime
 } = useWhiteNoise()
+
+const soundName = (id: string, fallback: string) => t(`whiteNoise.sounds.${id}`, fallback)
+const timerLabel = (value: number, fallback: string) => t(`whiteNoise.timers.${value}`, fallback)
 </script>
 
 <template>
   <div class="white-noise">
     <div class="page-header">
-      <h1>白噪音</h1>
-      <p>选择声音，调节音量，享受宁静时光</p>
+      <h1>{{ t('whiteNoise.title') }}</h1>
+      <p>{{ t('whiteNoise.subtitle') }}</p>
     </div>
 
     <div class="sound-grid">
@@ -34,7 +40,7 @@ const {
         <div class="sound-icon">
           <Icon :icon="sound.icon" :width="32" />
         </div>
-        <div class="sound-name">{{ sound.name }}</div>
+        <div class="sound-name">{{ soundName(sound.id, sound.name) }}</div>
         <div v-if="sound.isPlaying" class="volume-control" @click.stop>
           <input 
             type="range" 
@@ -67,7 +73,7 @@ const {
           @change="setTimer(Number(($event.target as HTMLSelectElement).value))"
         >
           <option v-for="preset in timerPresets" :key="preset.value" :value="preset.value">
-            {{ preset.label }}
+            {{ timerLabel(preset.value, preset.label) }}
           </option>
         </select>
         <span v-if="timerRemaining > 0" class="timer-display">
@@ -77,12 +83,12 @@ const {
 
       <button v-if="state.isPlaying" class="stop-btn" @click="stopAll">
         <Icon icon="mdi:stop" :width="20" />
-        <span>停止全部</span>
+        <span>{{ t('whiteNoise.stopAll') }}</span>
       </button>
     </div>
 
     <div v-if="activeSounds.length > 0" class="active-info">
-      <p>正在播放: {{ activeSounds.map(s => s.name).join(' + ') }}</p>
+      <p>{{ t('whiteNoise.nowPlaying') }}: {{ activeSounds.map(s => soundName(s.id, s.name)).join(' + ') }}</p>
     </div>
   </div>
 </template>

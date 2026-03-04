@@ -7,8 +7,8 @@
             <path d="M4.5 9.5C3.67 9.5 3 8.83 3 8s.67-1.5 1.5-1.5S6 7.17 6 8s-.67 1.5-1.5 1.5zm5-2C8.67 7.5 8 6.83 8 6s.67-1.5 1.5-1.5S11 5.17 11 6s-.67 1.5-1.5 1.5zm5 0C13.67 7.5 13 6.83 13 6s.67-1.5 1.5-1.5S16 5.17 16 6s-.67 1.5-1.5 1.5zm5 2C18.67 9.5 18 8.83 18 8s.67-1.5 1.5-1.5S21 7.17 21 8s-.67 1.5-1.5 1.5zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-.29.02-.58.05-.86 2.36-1.05 4.23-2.98 5.21-5.37C11.07 8.33 14.05 10 17.42 10c.78 0 1.53-.09 2.25-.26.21.71.33 1.47.33 2.26 0 4.42-3.58 8-8 8z"/>
           </svg>
         </div>
-        <h1 class="title">选择你的伙伴</h1>
-        <p class="subtitle">选择一只可爱的宠物开始陪伴之旅</p>
+        <h1 class="title">{{ isEn ? 'Choose your companion' : '选择你的伙伴' }}</h1>
+        <p class="subtitle">{{ isEn ? 'Pick a lovely pet and start your cozy journey' : '选择一只可爱的宠物开始陪伴之旅' }}</p>
       </header>
 
       <div class="pet-grid">
@@ -38,7 +38,7 @@
       </div>
 
       <div class="name-section" v-if="selectedPet">
-        <label for="pet-name" class="name-label">给你的宠物起个名字</label>
+        <label for="pet-name" class="name-label">{{ isEn ? 'Give your pet a name' : '给你的宠物起个名字' }}</label>
         <input
           id="pet-name"
           v-model="customName"
@@ -58,7 +58,7 @@
         @click="confirm"
       >
         <span class="btn-icon">🐾</span>
-        开始陪伴
+        {{ isEn ? 'Start' : '开始陪伴' }}
       </BaseButton>
     </div>
   </div>
@@ -66,6 +66,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import BaseButton from '@/components/common/BaseButton.vue'
 import type { PetType } from '../stores/pet'
 import { PET_CONFIGS } from '../stores/pet'
@@ -76,43 +77,46 @@ import RabbitPet from './pets/RabbitPet.vue'
 const emit = defineEmits<{
   (e: 'select', type: PetType, name: string): void
 }>()
+const { locale } = useI18n()
+const isEn = computed(() => locale.value === 'en')
 
 const selectedPet = ref<PetType | null>(null)
 const customName = ref('')
 
-const petOptions = [
+const petOptions = computed(() => [
   {
     type: 'cat' as PetType,
-    label: '猫咪',
-    defaultName: PET_CONFIGS.cat.name,
+    label: isEn.value ? 'Cat' : '猫咪',
+    defaultName: isEn.value ? 'Mochi' : PET_CONFIGS.cat.name,
     color: PET_CONFIGS.cat.color,
     accentColor: PET_CONFIGS.cat.accentColor,
     component: CatPet,
-    traits: ['活泼', '独立', '爱撒娇'],
+    traits: isEn.value ? ['Playful', 'Independent', 'Affectionate'] : ['活泼', '独立', '爱撒娇'],
   },
   {
     type: 'dog' as PetType,
-    label: '狗狗',
-    defaultName: PET_CONFIGS.dog.name,
+    label: isEn.value ? 'Dog' : '狗狗',
+    defaultName: isEn.value ? 'Buddy' : PET_CONFIGS.dog.name,
     color: PET_CONFIGS.dog.color,
     accentColor: PET_CONFIGS.dog.accentColor,
     component: DogPet,
-    traits: ['忠诚', '热情', '爱玩耍'],
+    traits: isEn.value ? ['Loyal', 'Warm', 'Playful'] : ['忠诚', '热情', '爱玩耍'],
   },
   {
     type: 'rabbit' as PetType,
-    label: '兔子',
-    defaultName: PET_CONFIGS.rabbit.name,
+    label: isEn.value ? 'Rabbit' : '兔子',
+    defaultName: isEn.value ? 'Snow' : PET_CONFIGS.rabbit.name,
     color: PET_CONFIGS.rabbit.color,
     accentColor: PET_CONFIGS.rabbit.accentColor,
     component: RabbitPet,
-    traits: ['温顺', '可爱', '爱干净'],
+    traits: isEn.value ? ['Gentle', 'Cute', 'Clean'] : ['温顺', '可爱', '爱干净'],
   },
-]
+])
 
 const defaultName = computed(() => {
   if (!selectedPet.value) return ''
-  return PET_CONFIGS[selectedPet.value].name
+  const option = petOptions.value.find(p => p.type === selectedPet.value)
+  return option?.defaultName || PET_CONFIGS[selectedPet.value].name
 })
 
 function selectPet(type: PetType) {

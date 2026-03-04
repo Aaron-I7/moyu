@@ -1,5 +1,6 @@
 import { reactive, ref, computed } from 'vue'
 import type { Book, Chapter, ReaderSettings } from '../types'
+import { i18n } from '@/core/i18n'
 
 export function useTxtParser() {
   const isParsing = ref(false)
@@ -39,7 +40,9 @@ export function useTxtParser() {
           const startIndex = content.indexOf(match, index)
           const lines = match.split('\n')
           const firstLine = lines[0]
-          const title = firstLine ? firstLine.trim().slice(0, 50) : `第 ${chapters.length + 1} 部分`
+          const title = firstLine
+            ? firstLine.trim().slice(0, 50)
+            : ((i18n.global.locale as any).value === 'en' ? `Part ${chapters.length + 1}` : `第 ${chapters.length + 1} 部分`)
           chapters.push({
             id: `chapter-${chapters.length}`,
             title,
@@ -60,7 +63,7 @@ export function useTxtParser() {
         const chunk = lines.slice(i, i + chunkSize).join('\n')
         chapters.push({
           id: `chapter-${chapters.length}`,
-          title: `第 ${chapters.length + 1} 部分`,
+          title: (i18n.global.locale as any).value === 'en' ? `Part ${chapters.length + 1}` : `第 ${chapters.length + 1} 部分`,
           content: chunk,
           startIndex: 0,
           endIndex: 0
@@ -96,7 +99,7 @@ export function useTxtParser() {
 
       return book
     } catch (e) {
-      error.value = e instanceof Error ? e.message : '解析失败'
+      error.value = e instanceof Error ? e.message : ((i18n.global.locale as any).value === 'en' ? 'Parse failed' : '解析失败')
       return null
     } finally {
       isParsing.value = false

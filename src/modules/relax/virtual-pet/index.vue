@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { usePetStore } from './stores/pet'
 import BaseButton from '@/components/common/BaseButton.vue'
 import PetSelector from './components/PetSelector.vue'
@@ -13,6 +14,8 @@ import ConfirmModal from './components/ConfirmModal.vue'
 import MoyuStats from './components/MoyuStats.vue'
 
 const pet = usePetStore()
+const { locale } = useI18n()
+const isEn = computed(() => locale.value === 'en')
 const showSelector = ref(!pet.type)
 const showResetModal = ref(false)
 
@@ -27,6 +30,23 @@ const canPlay = computed(() => pet.canPlay)
 const canPet = computed(() => pet.canPet)
 const canSleep = computed(() => pet.canSleep)
 const canBath = computed(() => pet.canBath)
+const displayName = computed(() => {
+  if (locale.value !== 'en') return name.value
+  if (name.value === '小咪') return 'Mochi'
+  if (name.value === '旺财') return 'Buddy'
+  if (name.value === '雪球') return 'Snow'
+  return name.value
+})
+const petTypeName = computed(() => {
+  if (!pet.type) return ''
+  if (locale.value === 'en') {
+    if (pet.type === 'cat') return 'Cat'
+    if (pet.type === 'dog') return 'Dog'
+    return 'Rabbit'
+  }
+  return pet.petConfig.name
+})
+const workStatusText = computed(() => (pet.isWorkingHours ? (isEn.value ? 'Break Time' : '摸鱼中') : (isEn.value ? 'Rest Time' : '休息中')))
 
 function handlePetSelect(type: string, customName: string) {
   pet.selectPet(type as any, customName)
@@ -66,23 +86,23 @@ onUnmounted(() => pet.stopTimer())
       <div class="main-area">
         <header class="pet-header">
           <div class="pet-info">
-            <h1 class="pet-name">{{ name }}</h1>
-            <span class="pet-type">{{ pet.petConfig.name }}</span>
+            <h1 class="pet-name">{{ displayName }}</h1>
+            <span class="pet-type">{{ petTypeName }}</span>
           </div>
           <div class="header-actions">
             <div class="moyu-status-badge" :class="{ working: pet.isWorkingHours }">
               <span class="status-icon">{{ pet.isWorkingHours ? '🐟' : '🌙' }}</span>
-              <span class="status-text">{{ pet.moyuStatus }}</span>
+              <span class="status-text">{{ workStatusText }}</span>
             </div>
             <div class="day-badge">
-              <span class="day-label">DAY</span>
+              <span class="day-label">{{ isEn ? 'DAY' : '天数' }}</span>
               <span class="day-num">{{ Math.floor(pet.age / 6) + 1 }}</span>
             </div>
             <BaseButton
               :icon="true"
               class="reset-btn"
               @click="handleResetClick"
-              title="重新选择宠物"
+              :title="isEn ? 'Reselect Pet' : '重新选择宠物'"
             >
               <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
                 <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
@@ -145,8 +165,8 @@ onUnmounted(() => pet.stopTimer())
 
     <ConfirmModal
       :visible="showResetModal"
-      title="重新选择宠物"
-      message="确定要重新选择宠物吗？当前宠物的所有数据将被清除。"
+      :title="isEn ? 'Reselect Pet' : '重新选择宠物'"
+      :message="isEn ? 'Do you want to reselect your pet? Current data will be cleared.' : '确定要重新选择宠物吗？当前宠物的所有数据将被清除。'"
       @confirm="confirmReset"
       @cancel="cancelReset"
     />

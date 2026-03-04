@@ -4,14 +4,16 @@ import type { ThemeId, ThemeConfig } from './config'
 import { themes } from './config'
 
 export const useThemeStore = defineStore('theme', () => {
-  const currentThemeId = ref<ThemeId>('default')
-  const currentTheme = ref<ThemeConfig>(themes.default)
+  const themeStorageKey = 'moyu-theme-id'
+  const currentThemeId = ref<ThemeId>('day')
+  const currentTheme = ref<ThemeConfig>(themes.day)
 
   const setTheme = (themeId: ThemeId) => {
     if (themes[themeId]) {
       currentThemeId.value = themeId
       currentTheme.value = themes[themeId]
       applyTheme(themes[themeId])
+      localStorage.setItem(themeStorageKey, themeId)
     }
   }
 
@@ -55,8 +57,22 @@ export const useThemeStore = defineStore('theme', () => {
     }
   }
 
+  const loadTheme = () => {
+    const legacyMap: Record<string, ThemeId> = {
+      default: 'day',
+      slate: 'pixel',
+      midnight: 'night'
+    }
+    const storedRaw = localStorage.getItem(themeStorageKey)
+    const normalized = storedRaw ? (legacyMap[storedRaw] || storedRaw) : null
+    const storedTheme = normalized as ThemeId | null
+    const fallback: ThemeId = 'day'
+    const targetTheme = storedTheme && themes[storedTheme] ? storedTheme : fallback
+    setTheme(targetTheme)
+  }
+
   const cycleTheme = () => {
-    const themeIds: ThemeId[] = ['default', 'pixel', 'retro']
+    const themeIds = Object.keys(themes) as ThemeId[]
     const currentIndex = themeIds.indexOf(currentThemeId.value)
     const nextIndex = (currentIndex + 1) % themeIds.length
     const nextTheme = themeIds[nextIndex]
@@ -69,6 +85,7 @@ export const useThemeStore = defineStore('theme', () => {
     currentThemeId,
     currentTheme,
     setTheme,
+    loadTheme,
     cycleTheme
   }
 })

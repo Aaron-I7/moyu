@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useWoodenFish } from './composables/useWoodenFish'
 import woodenFishImg from '@/assets/images/wooden-fish/muyu.webp'
 import hammerImg from '@/assets/images/wooden-fish/hammer.png'
@@ -14,21 +16,23 @@ const {
   toggleVibration,
   resetCount
 } = useWoodenFish()
+const { locale } = useI18n()
+const isEn = computed(() => locale.value === 'en')
 </script>
 
 <template>
   <div class="page">
     <div class="page-inner">
       <div class="page-header">
-        <h1>敲木鱼</h1>
-        <p>敲击木鱼，积累功德，放松身心</p>
+        <h1>{{ isEn ? 'Wooden Fish' : '敲木鱼' }}</h1>
+        <p>{{ isEn ? 'Tap to calm down and reset your focus' : '敲击木鱼，积累功德，放松身心' }}</p>
       </div>
 
       <div class="game-area">
         <div class="stats">
           <div class="stat-item">
             <span class="stat-value">{{ state.count }}</span>
-            <span class="stat-label">功德</span>
+            <span class="stat-label">{{ isEn ? 'Merit' : '功德' }}</span>
           </div>
         </div>
 
@@ -38,12 +42,14 @@ const {
             @click="knock"
             @touchstart.prevent="knock($event)"
           >
-            <img :src="woodenFishImg" alt="木鱼" class="fish-img" />
+            <img :src="woodenFishImg" :alt="isEn ? 'wooden fish' : '木鱼'" class="fish-img" loading="lazy" decoding="async" />
             <img 
               :src="hammerImg" 
-              alt="木槌" 
+              :alt="isEn ? 'mallet' : '木槌'" 
               class="hammer-img"
               :class="{ 'hammer-knock': state.count > 0 }"
+              loading="lazy"
+              decoding="async"
             />
           </button>
           
@@ -59,7 +65,7 @@ const {
           </TransitionGroup>
         </div>
 
-        <p class="hint">点击木鱼或按空格键积攒功德</p>
+        <p class="hint">{{ isEn ? 'Click the fish or press Space' : '点击木鱼或按空格键积攒功德' }}</p>
 
         <div class="controls">
           <div class="control-row">
@@ -68,7 +74,7 @@ const {
               @click="toggleAutoMode"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-              <span>{{ state.autoMode ? '停止' : '自动' }}</span>
+              <span>{{ state.autoMode ? (isEn ? 'Stop' : '停止') : (isEn ? 'Auto' : '自动') }}</span>
             </BaseButton>
             
             <BaseButton 
@@ -77,7 +83,7 @@ const {
             >
               <svg v-if="state.soundEnabled" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
               <svg v-else xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
-              <span>音效</span>
+              <span>{{ isEn ? 'Sound' : '音效' }}</span>
             </BaseButton>
             
             <BaseButton 
@@ -85,12 +91,12 @@ const {
               @click="toggleVibration"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="M6 12a6 6 0 0 0 12 0"></path><path d="M12 2v2"></path><path d="M12 20v2"></path></svg>
-              <span>震动</span>
+              <span>{{ isEn ? 'Vibrate' : '震动' }}</span>
             </BaseButton>
           </div>
 
           <div v-if="state.autoMode" class="speed-control">
-            <label>速度</label>
+            <label>{{ isEn ? 'Speed' : '速度' }}</label>
             <input 
               type="range" 
               min="50" 
@@ -102,7 +108,7 @@ const {
           </div>
 
           <BaseButton type="danger" @click="resetCount">
-            重置功德
+            {{ isEn ? 'Reset Merit' : '重置功德' }}
           </BaseButton>
         </div>
       </div>
@@ -324,7 +330,7 @@ const {
   }
 }
 
-[data-theme="retro"] {
+[data-theme="night"] {
   .wooden-fish {
     filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.4));
     

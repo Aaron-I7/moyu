@@ -1,0 +1,32 @@
+{
+  "pixelFishing": {
+    "name": "Pixel Fishing",
+    "description": "Immersive retro fishing with 5 spots and 40 species.",
+    "tags": ["pixel", "fishing", "relax", "collection"]
+  },
+  "woodenFish": {
+    "name": "Rhythm Tap",
+    "description": "Tap to regulate breathing and lower stress spikes.",
+    "tags": ["stress-relief", "focus", "mindfulness"]
+  },
+  "virtualPet": {
+    "name": "Virtual Pet",
+    "description": "Care for a tiny companion during your workday.",
+    "tags": ["pet", "habit", "companion"]
+  },
+  "whiteNoise": {
+    "name": "White Noise Mixer",
+    "description": "Blend ambient sounds for focus, commute, or sleep.",
+    "tags": ["focus", "sleep", "ambient"]
+  },
+  "pngToSvg": {
+    "name": "PNG to SVG",
+    "description": "Convert PNG assets into scalable vectors quickly.",
+    "tags": ["image", "convert", "svg"]
+  },
+  "reading": {
+    "name": "Novel Reader",
+    "description": "Read local TXT books with lightweight controls.",
+    "tags": ["reading", "novel"]
+  }
+}

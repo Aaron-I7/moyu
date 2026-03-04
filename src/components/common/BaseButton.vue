@@ -75,7 +75,7 @@ function handleClick(event: MouseEvent) {
   cursor: pointer;
   user-select: none;
   border: 1px solid transparent;
-  transition: all 0.2s ease;
+  transition: var(--transition);
   text-decoration: none;
   outline: none;
 
@@ -85,31 +85,33 @@ function handleClick(event: MouseEvent) {
   }
 
   &--small {
-    padding: 6px 12px;
+    padding: 7px 13px;
     font-size: 12px;
-    border-radius: 6px;
+    border-radius: 10px;
   }
 
   &--medium {
-    padding: 10px 16px;
+    padding: 11px 17px;
     font-size: 14px;
     border-radius: var(--border-radius);
   }
 
   &--large {
-    padding: 14px 24px;
+    padding: 15px 24px;
     font-size: 16px;
     border-radius: var(--border-radius);
   }
 
   &--default {
-    background: var(--color-surface);
+    background: color-mix(in srgb, var(--color-surface) 94%, transparent);
     border-color: var(--color-border);
     color: var(--color-text-secondary);
 
     &:hover:not(:disabled) {
-      border-color: var(--color-primary);
-      color: var(--color-primary);
+      border-color: color-mix(in srgb, var(--color-primary) 48%, var(--color-border));
+      color: var(--color-text);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow);
     }
 
     &:active:not(:disabled) {
@@ -118,12 +120,14 @@ function handleClick(event: MouseEvent) {
   }
 
   &--primary {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    border-color: color-mix(in srgb, var(--color-primary) 60%, var(--color-secondary));
     color: white;
 
     &:hover:not(:disabled) {
-      filter: brightness(1.1);
+      transform: translateY(-1px);
+      filter: brightness(1.03);
+      box-shadow: var(--shadow);
     }
 
     &:active:not(:disabled) {
@@ -140,7 +144,7 @@ function handleClick(event: MouseEvent) {
 
     &:hover:not(:disabled) {
       color: var(--color-primary);
-      background: rgba(16, 185, 129, 0.08);
+      background: color-mix(in srgb, var(--color-primary) 10%, transparent);
     }
   }
 
@@ -150,7 +154,8 @@ function handleClick(event: MouseEvent) {
     color: white;
 
     &:hover:not(:disabled) {
-      filter: brightness(1.1);
+      filter: brightness(1.05);
+      box-shadow: var(--shadow);
     }
   }
 
@@ -213,7 +218,7 @@ function handleClick(event: MouseEvent) {
   }
 }
 
-[data-theme="retro"] {
+[data-theme="night"] {
   .base-btn {
     &--primary {
       box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);

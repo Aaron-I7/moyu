@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { usePngToSvg } from './composables/usePngToSvg'
 import type { ConversionOptions, ConversionResult } from './types'
 import { defaultOptions } from './types'
+
+const { t } = useI18n()
 
 const {
   isConverting,
@@ -81,15 +84,15 @@ const sizeChange = computed(() => {
 })
 
 const colorModeOptions = [
-  { value: 'color', label: '彩色' },
-  { value: 'grayscale', label: '灰度' },
-  { value: 'blackwhite', label: '黑白' }
+  { value: 'color', label: computed(() => t('pngToSvg.colorMode.color')) },
+  { value: 'grayscale', label: computed(() => t('pngToSvg.colorMode.grayscale')) },
+  { value: 'blackwhite', label: computed(() => t('pngToSvg.colorMode.blackwhite')) }
 ]
 
 const detailLevelOptions = [
-  { value: 'low', label: '低（文件小）' },
-  { value: 'medium', label: '中（平衡）' },
-  { value: 'high', label: '高（细节多）' }
+  { value: 'low', label: computed(() => t('pngToSvg.detail.low')) },
+  { value: 'medium', label: computed(() => t('pngToSvg.detail.medium')) },
+  { value: 'high', label: computed(() => t('pngToSvg.detail.high')) }
 ]
 </script>
 
@@ -97,8 +100,8 @@ const detailLevelOptions = [
   <div class="page">
     <div class="page-inner">
       <div class="page-header">
-        <h1>PNG转SVG</h1>
-        <p>将PNG图片转换为SVG矢量图，支持多种转换模式</p>
+        <h1>{{ t('pngToSvg.title') }}</h1>
+        <p>{{ t('pngToSvg.subtitle') }}</p>
       </div>
 
       <div class="upload-area" 
@@ -120,22 +123,22 @@ const detailLevelOptions = [
             <polyline points="17 8 12 3 7 8"/>
             <line x1="12" y1="3" x2="12" y2="15"/>
           </svg>
-          <p class="upload-text">点击或拖拽PNG图片到此处</p>
-          <p class="upload-hint">支持PNG格式图片</p>
+          <p class="upload-text">{{ t('pngToSvg.uploadText') }}</p>
+          <p class="upload-hint">{{ t('pngToSvg.uploadHint') }}</p>
         </template>
         
         <template v-else>
-          <img :src="previewUrl!" alt="预览" class="preview-image" />
+          <img :src="previewUrl!" :alt="t('pngToSvg.preview')" class="preview-image" loading="lazy" decoding="async" />
           <p class="file-name">{{ selectedFile.name }}</p>
           <p class="file-size">{{ formatSize(selectedFile.size) }}</p>
         </template>
       </div>
 
       <div v-if="selectedFile" class="options-area">
-        <h3>转换选项</h3>
+        <h3>{{ t('pngToSvg.options') }}</h3>
         
         <div class="option-group">
-          <label>颜色模式</label>
+          <label>{{ t('pngToSvg.optionColorMode') }}</label>
           <div class="option-buttons">
             <button 
               v-for="opt in colorModeOptions" 
@@ -143,13 +146,13 @@ const detailLevelOptions = [
               :class="{ active: options.colorMode === opt.value }"
               @click="options.colorMode = opt.value as any"
             >
-              {{ opt.label }}
+              {{ opt.label.value }}
             </button>
           </div>
         </div>
         
         <div class="option-group">
-          <label>细节级别</label>
+          <label>{{ t('pngToSvg.optionDetail') }}</label>
           <div class="option-buttons">
             <button 
               v-for="opt in detailLevelOptions" 
@@ -157,13 +160,13 @@ const detailLevelOptions = [
               :class="{ active: options.detailLevel === opt.value }"
               @click="options.detailLevel = opt.value as any"
             >
-              {{ opt.label }}
+              {{ opt.label.value }}
             </button>
           </div>
         </div>
         
         <div v-if="options.colorMode === 'blackwhite'" class="option-group">
-          <label>阈值: {{ options.threshold }}</label>
+          <label>{{ t('pngToSvg.optionThreshold') }}: {{ options.threshold }}</label>
           <input 
             type="range" 
             min="0" 
@@ -173,7 +176,7 @@ const detailLevelOptions = [
         </div>
         
         <div class="option-group">
-          <label>描边宽度: {{ options.strokeWidth }}px</label>
+          <label>{{ t('pngToSvg.optionStroke') }}: {{ options.strokeWidth }}px</label>
           <input 
             type="range" 
             min="0" 
@@ -192,10 +195,10 @@ const detailLevelOptions = [
         >
           <template v-if="isConverting">
             <span class="spinner"></span>
-            转换中... {{ progress }}%
+            {{ t('pngToSvg.converting') }} {{ progress }}%
           </template>
           <template v-else>
-            开始转换
+            {{ t('pngToSvg.start') }}
           </template>
         </button>
       </div>
@@ -205,34 +208,34 @@ const detailLevelOptions = [
       </div>
 
       <div v-if="result" class="result-area">
-        <h3>转换结果</h3>
+        <h3>{{ t('pngToSvg.result') }}</h3>
         
         <div class="result-preview">
           <div class="preview-item">
-            <span class="label">原始图片</span>
-            <img :src="previewUrl!" alt="原始" class="result-image" />
+            <span class="label">{{ t('pngToSvg.originalImage') }}</span>
+            <img :src="previewUrl!" :alt="t('pngToSvg.originalImage')" class="result-image" loading="lazy" decoding="async" />
           </div>
           <div class="preview-item">
-            <span class="label">SVG预览</span>
+            <span class="label">{{ t('pngToSvg.svgPreview') }}</span>
             <div class="svg-preview" v-html="result.svg"></div>
           </div>
         </div>
         
         <div class="result-info">
           <div class="info-item">
-            <span class="label">尺寸</span>
+            <span class="label">{{ t('pngToSvg.size') }}</span>
             <span class="value">{{ result.width }} x {{ result.height }}</span>
           </div>
           <div class="info-item">
-            <span class="label">原始大小</span>
+            <span class="label">{{ t('pngToSvg.originalSize') }}</span>
             <span class="value">{{ formatSize(result.originalSize) }}</span>
           </div>
           <div class="info-item">
-            <span class="label">SVG大小</span>
+            <span class="label">{{ t('pngToSvg.svgSize') }}</span>
             <span class="value">{{ formatSize(result.svgSize) }}</span>
           </div>
           <div class="info-item">
-            <span class="label">大小变化</span>
+            <span class="label">{{ t('pngToSvg.sizeChange') }}</span>
             <span class="value" :class="{ 'increase': parseFloat(sizeChange!) > 0, 'decrease': parseFloat(sizeChange!) < 0 }">
               {{ parseFloat(sizeChange!) > 0 ? '+' : '' }}{{ sizeChange }}%
             </span>
@@ -246,14 +249,14 @@ const detailLevelOptions = [
               <polyline points="7 10 12 15 17 10"/>
               <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
-            下载SVG
+            {{ t('pngToSvg.download') }}
           </button>
           <button class="action-btn" @click="handleCopy">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
             </svg>
-            {{ copied ? '已复制!' : '复制代码' }}
+            {{ copied ? t('pngToSvg.copied') : t('pngToSvg.copy') }}
           </button>
         </div>
       </div>

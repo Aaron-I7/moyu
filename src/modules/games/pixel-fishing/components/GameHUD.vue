@@ -4,17 +4,19 @@
  * 像素风暗色浮层：金币、当前钓点、等级、操作提示
  */
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { usePixelFishingStore } from '../stores/pixelFishing'
 
 const store = usePixelFishingStore()
+const { t } = useI18n()
 
 const stateHint = computed(() => {
   switch (store.fishingState) {
-    case 'idle': return '[ 空格 ] 抛竿'
-    case 'casting': return '抛竿中 ...'
-    case 'waiting': return '等待咬钩 ...'
-    case 'biting': return '!! 鱼咬钩了 — 快按空格 !!'
-    case 'timing-game': return '精准停住指针!'
+    case 'idle': return t('pixelFishing.hud.idle')
+    case 'casting': return t('pixelFishing.hud.casting')
+    case 'waiting': return t('pixelFishing.hud.waiting')
+    case 'biting': return t('pixelFishing.hud.biting')
+    case 'timing-game': return t('pixelFishing.hud.timing')
     case 'catch-animation': return ''
     case 'success': return ''
     case 'failed': return ''
@@ -41,11 +43,11 @@ const emit = defineEmits<{
   <div class="game-hud">
     <!-- 左上：返回 + 钓点名 -->
     <div class="hud-top-left">
-      <button class="hud-btn" @click="emit('backToSpots')" title="返回">
+      <button class="hud-btn" @click="emit('backToSpots')" :title="t('pixelFishing.hud.back')">
         <span class="btn-icon">◁</span>
       </button>
       <div v-if="store.currentSpot" class="spot-badge">
-        {{ store.currentSpot.name }}
+        {{ t(`pixelFishing.spots.${store.currentSpot.id}.name`, store.currentSpot.name) }}
       </div>
     </div>
 
@@ -55,15 +57,15 @@ const emit = defineEmits<{
         class="hud-btn"
         :class="{ 'hud-btn--active': store.viewMode === 'first-person' }"
         @click="emit('toggleView')"
-        title="切换视角 (V)"
+        :title="t('pixelFishing.hud.switchView')"
       >
         <span class="btn-icon">{{ store.viewMode === 'third-person' ? '👁' : '🎯' }}</span>
-        <span class="btn-label">{{ store.viewMode === 'third-person' ? '三人称' : '第一人称' }}</span>
+        <span class="btn-label">{{ store.viewMode === 'third-person' ? t('pixelFishing.hud.thirdPerson') : t('pixelFishing.hud.firstPerson') }}</span>
       </button>
-      <button class="hud-btn" @click="emit('openJournal')" title="图鉴 (J)">
+      <button class="hud-btn" @click="emit('openJournal')" :title="t('pixelFishing.hud.journal')">
         <span class="btn-icon">📖</span>
       </button>
-      <button class="hud-btn" @click="emit('toggleMute')" title="静音 (M)">
+      <button class="hud-btn" @click="emit('toggleMute')" :title="t('pixelFishing.hud.mute')">
         <span class="btn-icon">🔊</span>
       </button>
     </div>

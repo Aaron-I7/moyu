@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import DanmakuInput from './DanmakuInput.vue'
-import { useWebSocketDanmaku } from '@/composables/useWebSocketDanmaku'
+import { useRealtimeDanmaku } from '@/composables/useRealtimeDanmaku'
 
 const showInputPanel = ref(false)
 const isHovered = ref(false)
 
-const { danmakuEnabled, loadDanmakuEnabled } = useWebSocketDanmaku()
+const { danmakuEnabled, loadDanmakuEnabled } = useRealtimeDanmaku()
 
 function openInputPanel() {
   showInputPanel.value = true

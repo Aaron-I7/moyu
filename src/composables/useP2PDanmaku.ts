@@ -1,5 +1,6 @@
 import { ref, onUnmounted } from 'vue'
 import Peer, { type DataConnection } from 'peerjs'
+import { i18n } from '@/core/i18n'
 
 export interface DanmakuMessage {
   id: string
@@ -32,6 +33,14 @@ const onlineUsers = ref<PeerUser[]>([])
 const receivedMessages = ref<DanmakuMessage[]>([])
 const danmakuHistory = ref<DanmakuMessage[]>([])
 const danmakuEnabled = ref(true)
+
+function fallbackName() {
+  return (i18n.global.locale as any).value === 'en' ? 'Guest Angler' : '匿名摸鱼者'
+}
+
+function roomName() {
+  return (i18n.global.locale as any).value === 'en' ? 'Angler' : '摸鱼者'
+}
 
 function loadDanmakuEnabled() {
   const stored = localStorage.getItem(ENABLED_KEY)
@@ -110,7 +119,7 @@ function connect(customUserName?: string) {
   isConnecting.value = true
 
   const localUser = getLocalUser()
-  const name = customUserName || localUser?.userName || `摸鱼者${Math.floor(Math.random() * 1000)}`
+  const name = customUserName || localUser?.userName || `${roomName()}${Math.floor(Math.random() * 1000)}`
   
   if (!localUser && !customUserName) {
     saveLocalUser(name)
@@ -220,7 +229,7 @@ function handleMessage(data: any, fromPeer: string) {
     if (!existingUser) {
       onlineUsers.value.push({
         id: fromPeer,
-        name: data.userName || '匿名摸鱼者',
+        name: data.userName || fallbackName(),
         connected: true
       })
     }
@@ -230,7 +239,7 @@ function handleMessage(data: any, fromPeer: string) {
       content: data.content,
       emoji: data.emoji,
       userId: fromPeer,
-      userName: data.userName || '匿名摸鱼者',
+      userName: data.userName || fallbackName(),
       timestamp: data.timestamp || Date.now(),
       type: 'user'
     }
@@ -247,7 +256,7 @@ function handleMessage(data: any, fromPeer: string) {
 function updateOnlineUsers() {
   onlineUsers.value = Array.from(connections.value.keys()).map(pid => ({
     id: pid,
-    name: '摸鱼者',
+    name: roomName(),
     connected: connections.value.has(pid)
   }))
 }

@@ -2,22 +2,22 @@ import { reactive, ref, computed } from 'vue'
 import type { SoundItem, WhiteNoiseState, TimerPreset } from '../types'
 
 const timerPresets: TimerPreset[] = [
-  { label: '关闭', value: 0 },
-  { label: '5分钟', value: 5 },
-  { label: '15分钟', value: 15 },
-  { label: '30分钟', value: 30 },
-  { label: '60分钟', value: 60 }
+  { label: 'Off', value: 0 },
+  { label: '5 min', value: 5 },
+  { label: '15 min', value: 15 },
+  { label: '30 min', value: 30 },
+  { label: '60 min', value: 60 }
 ]
 
 const defaultSounds: SoundItem[] = [
-  { id: 'rain', name: '雨声', icon: 'mdi:weather-rainy', volume: 0.5, isPlaying: false },
-  { id: 'wind', name: '风声', icon: 'mdi:weather-windy', volume: 0.5, isPlaying: false },
-  { id: 'thunder', name: '雷声', icon: 'mdi:weather-lightning', volume: 0.5, isPlaying: false },
-  { id: 'fire', name: '壁炉', icon: 'mdi:fire', volume: 0.5, isPlaying: false },
-  { id: 'cafe', name: '咖啡厅', icon: 'mdi:coffee', volume: 0.5, isPlaying: false },
-  { id: 'ocean', name: '海浪', icon: 'mdi:waves', volume: 0.5, isPlaying: false },
-  { id: 'birds', name: '鸟鸣', icon: 'mdi:bird', volume: 0.5, isPlaying: false },
-  { id: 'night', name: '夜晚', icon: 'mdi:weather-night', volume: 0.5, isPlaying: false }
+  { id: 'rain', name: 'Rain', icon: 'mdi:weather-rainy', volume: 0.5, isPlaying: false },
+  { id: 'wind', name: 'Wind', icon: 'mdi:weather-windy', volume: 0.5, isPlaying: false },
+  { id: 'thunder', name: 'Thunder', icon: 'mdi:weather-lightning', volume: 0.5, isPlaying: false },
+  { id: 'fire', name: 'Fireplace', icon: 'mdi:fire', volume: 0.5, isPlaying: false },
+  { id: 'cafe', name: 'Cafe', icon: 'mdi:coffee', volume: 0.5, isPlaying: false },
+  { id: 'ocean', name: 'Ocean', icon: 'mdi:waves', volume: 0.5, isPlaying: false },
+  { id: 'birds', name: 'Birds', icon: 'mdi:bird', volume: 0.5, isPlaying: false },
+  { id: 'night', name: 'Night', icon: 'mdi:weather-night', volume: 0.5, isPlaying: false }
 ]
 
 export function useWhiteNoise() {

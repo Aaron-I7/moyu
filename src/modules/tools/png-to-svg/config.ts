@@ -2,10 +2,10 @@ import type { ModuleConfig } from '@/core/module/types'
 
 const pngToSvgConfig: ModuleConfig = {
   id: 'png-to-svg',
-  name: 'PNG转SVG',
-  description: '将PNG图片转换为SVG矢量图，支持多种转换模式',
+  name: 'PNG to SVG',
+  description: 'Convert PNG images into scalable vectors with flexible modes.',
   category: 'tools',
-  tags: ['图片处理', '转换', 'SVG'],
+  tags: ['image', 'convert', 'svg'],
   icon: 'mdi:image-outline',
   iconType: 'iconify',
   route: '/tools/png-to-svg',
@@ -14,7 +14,17 @@ const pngToSvgConfig: ModuleConfig = {
     return mod.default
   },
   meta: {
-    title: 'PNG转SVG - 摸鱼吧'
+    title: 'PNG to SVG - Breakflow',
+    titleKey: 'modules.pngToSvg.name'
+  },
+  i18n: {
+    nameKey: 'modules.pngToSvg.name',
+    descriptionKey: 'modules.pngToSvg.description',
+    tagKeys: [
+      'modules.pngToSvg.tags.0',
+      'modules.pngToSvg.tags.1',
+      'modules.pngToSvg.tags.2'
+    ]
   },
   enabled: true,
   order: 2

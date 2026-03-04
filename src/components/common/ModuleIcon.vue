@@ -30,6 +30,8 @@ const renderType = computed(() => {
       :width="iconSize"
       :height="iconSize"
       :alt="config.name"
+      loading="lazy"
+      decoding="async"
     />
   </div>
 </template>

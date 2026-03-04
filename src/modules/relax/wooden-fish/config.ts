@@ -2,10 +2,10 @@ import type { ModuleConfig } from '@/core/module/types'
 
 const woodenFishConfig: ModuleConfig = {
   id: 'wooden-fish',
-  name: '敲木鱼',
-  description: '敲击木鱼，积累功德，放松身心',
+  name: 'Rhythm Tap',
+  description: 'Tap with a steady pace to regulate breath and reduce stress.',
   category: 'relax',
-  tags: ['解压', '放松', '冥想'],
+  tags: ['stress-relief', 'focus', 'mindfulness'],
   icon: 'mdi:circle-outline',
   iconType: 'iconify',
   route: '/relax/wooden-fish',
@@ -14,7 +14,17 @@ const woodenFishConfig: ModuleConfig = {
     return mod.default
   },
   meta: {
-    title: '敲木鱼 - 摸鱼吧'
+    title: 'Rhythm Tap - Breakflow',
+    titleKey: 'modules.woodenFish.name'
+  },
+  i18n: {
+    nameKey: 'modules.woodenFish.name',
+    descriptionKey: 'modules.woodenFish.description',
+    tagKeys: [
+      'modules.woodenFish.tags.0',
+      'modules.woodenFish.tags.1',
+      'modules.woodenFish.tags.2'
+    ]
   },
   enabled: true,
   order: 1
