@@ -71,6 +71,26 @@ const zh = {
     reading: '阅读',
     notFound: '页面未找到'
   },
+  seo: {
+    defaultDescription: 'Breakflow 是一个轻量碎片放松平台，包含游戏、解压、工具与本地阅读模块。',
+    routes: {
+      home: {
+        description: '发现适合快速恢复专注与降压的碎片化休息内容。'
+      },
+      games: {
+        description: '体验低压力小游戏，帮助你在短休中快速恢复状态。'
+      },
+      relax: {
+        description: '通过温和互动和轻冥想组件缓解任务间压力。'
+      },
+      tools: {
+        description: '使用轻量效率工具，支持日常专注与快速处理任务。'
+      },
+      notFound: {
+        description: '当前页面不存在，可返回 Breakflow 首页继续浏览。'
+      }
+    }
+  },
   notFound: {
     title: '页面未找到',
     backHome: '返回首页'

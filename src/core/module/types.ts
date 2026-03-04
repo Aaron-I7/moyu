@@ -7,6 +7,7 @@ export type IconType = 'svg' | 'iconify' | 'image' | 'component'
 export interface ModuleMeta {
   title: string
   titleKey?: string
+  descriptionKey?: string
   keywords?: string[]
   description?: string
 }

@@ -128,7 +128,7 @@ const detailLevelOptions = [
         </template>
         
         <template v-else>
-          <img :src="previewUrl!" :alt="t('pngToSvg.preview')" class="preview-image" />
+          <img :src="previewUrl!" :alt="t('pngToSvg.preview')" class="preview-image" loading="lazy" decoding="async" />
           <p class="file-name">{{ selectedFile.name }}</p>
           <p class="file-size">{{ formatSize(selectedFile.size) }}</p>
         </template>
@@ -213,7 +213,7 @@ const detailLevelOptions = [
         <div class="result-preview">
           <div class="preview-item">
             <span class="label">{{ t('pngToSvg.originalImage') }}</span>
-            <img :src="previewUrl!" :alt="t('pngToSvg.originalImage')" class="result-image" />
+            <img :src="previewUrl!" :alt="t('pngToSvg.originalImage')" class="result-image" loading="lazy" decoding="async" />
           </div>
           <div class="preview-item">
             <span class="label">{{ t('pngToSvg.svgPreview') }}</span>

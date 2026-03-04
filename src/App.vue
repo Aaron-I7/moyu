@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import GlobalBossKey from '@/components/common/GlobalBossKey.vue'
@@ -9,13 +9,18 @@ import GlobalDanmaku from '@/components/common/GlobalDanmaku.vue'
 import DanmakuFab from '@/components/common/DanmakuFab.vue'
 import PrivacyConsentBanner from '@/components/common/PrivacyConsentBanner.vue'
 import UsageReminder from '@/components/common/UsageReminder.vue'
+import AdSlot from '@/components/common/AdSlot.vue'
 import { bindGestureNavigation } from '@/composables/useGestureNavigation'
 import { createEnTextGuard } from '@/core/i18n/enTextGuard'
+import { applyRouteSeo } from '@/core/seo'
+import { adsConfig } from '@/core/ads/config'
 
 const router = useRouter()
+const route = useRoute()
 const { locale } = useI18n()
 const appMainRef = ref<HTMLElement | null>(null)
 const enTextGuard = createEnTextGuard()
+const showAds = computed(() => adsConfig.enabled && route.name !== 'NotFound')
 
 let cleanupGesture: (() => void) | null = null
 
@@ -42,6 +47,7 @@ watch(
     } else {
       enTextGuard.stop()
     }
+    applyRouteSeo(router.currentRoute.value)
   }
 )
 </script>
@@ -51,8 +57,11 @@ watch(
     <GlobalDanmaku />
     <AppHeader />
     <main ref="appMainRef" class="app-main">
+      <AdSlot v-if="showAds" slot-id="top-banner" format="leaderboard" />
       <router-view />
+      <AdSlot v-if="showAds" slot-id="in-feed" format="auto" />
     </main>
+    <AdSlot v-if="showAds" slot-id="sticky-bottom" format="sticky" />
     <GlobalToolMenu />
     <GlobalBossKey />
     <DanmakuFab />

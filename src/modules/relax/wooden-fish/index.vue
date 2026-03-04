@@ -42,12 +42,14 @@ const isEn = computed(() => locale.value === 'en')
             @click="knock"
             @touchstart.prevent="knock($event)"
           >
-            <img :src="woodenFishImg" :alt="isEn ? 'wooden fish' : '木鱼'" class="fish-img" />
+            <img :src="woodenFishImg" :alt="isEn ? 'wooden fish' : '木鱼'" class="fish-img" loading="lazy" decoding="async" />
             <img 
               :src="hammerImg" 
               :alt="isEn ? 'mallet' : '木槌'" 
               class="hammer-img"
               :class="{ 'hammer-knock': state.count > 0 }"
+              loading="lazy"
+              decoding="async"
             />
           </button>
           

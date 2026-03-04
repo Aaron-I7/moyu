@@ -71,6 +71,26 @@ const en = {
     reading: 'Reading',
     notFound: 'Page Not Found'
   },
+  seo: {
+    defaultDescription: 'Breakflow is a lightweight break platform with games, relaxation tools, utilities, and local reading.',
+    routes: {
+      home: {
+        description: 'Discover quick recharge modules for focus recovery, stress relief, and private break routines.'
+      },
+      games: {
+        description: 'Explore low-pressure mini games designed for short breaks and better mood reset.'
+      },
+      relax: {
+        description: 'Use calming interactions and mindful mini tools to reduce stress between tasks.'
+      },
+      tools: {
+        description: 'Access practical productivity and utility tools built for fast daily workflows.'
+      },
+      notFound: {
+        description: 'The requested page is unavailable. Return to Breakflow home to continue browsing.'
+      }
+    }
+  },
   notFound: {
     title: 'Page Not Found',
     backHome: 'Back to home'

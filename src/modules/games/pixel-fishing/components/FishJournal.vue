@@ -156,6 +156,8 @@ function rarityLabel(rarity: keyof typeof RARITY_NAMES): string {
               :src="fish.imageUrl"
               :alt="displayFishName(fish.name, fish.scientificName)"
               class="fish-img"
+              loading="lazy"
+              decoding="async"
               @error="handleImageError"
             />
             <span v-else-if="fish.caught" class="fish-emoji">🐟</span>
@@ -201,6 +203,8 @@ function rarityLabel(rarity: keyof typeof RARITY_NAMES): string {
             v-if="selectedFish.imageUrl"
             :src="selectedFish.imageUrl"
             :alt="displayFishName(selectedFish.name, selectedFish.scientificName)"
+            loading="lazy"
+            decoding="async"
             @error="handleImageError"
           />
         </div>

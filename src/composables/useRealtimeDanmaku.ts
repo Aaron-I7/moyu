@@ -138,7 +138,6 @@ function pushReceivedMessage(message: DanmakuMessage, persistHistory = true) {
 async function loadRecentMessages() {
   if (!supabase) return
   
-  // 仅获取当天的弹幕（从当天0点开始）
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   
