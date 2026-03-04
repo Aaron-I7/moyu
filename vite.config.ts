@@ -9,9 +9,11 @@ export default defineConfig(() => {
   const repositoryName = repository.split('/')[1] || ''
   const isUserPage = repositoryName.endsWith('.github.io')
   const pagesBase = isUserPage ? '/' : `/${repositoryName}/`
-  // 确保 base 始终以 / 结尾，这对于 GitHub Pages 子路径至关重要
   const normalizedPagesBase = pagesBase.endsWith('/') ? pagesBase : `${pagesBase}/`
-  const base = process.env.GITHUB_ACTIONS === 'true' ? normalizedPagesBase : '/'
+
+  const isGitHubActions = process.env.GITHUB_ACTIONS === 'true'
+  const isCloudflare = process.env.CF_PAGES === '1'
+  const base = (isGitHubActions ? normalizedPagesBase : (isCloudflare ? '/' : '/'))
 
   return {
     base,
