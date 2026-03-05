@@ -1,26 +1,83 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Icon } from '@iconify/vue'
-import BossKeySettings from '@/components/common/BossKeySettings.vue'
+import GlobalSettingsModal from '@/components/common/GlobalSettingsModal.vue'
 import SharePanel from '@/components/common/SharePanel.vue'
-import { useThemeStore, themeList, type ThemeId } from '@/core/theme'
+import AuthModal from '@/components/auth/AuthModal.vue'
 import { useBossKeyStore } from '@/stores/bossKey'
 import { availableLocales, localeMetaMap, setLocale, type AppLocale } from '@/core/i18n'
+import { useAuth } from '@/composables/useAuth'
+import { useSoundEngine } from '@/modules/tools/pomodoro/composables/useSoundEngine'
 
 const router = useRouter()
 const route = useRoute()
 const { t, locale } = useI18n({ useScope: 'global' })
-const themeStore = useThemeStore()
 const bossKeyStore = useBossKeyStore()
+const { user, nickname, logout, initAuth } = useAuth()
+const { isPlaying: isMusicPlaying } = useSoundEngine()
 
-const showThemeMenu = ref(false)
+const showSettingsModal = ref(false)
 const showLocaleMenu = ref(false)
 const showShareMenu = ref(false)
-const showBossKeySettings = ref(false)
+const showAuthModal = ref(false)
+const showUserMenu = ref(false)
 const isMobileMenuOpen = ref(false)
 const localePrefixRegex = /^\/(en|zh)(?=\/|$)/
+
+// Click outside handler for dropdowns
+onMounted(() => {
+  document.addEventListener('click', closeDropdowns)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', closeDropdowns)
+})
+
+const closeDropdowns = () => {
+  showLocaleMenu.value = false
+  showShareMenu.value = false
+  showUserMenu.value = false
+}
+
+// Stay duration tracking
+const stayDuration = ref(0)
+let timerId: number | null = null
+let lastTime = Date.now()
+
+const updateDuration = () => {
+  const now = Date.now()
+  const delta = now - lastTime
+  lastTime = now
+
+  // Accumulate time if page is visible OR music is playing
+  if (!document.hidden || isMusicPlaying.value) {
+    stayDuration.value += delta
+  }
+}
+
+onMounted(() => {
+  initAuth()
+  lastTime = Date.now()
+  timerId = window.setInterval(updateDuration, 1000)
+})
+
+onUnmounted(() => {
+  if (timerId) clearInterval(timerId)
+})
+
+const formattedDuration = computed(() => {
+  const totalSeconds = Math.floor(stayDuration.value / 1000)
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+  }
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+})
 
 const navItems = computed(() => [
   { path: '/', label: t('nav.home'), icon: 'mdi:home' },
@@ -38,14 +95,6 @@ const localeOptions = computed(() =>
   }))
 )
 
-const bossKeyModeLabels: Record<string, string> = {
-  code: 'bossKey.modes.code',
-  excel: 'bossKey.modes.excel',
-  forum: 'bossKey.modes.forum',
-  terminal: 'bossKey.modes.terminal'
-}
-
-const currentBossKeyLabel = computed(() => t(bossKeyModeLabels[bossKeyStore.mode] || 'bossKey.modes.code'))
 const currentLocale = computed<AppLocale>(() => (route.params.locale === 'zh' ? 'zh' : 'en'))
 const routePathWithoutLocale = computed(() => {
   const path = route.path.replace(localePrefixRegex, '')
@@ -67,11 +116,6 @@ const handleNavigate = (path: string) => {
   isMobileMenuOpen.value = false
 }
 
-const selectTheme = (themeId: ThemeId) => {
-  themeStore.setTheme(themeId)
-  showThemeMenu.value = false
-}
-
 const selectLocale = async (nextLocale: AppLocale) => {
   await setLocale(nextLocale)
   locale.value = nextLocale
@@ -81,6 +125,33 @@ const selectLocale = async (nextLocale: AppLocale) => {
     hash: route.hash
   })
   showLocaleMenu.value = false
+}
+
+const handleLogout = async () => {
+  showUserMenu.value = false
+  await logout()
+}
+
+// Stop propagation for dropdown toggles
+const toggleLocale = (e: Event) => {
+  e.stopPropagation()
+  showLocaleMenu.value = !showLocaleMenu.value
+  showShareMenu.value = false
+  showUserMenu.value = false
+}
+
+const toggleShare = (e: Event) => {
+  e.stopPropagation()
+  showShareMenu.value = !showShareMenu.value
+  showLocaleMenu.value = false
+  showUserMenu.value = false
+}
+
+const toggleUser = (e: Event) => {
+  e.stopPropagation()
+  showUserMenu.value = !showUserMenu.value
+  showLocaleMenu.value = false
+  showShareMenu.value = false
 }
 </script>
 
@@ -108,38 +179,32 @@ const selectLocale = async (nextLocale: AppLocale) => {
       </nav>
       
       <div class="header-right">
-        <button class="boss-key-btn" @click="showBossKeySettings = true" :title="t('header.bossMode')">
-          <Icon icon="mdi:shield-account" :width="18" />
-          <span class="boss-key-label">{{ currentBossKeyLabel }}</span>
+        <div class="stay-duration" :title="t('header.stayDuration')">
+          <Icon icon="mdi:clock-outline" :width="16" />
+          <span>{{ formattedDuration }}</span>
+        </div>
+
+        <button class="boss-key-btn" @click="handleNavigate('/about')" :title="t('routeTitle.about')">
+          <Icon icon="mdi:information-variant-circle-outline" :width="18" />
         </button>
 
-        <div class="theme-selector">
-          <button class="theme-btn" @click="showThemeMenu = !showThemeMenu">
-            <Icon :icon="themeStore.currentTheme.icon" :width="18" />
+        <div class="share-selector">
+          <button class="theme-btn" :title="t('header.share')" @click="toggleShare">
+            <Icon icon="mdi:share-variant-outline" :width="18" />
           </button>
-          
           <Transition name="fade">
-            <div v-if="showThemeMenu" class="theme-menu">
-              <div 
-                v-for="theme in themeList" 
-                :key="theme.id"
-                class="theme-option"
-                :class="{ active: theme.id === themeStore.currentThemeId }"
-                @click="selectTheme(theme.id)"
-              >
-                <Icon :icon="theme.icon" :width="16" />
-                <span>{{ t(theme.i18nKey, theme.name) }}</span>
-              </div>
+            <div v-if="showShareMenu" class="share-menu" @click.stop>
+              <SharePanel />
             </div>
           </Transition>
         </div>
 
         <div class="locale-selector">
-          <button class="theme-btn" @click="showLocaleMenu = !showLocaleMenu">
+          <button class="theme-btn" @click="toggleLocale">
             <Icon icon="mdi:translate" :width="18" />
           </button>
           <Transition name="fade">
-            <div v-if="showLocaleMenu" class="theme-menu">
+            <div v-if="showLocaleMenu" class="theme-menu" @click.stop>
               <div
                 v-for="option in localeOptions"
                 :key="option.code"
@@ -154,13 +219,35 @@ const selectLocale = async (nextLocale: AppLocale) => {
           </Transition>
         </div>
 
-        <div class="share-selector">
-          <button class="theme-btn" :title="t('header.share')" @click="showShareMenu = !showShareMenu">
-            <Icon icon="mdi:share-variant-outline" :width="18" />
+        <button class="theme-btn" @click="showSettingsModal = true" :title="t('settings.title')">
+          <Icon icon="mdi:cog" :width="18" />
+        </button>
+
+        <div class="user-selector">
+          <button v-if="user" class="theme-btn user-btn" @click="toggleUser" :title="nickname">
+            <Icon icon="mdi:account" :width="18" />
+            <span class="user-name">{{ nickname }}</span>
           </button>
+          <button v-else class="theme-btn login-btn" @click="showAuthModal = true" title="Login / Register">
+            <Icon icon="mdi:login" :width="18" />
+          </button>
+          
           <Transition name="fade">
-            <div v-if="showShareMenu" class="share-menu">
-              <SharePanel />
+            <div v-if="showUserMenu && user" class="user-menu" @click.stop>
+              <div class="user-header">
+                <div class="user-avatar">
+                  <Icon icon="mdi:account-circle" width="32" />
+                </div>
+                <div class="user-info">
+                  <span class="name">{{ nickname }}</span>
+                  <span class="status">Online</span>
+                </div>
+              </div>
+              <div class="menu-divider" />
+              <div class="menu-item" @click="handleLogout">
+                <Icon icon="mdi:logout" width="16" />
+                <span>Logout</span>
+              </div>
             </div>
           </Transition>
         </div>
@@ -186,19 +273,21 @@ const selectLocale = async (nextLocale: AppLocale) => {
         
         <div class="mobile-nav-divider" />
         
-        <div class="mobile-nav-item" @click="showBossKeySettings = true; isMobileMenuOpen = false">
-          <Icon icon="mdi:shield-account" :width="20" />
-          <span>{{ t('header.bossMode') }}</span>
+        <div class="mobile-nav-item" @click="showSettingsModal = true; isMobileMenuOpen = false">
+          <Icon icon="mdi:cog" :width="20" />
+          <span>{{ t('settings.title') }}</span>
         </div>
       </nav>
     </Transition>
     
-    <BossKeySettings 
-      :visible="showBossKeySettings" 
+    <GlobalSettingsModal 
+      :visible="showSettingsModal" 
       :current-mode="bossKeyStore.mode"
-      @close="showBossKeySettings = false"
-      @change-mode="bossKeyStore.setMode"
+      @close="showSettingsModal = false"
+      @change-boss-key-mode="bossKeyStore.setMode"
     />
+    
+    <AuthModal :show="showAuthModal" @close="showAuthModal = false" />
   </header>
 </template>
 
@@ -280,11 +369,31 @@ const selectLocale = async (nextLocale: AppLocale) => {
 }
 
 .header-right {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    
+    .stay-duration {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 10px;
+      height: 36px;
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--color-surface-muted, var(--color-background)) 50%, transparent);
+      color: var(--color-text-secondary);
+      font-size: 13px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      margin-right: 6px;
+      cursor: help;
+      
+      @media (max-width: 600px) {
+        display: none;
+      }
+    }
   
-  .boss-key-btn {
+    .boss-key-btn {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -369,8 +478,107 @@ const selectLocale = async (nextLocale: AppLocale) => {
   
   .share-selector,
   .locale-selector,
-  .theme-selector {
+  .theme-selector,
+  .user-selector {
     position: relative;
+  }
+  
+  .user-btn {
+    width: auto;
+    padding: 0 10px;
+    gap: 6px;
+    
+    .user-name {
+      font-size: 13px;
+      font-weight: 600;
+      max-width: 100px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      
+      @media (max-width: 600px) {
+        display: none;
+      }
+    }
+  }
+  
+  .user-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 10px;
+    width: 240px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-lg);
+    padding: 16px;
+    z-index: 200;
+    
+    .user-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      
+      .user-avatar {
+        color: var(--color-primary);
+        background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+        padding: 8px;
+        border-radius: 50%;
+        display: flex;
+      }
+      
+      .user-info {
+        display: flex;
+        flex-direction: column;
+        
+        .name {
+          font-weight: 600;
+          color: var(--color-text);
+          font-size: 15px;
+        }
+        
+        .status {
+          font-size: 12px;
+          color: var(--color-success);
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          
+          &::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+          }
+        }
+      }
+    }
+    
+    .menu-divider {
+      height: 1px;
+      background: var(--color-border);
+      margin: 8px 0;
+    }
+    
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--color-text-secondary);
+      font-size: 14px;
+      transition: all 0.2s;
+      
+      &:hover {
+        background: var(--color-background);
+        color: var(--color-error);
+      }
+    }
   }
 
   .share-menu {

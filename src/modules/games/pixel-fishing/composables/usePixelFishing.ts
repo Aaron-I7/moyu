@@ -140,8 +140,8 @@ export function usePixelFishing() {
     const weight = +(fish.weightRange[0] + Math.random() * (fish.weightRange[1] - fish.weightRange[0])).toFixed(2)
 
     // 检查是否是新物种
-    const entry = store.state.journal[fish.id]
-    isNewSpecies.value = entry ? !entry.caught : true
+    const entryCount = store.state.journal[fish.id] || 0
+    isNewSpecies.value = entryCount === 0
 
     const record = store.recordCatch(fish.id, size, weight)
     lastCatch.value = record

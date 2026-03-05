@@ -19,7 +19,7 @@ const { t, locale } = useI18n()
 
 type FilterTab = 'all' | 'stream' | 'lake' | 'river' | 'coast' | 'deep-sea'
 const activeTab = ref<FilterTab>('all')
-const selectedFish = ref<typeof filteredFish.value[0] | null>(null)
+const selectedFish = ref<any>(null)
 
 const tabs: { key: FilterTab; label: string }[] = [
   { key: 'all', label: t('pixelFishing.journal.all') },
@@ -31,11 +31,14 @@ const filteredFish = computed(() => {
   if (activeTab.value !== 'all') {
     list = list.filter(f => f.spotIds.includes(activeTab.value))
   }
-  return list.map(f => ({
-    ...f,
-    entry: store.state.journal[f.id],
-    caught: store.state.journal[f.id]?.caught ?? false
-  }))
+  return list.map(f => {
+    const count = store.state.journal[f.id] || 0
+    return {
+      ...f,
+      entry: { count },
+      caught: count > 0
+    }
+  })
 })
 
 const stats = computed(() => ({
@@ -44,11 +47,7 @@ const stats = computed(() => ({
   pct: Math.round(store.journalProgress * 100)
 }))
 
-function formatWeight(w: number) {
-  return w >= 1 ? `${w.toFixed(1)} kg` : `${(w * 1000).toFixed(0)} g`
-}
-
-function selectFish(fish: typeof filteredFish.value[0]) {
+function selectFish(fish: any) {
   if (fish.caught) {
     selectedFish.value = fish
   }
@@ -178,8 +177,6 @@ function rarityLabel(rarity: keyof typeof RARITY_NAMES): string {
               <p class="fish-desc">{{ displayFishDesc(fish.description) }}</p>
               <div class="fish-stats">
                 <span>× {{ fish.entry.count }}</span>
-                <span>📏 {{ fish.entry.maxSize?.toFixed(1) }} cm</span>
-                <span>⚖ {{ formatWeight(fish.entry.maxWeight ?? 0) }}</span>
               </div>
             </template>
             <p v-else class="fish-not-caught">{{ t('pixelFishing.journal.notCaught') }}</p>
@@ -227,14 +224,6 @@ function rarityLabel(rarity: keyof typeof RARITY_NAMES): string {
               </span>
             </div>
             <div class="detail-stat">
-              <span class="detail-stat__label">{{ t('pixelFishing.journal.sizeRange') }}</span>
-              <span class="detail-stat__value">{{ selectedFish.sizeRange[0] }}-{{ selectedFish.sizeRange[1] }} cm</span>
-            </div>
-            <div class="detail-stat">
-              <span class="detail-stat__label">{{ t('pixelFishing.journal.weightRange') }}</span>
-              <span class="detail-stat__value">{{ formatWeight(selectedFish.weightRange[0]) }} - {{ formatWeight(selectedFish.weightRange[1]) }}</span>
-            </div>
-            <div v-if="selectedFish.entry" class="detail-stat">
               <span class="detail-stat__label">{{ t('pixelFishing.journal.catchCount') }}</span>
               <span class="detail-stat__value">{{ selectedFish.entry.count }} {{ t('pixelFishing.journal.countUnit') }}</span>
             </div>

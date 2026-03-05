@@ -1,0 +1,168 @@
+import { ref, computed } from 'vue'
+import { supabase } from '@/core/supabase/client'
+import { useCloudSync } from './useCloudSync'
+import type { User } from '@supabase/supabase-js'
+
+const user = ref<User | null>(null)
+const profile = ref<{ nickname: string } | null>(null)
+const loading = ref(false)
+const error = ref(null)
+
+const EMAIL_DOMAIN = 'moyu.com'
+
+export function useAuth() {
+  const { pullData } = useCloudSync()
+
+  const isAuthenticated = computed(() => !!user.value)
+  const nickname = computed(() => profile.value?.nickname || user.value?.email?.split('@')[0])
+
+  // Initialize session
+  const initAuth = async () => {
+    if (!supabase) return
+
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.user) {
+      user.value = session.user
+      await fetchProfile()
+      await pullData() // Sync data on load
+    }
+
+    supabase.auth.onAuthStateChange(async (_event, session) => {
+      user.value = session?.user || null
+      if (session?.user) {
+        await fetchProfile()
+        await pullData()
+      } else {
+        profile.value = null
+      }
+    })
+  }
+
+  const fetchProfile = async () => {
+    if (!user.value || !supabase) return
+    
+    try {
+      const { data, error: err } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.value.id)
+        .single()
+      
+      if (err) throw err
+      profile.value = data
+    } catch (e) {
+      console.error('Error fetching profile:', e)
+    }
+  }
+
+  const register = async (nicknameInput: string, password: string) => {
+    if (!supabase) throw new Error('Supabase not configured')
+    
+    loading.value = true
+    error.value = null
+    
+    try {
+      const email = `${nicknameInput}@${EMAIL_DOMAIN}`
+
+      // 1. Sign up
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            nickname: nicknameInput
+          }
+        }
+      })
+      
+      if (authError) throw authError
+      if (!authData.user) throw new Error('Registration failed')
+      
+      // 2. Create profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([
+          { id: authData.user.id, nickname: nicknameInput }
+        ])
+        
+      if (profileError) {
+        // If profile creation fails, we should probably clean up the auth user, 
+        // but Supabase doesn't allow deleting users easily from client.
+        // For now, just throw.
+        throw profileError
+      }
+      
+      user.value = authData.user
+      await fetchProfile()
+      
+      return { user: authData.user }
+    } catch (e: any) {
+      error.value = e.message
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const login = async (nicknameInput: string, password: string) => {
+    if (!supabase) throw new Error('Supabase not configured')
+    
+    loading.value = true
+    error.value = null
+    
+    try {
+      const email = `${nicknameInput}@${EMAIL_DOMAIN}`
+
+      const { data, error: err } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+      
+      if (err) throw err
+      
+      user.value = data.user
+      await fetchProfile()
+      await pullData() // Sync data on login
+      
+      return { user: data.user }
+    } catch (e: any) {
+      error.value = e.message
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const logout = async () => {
+    if (!supabase) return
+    
+    const { clearLocalData } = useCloudSync()
+    
+    loading.value = true
+    try {
+      await supabase.auth.signOut()
+      user.value = null
+      profile.value = null
+      
+      // Clear local storage data on logout
+      clearLocalData()
+    } catch (e: any) {
+      error.value = e.message
+    } finally {
+      loading.value = false
+    }
+  }
+
+  return {
+    user,
+    profile,
+    isAuthenticated,
+    nickname,
+    loading,
+    error,
+    initAuth,
+    register,
+    login,
+    logout
+  }
+}

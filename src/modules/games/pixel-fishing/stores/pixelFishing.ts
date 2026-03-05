@@ -3,15 +3,16 @@ import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import type {
   PlayerState, PlayerSettings, CatchRecord,
-  JournalEntry, ViewMode, FishingState, Weather, ComboState
+  ViewMode, FishingState, Weather, ComboState
 } from '../types'
 import {
-  STORAGE_KEY, MAX_CATCH_HISTORY,
+  STORAGE_KEY,
   RARITY_EXP_MULTIPLIER, EXP_PER_LEVEL, MAX_LEVEL
 } from '../constants'
 import { FISH_DATA, getFishById } from '../data/fish'
 import { SPOTS, getUnlockedSpots } from '../data/spots'
 import { WEATHER_CONFIG, getRandomWeather } from '../data/weather'
+import { useCloudSync } from '@/composables/useCloudSync'
 
 function createDefaultSettings(): PlayerSettings {
   return {
@@ -23,17 +24,10 @@ function createDefaultSettings(): PlayerSettings {
   }
 }
 
-function createDefaultJournal(): Record<string, JournalEntry> {
-  const journal: Record<string, JournalEntry> = {}
+function createDefaultJournal(): Record<string, number> {
+  const journal: Record<string, number> = {}
   FISH_DATA.forEach(f => {
-    journal[f.id] = {
-      fishId: f.id,
-      caught: false,
-      count: 0,
-      maxSize: 0,
-      maxWeight: 0,
-      firstCaughtAt: null
-    }
+    journal[f.id] = 0
   })
   return journal
 }
@@ -46,7 +40,6 @@ function createDefaultState(): PlayerState {
     totalCatch: 0,
     unlockedSpotIds: ['stream'],
     journal: createDefaultJournal(),
-    catchHistory: [],
     settings: createDefaultSettings()
   }
 }
@@ -55,16 +48,30 @@ function loadState(): PlayerState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
-      const parsed = JSON.parse(raw) as PlayerState
+      const parsed = JSON.parse(raw) as any // Use any to migrate old data
+      
+      // Migration logic: if old journal format (object), convert to number
+      const migratedJournal: Record<string, number> = {}
       FISH_DATA.forEach(f => {
-        if (!parsed.journal[f.id]) {
-          parsed.journal[f.id] = {
-            fishId: f.id, caught: false, count: 0,
-            maxSize: 0, maxWeight: 0, firstCaughtAt: null
-          }
+        const oldEntry = parsed.journal?.[f.id]
+        if (typeof oldEntry === 'object' && oldEntry !== null) {
+          migratedJournal[f.id] = oldEntry.count || 0
+        } else if (typeof oldEntry === 'number') {
+          migratedJournal[f.id] = oldEntry
+        } else {
+          migratedJournal[f.id] = 0
         }
       })
-      return parsed
+      
+      return {
+        coins: parsed.coins || 0,
+        level: parsed.level || 1,
+        exp: parsed.exp || 0,
+        totalCatch: parsed.totalCatch || 0,
+        unlockedSpotIds: parsed.unlockedSpotIds || ['stream'],
+        journal: migratedJournal,
+        settings: parsed.settings || createDefaultSettings()
+      }
     }
   } catch { /* ignore */ }
   return createDefaultState()
@@ -100,16 +107,37 @@ export const usePixelFishingStore = defineStore('pixel-fishing', () => {
     currentSpotId.value ? SPOTS.find(s => s.id === currentSpotId.value) : null
   )
 
-  const journalEntries = computed(() => Object.values(state.value.journal))
-  const caughtCount = computed(() => journalEntries.value.filter(e => e.caught).length)
+  const journalEntries = computed(() => {
+    return FISH_DATA.map(fish => {
+      const count = state.value.journal[fish.id] || 0
+      return {
+        fishId: fish.id,
+        caught: count > 0,
+        count,
+        maxSize: 0,
+        maxWeight: 0,
+        firstCaughtAt: null
+      }
+    })
+  })
+  
+  const caughtCount = computed(() => Object.values(state.value.journal).filter(c => c > 0).length)
   const totalFishSpecies = computed(() => FISH_DATA.length)
   const journalProgress = computed(() => caughtCount.value / totalFishSpecies.value)
+  const catchHistory = computed(() => [] as CatchRecord[]) // 移除历史记录，返回空数组兼容接口
 
   const weatherConfig = computed(() => WEATHER_CONFIG[currentWeather.value])
+  const { pushData } = useCloudSync()
 
   function save() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.value))
+      // 存储时仅保存 journal 的计数信息
+      const dataToSave = {
+        ...state.value,
+        // catchHistory: [] // 确保不保存历史记录
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
+      pushData('pixel-fishing', dataToSave)
     } catch { /* quota exceeded etc */ }
   }
 
@@ -183,19 +211,11 @@ export const usePixelFishingStore = defineStore('pixel-fishing', () => {
 
     state.value.totalCatch++
 
-    const entry = state.value.journal[fishId]
-    if (entry) {
-      entry.caught = true
-      entry.count++
-      if (size > entry.maxSize) entry.maxSize = size
-      if (weight > entry.maxWeight) entry.maxWeight = weight
-      if (!entry.firstCaughtAt) entry.firstCaughtAt = Date.now()
-    }
+    // Simplified journal update: just increment count
+    const currentCount = state.value.journal[fishId] || 0
+    state.value.journal[fishId] = currentCount + 1
 
-    state.value.catchHistory.unshift(record)
-    if (state.value.catchHistory.length > MAX_CATCH_HISTORY) {
-      state.value.catchHistory = state.value.catchHistory.slice(0, MAX_CATCH_HISTORY)
-    }
+    // Removed catchHistory updates
 
     checkUnlocks()
 
@@ -256,6 +276,7 @@ export const usePixelFishingStore = defineStore('pixel-fishing', () => {
     caughtCount,
     totalFishSpecies,
     journalProgress,
+    catchHistory,
     weatherConfig,
     save,
     selectSpot,

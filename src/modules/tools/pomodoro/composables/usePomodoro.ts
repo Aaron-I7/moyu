@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { useSoundEngine } from './useSoundEngine'
+import { useCloudSync } from '@/composables/useCloudSync'
 import {
   type TimerMode,
   type TimerStatus,
@@ -34,6 +35,7 @@ let timerWorker: Worker | null = null
 export function usePomodoro() {
   // 音频引擎
   const soundEngine = useSoundEngine()
+  const { pushData } = useCloudSync()
 
   // 初始化
   function init() {
@@ -95,6 +97,7 @@ export function usePomodoro() {
 
   function saveSettings() {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings.value))
+    pushData('pomodoro-settings', settings.value)
     // 如果当前处于 idle 状态，更新时间
     if (status.value === 'idle') {
       resetTimer()
@@ -131,6 +134,7 @@ export function usePomodoro() {
 
   function saveStats() {
     localStorage.setItem(STATS_KEY, JSON.stringify(stats.value))
+    pushData('pomodoro-stats', stats.value)
   }
 
   // 计时器逻辑

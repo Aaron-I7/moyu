@@ -2,8 +2,10 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { ThemeId, ThemeConfig } from './config'
 import { themes } from './config'
+import { useCloudSync } from '@/composables/useCloudSync'
 
 export const useThemeStore = defineStore('theme', () => {
+  const { pushData } = useCloudSync()
   const themeStorageKey = 'moyu-theme-id'
   const currentThemeId = ref<ThemeId>('day')
   const currentTheme = ref<ThemeConfig>(themes.day)
@@ -14,6 +16,7 @@ export const useThemeStore = defineStore('theme', () => {
       currentTheme.value = themes[themeId]
       applyTheme(themes[themeId])
       localStorage.setItem(themeStorageKey, themeId)
+      pushData('theme', themeId)
     }
   }
 

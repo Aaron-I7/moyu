@@ -8,6 +8,13 @@ function generateModuleRoutes(): RouteRecordRaw[] {
   const modules = moduleRegistry.getAll()
 
   routes.push({
+    path: `${localePath}/about`,
+    name: 'About',
+    component: () => import('@/views/AboutView.vue'),
+    meta: { title: 'About Us', titleKey: 'routeTitle.about', descriptionKey: 'seo.routes.about.description' }
+  })
+
+  routes.push({
     path: `${localePath}/games`,
     name: 'Games',
     component: () => import('@/views/GamesView.vue'),

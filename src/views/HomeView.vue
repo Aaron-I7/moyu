@@ -3,6 +3,10 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { useI18n } from 'vue-i18n'
+import SharedDivinationCard from '@/components/common/SharedDivinationCard.vue'
+import PopularTools from '@/components/common/PopularTools.vue'
+import PopularGames from '@/components/common/PopularGames.vue'
+import PopularRelax from '@/components/common/PopularRelax.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -40,13 +44,6 @@ const mainEntries = computed(() => [
   }
 ])
 
-const heroHighlights = computed(() => [
-  t('home.features.instant'),
-  t('home.features.privacy'),
-  t('home.features.adaptive'),
-  t('home.features.free')
-])
-
 const handleNavigate = (path: string) => {
   const normalized = path === '/' ? '' : path
   router.push(`/${currentLocale.value}${normalized}`)
@@ -55,14 +52,16 @@ const handleNavigate = (path: string) => {
 
 <template>
   <div class="home-page">
+    <!-- Hero Section Simplified -->
     <section class="hero">
       <div class="hero-content">
         <p class="hero-kicker">{{ t('app.titleSuffix') }}</p>
         <h1 class="hero-title">{{ t('app.name') }}</h1>
-        <p class="hero-desc">{{ t('app.heroDescription') }}</p>
-        <div class="hero-highlights">
-          <span v-for="item in heroHighlights" :key="item">{{ item }}</span>
-        </div>
+        <p class="hero-desc">{{ t('home.strategySubtitle') }}</p>
+      </div>
+      
+      <div class="hero-sidebar">
+        <SharedDivinationCard />
       </div>
     </section>
 
@@ -89,6 +88,10 @@ const handleNavigate = (path: string) => {
       </div>
     </section>
 
+    <PopularTools />
+    <PopularGames />
+    <PopularRelax />
+
   </div>
 </template>
 
@@ -109,8 +112,11 @@ const handleNavigate = (path: string) => {
   padding: 10px 18px 2px;
   text-align: start;
   flex-shrink: 0;
+  display: flex;
+  gap: 16px;
   
   .hero-content {
+    flex: 1;
     max-width: 100%;
     margin: 0;
     background: color-mix(in srgb, var(--color-surface) 94%, transparent);
@@ -120,6 +126,9 @@ const handleNavigate = (path: string) => {
     box-shadow: var(--shadow);
     position: relative;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 
     &::after {
       content: '';
@@ -131,6 +140,19 @@ const handleNavigate = (path: string) => {
       border-radius: 50%;
       background: color-mix(in srgb, var(--color-primary) 12%, transparent);
       pointer-events: none;
+    }
+  }
+  
+  .hero-sidebar {
+    width: 280px;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 800px) {
+    flex-direction: column;
+    
+    .hero-sidebar {
+      width: 100%;
     }
   }
 

@@ -1,6 +1,7 @@
-import { reactive, watch, ref } from 'vue'
+import { reactive, watch, ref, computed } from 'vue'
 import { Howl } from 'howler'
 import { PRESET_SOUNDS, type SoundItem, type SoundMix } from '../types'
+import { useCloudSync } from '@/composables/useCloudSync'
 
 const MIXES_KEY = 'moyu-pomodoro-mixes'
 
@@ -9,6 +10,7 @@ const sounds = reactive<SoundItem[]>(PRESET_SOUNDS.map(s => ({ ...s })))
 const howls: Record<string, Howl> = {}
 const savedMixes = ref<SoundMix[]>([])
 const isGlobalMixerOpen = ref(false)
+const isPlaying = computed(() => sounds.some(s => s.active))
 
 // Load mixes on init
 try {
@@ -26,6 +28,7 @@ watch(sounds, () => {
 }, { deep: true })
 
 export function useSoundEngine() {
+  const { pushData } = useCloudSync()
   
   // 初始化音频实例
   function initSound(sound: SoundItem): Howl {
@@ -40,7 +43,7 @@ export function useSoundEngine() {
       onloaderror: (_id, error) => {
         console.error(`Failed to load sound ${sound.id}:`, error)
       },
-      onplayerror: (_id, error) => {
+      onplayerror: (_id: any, error: any) => {
         console.error(`Failed to play sound ${sound.id}:`, error)
         howls[sound.id]?.once('unlock', function() {
           howls[sound.id]?.play()
@@ -164,7 +167,13 @@ export function useSoundEngine() {
     sounds.forEach(s => {
       const inMix = mix.sounds.some(ms => ms.id === s.id)
       if (s.active && !inMix) {
-        toggleSound(s.id) // Will set active=false and fade out
+        // 直接关闭，不调用 toggleSound 以避免逻辑混乱
+        s.active = false
+        const howl = howls[s.id]
+        if (howl) {
+            howl.fade(howl.volume(), 0, 500)
+            setTimeout(() => howl.pause(), 500)
+        }
       }
     })
 
@@ -173,11 +182,18 @@ export function useSoundEngine() {
       const sound = sounds.find(s => s.id === ms.id)
       if (sound) {
         sound.volume = ms.volume // Update volume first
+        
         // If not active, activate it
         if (!sound.active) {
-           toggleSound(sound.id)
+           sound.active = true
+           const howl = howls[sound.id] || initSound(sound)
+           if (!howl.playing()) {
+               howl.volume(0)
+               howl.play()
+               howl.fade(0, sound.volume, 1000)
+           }
         } else {
-           // If already active, ensure volume is updated in Howler (setVolume does this)
+           // If already active, ensure volume is updated in Howler
            setVolume(sound.id, ms.volume)
         }
       }
@@ -191,6 +207,7 @@ export function useSoundEngine() {
 
   function saveMixesToStorage() {
     localStorage.setItem(MIXES_KEY, JSON.stringify(savedMixes.value))
+    pushData('moyu-pomodoro-mixes', savedMixes.value)
   }
 
   return {
@@ -204,6 +221,7 @@ export function useSoundEngine() {
     stopAll,
     saveMix,
     loadMix,
-    deleteMix
+    deleteMix,
+    isPlaying
   }
 }

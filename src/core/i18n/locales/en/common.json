@@ -1,4 +1,7 @@
 {
+  "common": {
+    "more": "More"
+  },
   "app": {
     "name": "Breakflow",
     "titleSuffix": "Global Break Companion",
@@ -25,6 +28,7 @@
     "language": "Language",
     "voice": "Voice",
     "share": "Share",
+    "stayDuration": "Session Duration (Active or Playing Music)",
     "accessibility": "Accessibility",
     "fontScale": "Font size"
   },
@@ -35,18 +39,55 @@
   },
   "home": {
     "features": {
-      "instant": "Instant launch",
-      "privacy": "Privacy first",
-      "adaptive": "Adaptive layout",
-      "free": "Free forever"
+      "instant": "Instant Play",
+      "privacy": "Privacy First",
+      "adaptive": "Adaptive Layout",
+      "free": "Always Free"
     },
-    "strategyTitle": "Today's break strategy",
-    "strategySubtitle": "Localized by holidays, commute windows, and regional work rhythm.",
-    "recommendNow": "Recommended now",
-    "avoidNow": "Avoid now",
-    "holidayFocus": "Holiday context",
-    "commuteFocus": "Commute context",
-    "rhythmFocus": "Work rhythm"
+    "strategyTitle": "Daily Content Strategy",
+    "strategySubtitle": "Dynamic recommendations based on local holidays, commute, and work rhythm.",
+    "recommendNow": "Recommended Now",
+    "avoidNow": "Avoid Now",
+    "holidayFocus": "Holiday Context",
+    "commuteFocus": "Commute Context",
+    "rhythmFocus": "Work Rhythm",
+    "popularTools": "Popular Tools",
+    "popularGames": "Popular Games",
+    "popularRelax": "Popular Relax"
+  },
+  "tools": {
+    "pomodoro": {
+      "title": "Pomodoro",
+      "desc": "Focus & Break Cycles"
+    },
+    "breathing": {
+      "title": "Breathing",
+      "desc": "1-Min Stress Relief"
+    },
+    "noise": {
+      "title": "White Noise",
+      "desc": "Block Distractions"
+    },
+    "calendar": {
+      "title": "Calendar",
+      "desc": "Check Holidays",
+      "today": "Today"
+    }
+  },
+  "almanac": {
+    "ganzhi": "Gan-Zhi",
+    "wuxing": "Wu-Xing",
+    "chong": "Clash",
+    "sha": "Sha",
+    "yi": "Auspicious",
+    "ji": "Inauspicious",
+    "shengxiao": "Zodiac"
+  },
+  "divination": {
+    "title": "Daily Horoscope",
+    "good": "Good Luck",
+    "bad": "Bad Luck",
+    "refresh": "Refresh"
   },
   "views": {
     "gamesTitle": "Games",
@@ -75,19 +116,115 @@
       "tags": ["Focus", "Sleep", "Ambient"]
     }
   },
-  "white_noise": {
+  "whiteNoise": {
     "rain": "Rain",
-    "fire": "Fireplace",
+    "fire": "Fire",
     "forest": "Forest",
-    "waves": "Ocean Waves",
+    "waves": "Waves",
     "cafe": "Cafe",
     "thunder": "Thunder",
     "birds": "Birds",
-    "night": "Night",
-    "keyboard": "Keyboard"
+    "night": "Summer Night",
+    "keyboard": "Keyboard",
+    "mixer": "Ambience Mixer",
+    "stopAll": "Stop All",
+    "categories": {
+      "mixes": "My Mixes",
+      "animals": "Animals",
+      "nature": "Nature",
+      "rain": "Rain",
+      "urban": "Urban",
+      "places": "Places",
+      "transport": "Transport",
+      "things": "Things",
+      "noise": "Noise",
+      "help": "Help"
+    },
+    "sounds": {
+      "birds": "Birds",
+      "crickets": "Crickets",
+      "wolf": "Wolf",
+      "cat": "Cat",
+      "rain": "Rain",
+      "thunder": "Thunder",
+      "wind": "Wind",
+      "river": "River",
+      "ocean": "Ocean",
+      "fire": "Fire",
+      "train": "Train",
+      "car": "Car",
+      "plane": "Plane",
+      "fan": "Fan",
+      "clock": "Clock",
+      "keyboard": "Keyboard",
+      "white_noise": "White Noise",
+      "pink_noise": "Pink Noise",
+      "brown_noise": "Brown Noise",
+      "cafe": "Cafe",
+      "library": "Library",
+      "office": "Office"
+    },
+    "mixes": {
+      "title": "Saved Mixes",
+      "saveCurrent": "Save Current Mix",
+      "placeholder": "Mix Name (e.g., Rainy Cafe)",
+      "save": "Save",
+      "cancel": "Cancel",
+      "empty": "No saved mixes yet.",
+      "emptySub": "Activate some sounds and save them here.",
+      "load": "Load Mix",
+      "delete": "Delete",
+      "confirmTitle": "Delete Mix?",
+      "confirmMessage": "Are you sure you want to delete this sound mix? This action cannot be undone."
+    },
+    "help": {
+      "title": "How to use Ambience Mixer",
+      "toggleTitle": "Toggle Sounds",
+      "toggleDesc": "Click on any sound card to toggle it on or off. You can combine multiple sounds to create your perfect atmosphere.",
+      "volumeTitle": "Adjust Volume",
+      "volumeDesc": "Use the slider on active sound cards to adjust their individual volume levels.",
+      "saveTitle": "Save Mixes",
+      "saveDesc": "Go to \"My Mixes\" and click \"Save Current Mix\" to save your current combination. Give it a name to easily find it later.",
+      "globalTitle": "Global Control",
+      "globalDesc": "Sounds continue playing even if you close this modal or navigate away. Use the \"Stop All\" button in the header to silence everything at once."
+    },
+    "settings": {
+      "globalPlayback": "Background Playback",
+      "globalPlaybackDesc": "Keep sounds playing when leaving this page"
+    }
+  },
+  "about": {
+    "title": "About Us",
+    "description": "For global workers: Instant play, privacy first, and seamless transition.",
+    "mission": "Our Mission",
+    "missionDesc": "To create a lightweight relaxation platform designed for workers, helping you recharge during brief breaks.",
+    "features": {
+      "title": "Core Features",
+      "instant": "Instant Play",
+      "instantDesc": "No complex loading, play instantly anywhere, anytime.",
+      "privacy": "Privacy First",
+      "privacyDesc": "No registration required, local storage, we respect your data.",
+      "adaptive": "Adaptive Layout",
+      "adaptiveDesc": "Perfectly fits desktop and mobile screens, providing a consistent experience.",
+      "free": "Always Free",
+      "freeDesc": "Core features are promised to be free forever."
+    },
+    "feedback": {
+      "title": "Feedback",
+      "subtitle": "Your voice matters, help us improve.",
+      "contentLabel": "Feedback Content",
+      "contentPlaceholder": "Describe your suggestions or issues...",
+      "contactLabel": "Contact (Optional)",
+      "contactPlaceholder": "Email or other contact info for our reply",
+      "submit": "Submit Feedback",
+      "submitting": "Submitting...",
+      "success": "Feedback received, thank you!",
+      "error": "Submission failed, please try again later."
+    }
   },
   "routeTitle": {
     "home": "Home",
+    "about": "About Us",
     "games": "Games",
     "relax": "Recharge",
     "tools": "Tools",
@@ -120,6 +257,13 @@
   },
   "toolMenu": {
     "title": "Workspace Dock"
+  },
+  "settings": {
+    "title": "Settings",
+    "theme": "Appearance",
+    "themeDesc": "Choose your preferred interface style.",
+    "bossKey": "Boss Key Settings",
+    "bossKeyDesc": "Quickly switch to work interface in emergency."
   },
   "bossKey": {
     "title": "Stealth Mode Settings",
@@ -184,5 +328,16 @@
     "start": "Start listening",
     "stop": "Stop listening",
     "listening": "Listening… say \"home\", \"games\", \"tools\", \"reading\", or \"recharge\"."
+  },
+  "auth": {
+    "nickname": "Nickname",
+    "nicknamePlaceholder": "Enter your nickname",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "login": "Login",
+    "createAccount": "Create Account",
+    "noAccount": "New here?",
+    "hasAccount": "Already have an account?",
+    "subtitle": "Sync your progress across devices"
   }
 }

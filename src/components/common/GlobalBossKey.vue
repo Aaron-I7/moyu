@@ -1,11 +1,11 @@
 <template>
   <Teleport to="body">
     <Transition name="boss-key">
-      <div v-if="isActive" class="boss-key-overlay" @click="handleClick">
-        <div class="boss-key-content">
+      <div v-if="isActive" class="boss-key-overlay">
+        <div class="boss-key-content" @click.stop>
           <component :is="currentModeComponent" />
         </div>
-        <div class="hint">Press <kbd>Esc</kbd> or click anywhere to return</div>
+        <div class="hint" @click.stop>Press <kbd>Esc</kbd> to return</div>
       </div>
     </Transition>
   </Teleport>
@@ -20,6 +20,10 @@ const isActive = ref(false)
 const bossKeyStore = useBossKeyStore()
 
 const currentMode = computed(() => bossKeyStore.mode)
+
+// Prevent clicks from closing the overlay by stopping propagation on the content container
+// The overlay click handler is removed, so clicking the background won't close it either
+// Only Esc key can close it now, as requested for safety
 
 const CodeEditor = defineComponent({
   name: 'CodeEditor',
@@ -106,7 +110,7 @@ const ExcelSheet = defineComponent({
   setup() {
     const columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
     const rows = 20
-    const cellData: Record<string, string> = {
+    const cellData = ref<Record<string, string>>({
       'A1': 'Project', 'B1': 'Owner', 'C1': 'Progress', 'D1': 'Budget', 'E1': 'Spent', 'F1': 'Status', 'G1': 'Due Date', 'H1': 'Notes',
       'A2': 'User Management', 'B2': 'Alex', 'C2': '85%', 'D2': '¥50,000', 'E2': '¥42,500', 'F2': 'In progress', 'G2': '2024-03-15', 'H2': 'Pending test',
       'A3': 'Analytics Platform', 'B3': 'Robin', 'C3': '60%', 'D3': '¥80,000', 'E3': '¥48,000', 'F3': 'In progress', 'G3': '2024-04-01', 'H3': '',
@@ -115,6 +119,13 @@ const ExcelSheet = defineComponent({
       'A6': 'Security Audit', 'B6': 'Morgan', 'C6': '20%', 'D6': '¥15,000', 'E6': '¥3,000', 'F6': 'In progress', 'G6': '2024-04-15', 'H6': 'Waiting vendor',
       'A7': '', 'B7': '', 'C7': '', 'D7': '', 'E7': '', 'F7': '', 'G7': '', 'H7': '',
       'A8': 'Total', 'B8': '', 'C8': '', 'D8': '¥200,000', 'E8': '¥132,000', 'F8': '', 'G8': '', 'H8': '',
+    })
+
+    const selectedCell = ref<string | null>('A1')
+    const activeSheet = ref('Sheet1')
+
+    const handleCellClick = (cellId: string) => {
+      selectedCell.value = cellId
     }
 
     return () => h('div', { class: 'fake-excel' }, [
@@ -128,6 +139,14 @@ const ExcelSheet = defineComponent({
           h('span', { class: 'toolbar-btn' }, 'Data'),
         ]),
         h('div', { class: 'excel-title' }, 'Project Progress Tracker.xlsx - Excel'),
+        h('div', { class: 'excel-formula-bar' }, [
+          h('span', { class: 'formula-label' }, 'fx'),
+          h('input', { 
+            class: 'formula-input', 
+            value: selectedCell.value ? cellData.value[selectedCell.value] : '',
+            readonly: true 
+          }),
+        ])
       ]),
       h('div', { class: 'excel-content' }, [
         h('table', { class: 'excel-table' }, [
@@ -143,15 +162,19 @@ const ExcelSheet = defineComponent({
                 h('td', { class: 'row-header' }, rowIndex + 1),
                 ...columns.map(col => {
                   const cellId = `${col}${rowIndex + 1}`
-                  const value = cellData[cellId] || ''
+                  const value = cellData.value[cellId] || ''
                   const isHeader = rowIndex === 0
                   const isTotal = rowIndex === 7
+                  const isSelected = selectedCell.value === cellId
+                  
                   return h('td', { 
                     class: { 
                       'cell': true, 
                       'header-cell': isHeader,
                       'total-cell': isTotal,
-                    } 
+                      'selected': isSelected
+                    },
+                    onClick: () => handleCellClick(cellId)
                   }, value)
                 }),
               ])
@@ -160,9 +183,18 @@ const ExcelSheet = defineComponent({
         ]),
       ]),
       h('footer', { class: 'excel-footer' }, [
-        h('span', { class: 'sheet-tab active' }, 'Sheet1'),
-        h('span', { class: 'sheet-tab' }, 'Sheet2'),
-        h('span', { class: 'sheet-tab' }, 'Sheet3'),
+        h('span', { 
+          class: { 'sheet-tab': true, 'active': activeSheet.value === 'Sheet1' },
+          onClick: () => activeSheet.value = 'Sheet1'
+        }, 'Sheet1'),
+        h('span', { 
+          class: { 'sheet-tab': true, 'active': activeSheet.value === 'Sheet2' },
+          onClick: () => activeSheet.value = 'Sheet2'
+        }, 'Sheet2'),
+        h('span', { 
+          class: { 'sheet-tab': true, 'active': activeSheet.value === 'Sheet3' },
+          onClick: () => activeSheet.value = 'Sheet3'
+        }, 'Sheet3'),
         h('span', { class: 'add-sheet' }, '+'),
       ]),
     ])
@@ -183,16 +215,18 @@ const TechForum = defineComponent({
       { id: 8, title: 'Frontend Security Best Practices', author: 'Security Guard', replies: 156, views: 3456, time: '6 hours ago', tag: 'featured' },
     ]
 
+    const activeTab = ref('Home')
+    const activePostId = ref<number | null>(null)
+
     return () => h('div', { class: 'fake-forum' }, [
       h('header', { class: 'forum-header' }, [
         h('div', { class: 'forum-logo' }, 'Tech Community'),
         h('div', { class: 'forum-nav' }, [
-          h('span', { class: 'nav-item active' }, 'Home'),
-          h('span', { class: 'nav-item' }, 'Featured'),
-          h('span', { class: 'nav-item' }, 'Share'),
-          h('span', { class: 'nav-item' }, 'Q&A'),
-          h('span', { class: 'nav-item' }, 'Jobs'),
-        ]),
+          'Home', 'Featured', 'Share', 'Q&A', 'Jobs'
+        ].map(tab => h('span', { 
+          class: { 'nav-item': true, 'active': activeTab.value === tab },
+          onClick: () => activeTab.value = tab
+        }, tab))),
         h('div', { class: 'forum-user' }, [
           h('span', { class: 'user-avatar' }, '👤'),
           h('span', { class: 'user-name' }, 'Ops Team'),
@@ -213,7 +247,11 @@ const TechForum = defineComponent({
         h('div', { class: 'forum-main' }, [
           h('div', { class: 'post-list' }, 
             posts.map(post => 
-              h('div', { class: 'post-item', key: post.id }, [
+              h('div', { 
+                class: { 'post-item': true, 'active': activePostId.value === post.id }, 
+                key: post.id,
+                onClick: () => activePostId.value = post.id
+              }, [
                 h('div', { class: 'post-info' }, [
                   post.tag === 'featured' 
                     ? h('span', { class: 'post-tag-jing' }, 'F')
@@ -238,7 +276,7 @@ const TechForum = defineComponent({
 const Terminal = defineComponent({
   name: 'Terminal',
   setup() {
-    const lines = [
+    const lines = ref([
       { type: 'prompt', text: 'PS C:\\Workspace\\ops> Get-Process' },
       { type: 'output', text: '' },
       { type: 'info', text: 'Handles  NPM(K)    PM(K)      WS(K)     CPU(s)     Id  SI ProcessName' },
@@ -261,9 +299,18 @@ const Terminal = defineComponent({
       { type: 'output', text: 'Next sync window: 14:00' },
       { type: 'output', text: '' },
       { type: 'prompt', text: 'PS C:\\Workspace\\ops> _' },
-    ]
+    ])
+    
+    const terminalInput = ref<HTMLInputElement | null>(null)
 
-    return () => h('div', { class: 'fake-terminal' }, [
+    const focusInput = () => {
+      terminalInput.value?.focus()
+    }
+
+    return () => h('div', { 
+      class: 'fake-terminal',
+      onClick: focusInput
+    }, [
       h('header', { class: 'terminal-header' }, [
         h('div', { class: 'terminal-title' }, 'Windows PowerShell'),
         h('div', { class: 'terminal-controls' }, [
@@ -272,11 +319,16 @@ const Terminal = defineComponent({
           h('span', { class: 'control-btn close' }, '✕'),
         ]),
       ]),
-      h('main', { class: 'terminal-content' },
-        lines.map((line, index) => 
+      h('main', { class: 'terminal-content' }, [
+        ...lines.value.map((line, index) => 
           h('div', { class: ['terminal-line', line.type], key: index }, line.text || '\u00A0')
-        )
-      ),
+        ),
+        // Invisible input to capture focus
+        h('input', {
+          ref: terminalInput,
+          style: { opacity: '0', position: 'absolute', width: '1px', height: '1px', padding: 0, margin: 0, border: 'none' },
+        })
+      ]),
     ])
   },
 })
@@ -290,9 +342,9 @@ const modeComponents: Record<BossKeyMode, any> = {
 
 const currentModeComponent = computed(() => modeComponents[currentMode.value])
 
-function handleClick() {
-  isActive.value = false
-}
+// function handleClick() {
+//   isActive.value = false
+// }
 
 function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
@@ -529,78 +581,122 @@ defineExpose({ isActive })
   opacity: 0.9;
 }
 
-.excel-content {
-  flex: 1;
-  overflow: auto;
-  background: #fff;
-}
-
-.excel-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-
-.col-header, .row-header {
-  background: #f3f2f1;
-  color: #323130;
-  font-weight: 600;
-  text-align: center;
-  padding: 6px 8px;
-  border: 1px solid #d4d4d4;
-  position: sticky;
-}
-
-.col-header {
-  top: 0;
-  min-width: 80px;
-}
-
-.row-header {
-  left: 0;
-  width: 40px;
-}
-
-.cell {
-  padding: 6px 8px;
-  border: 1px solid #e1dfdd;
-  color: #323130;
-  min-width: 80px;
-}
-
-.header-cell {
-  background: #e6f2ea;
-  font-weight: 600;
-}
-
-.total-cell {
-  background: #fff4ce;
-  font-weight: 600;
-}
-
-.excel-footer {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  padding: 0 8px;
-  height: 28px;
-  background: #f3f2f1;
-  border-top: 1px solid #d4d4d4;
-  flex-shrink: 0;
-}
-
-.sheet-tab {
-  padding: 4px 12px;
-  font-size: 12px;
-  color: #323130;
-  cursor: default;
-  border-bottom: 2px solid transparent;
-
-  &.active {
+.excel-formula-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 16px 8px;
     background: #fff;
-    border-bottom-color: #217346;
+    border-bottom: 1px solid #e1dfdd;
   }
-}
+
+  .formula-label {
+    font-style: italic;
+    color: #666;
+    font-weight: 600;
+  }
+
+  .formula-input {
+    flex: 1;
+    border: 1px solid #d4d4d4;
+    padding: 4px 8px;
+    font-size: 13px;
+    color: #323130;
+    outline: none;
+    
+    &:focus {
+      border-color: #217346;
+    }
+  }
+
+  .excel-content {
+    flex: 1;
+    overflow: auto;
+    background: #fff;
+  }
+
+  .excel-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .col-header, .row-header {
+    background: #f3f2f1;
+    color: #323130;
+    font-weight: 600;
+    text-align: center;
+    padding: 6px 8px;
+    border: 1px solid #d4d4d4;
+    position: sticky;
+    user-select: none;
+  }
+
+  .col-header {
+    top: 0;
+    min-width: 80px;
+  }
+
+  .row-header {
+    left: 0;
+    width: 40px;
+  }
+
+  .cell {
+    padding: 6px 8px;
+    border: 1px solid #e1dfdd;
+    color: #323130;
+    min-width: 80px;
+    cursor: cell;
+    position: relative;
+    
+    &.selected {
+      border: 2px solid #217346;
+      z-index: 10;
+    }
+  }
+
+  .header-cell {
+    background: #e6f2ea;
+    font-weight: 600;
+  }
+
+  .total-cell {
+    background: #fff4ce;
+    font-weight: 600;
+  }
+
+  .excel-footer {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 8px;
+    height: 28px;
+    background: #f3f2f1;
+    border-top: 1px solid #d4d4d4;
+    flex-shrink: 0;
+    user-select: none;
+  }
+
+  .sheet-tab {
+    padding: 4px 12px;
+    font-size: 12px;
+    color: #323130;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: background 0.1s;
+
+    &:hover {
+      background: #e1dfdd;
+    }
+
+    &.active {
+      background: #fff;
+      border-bottom-color: #217346;
+      color: #217346;
+      font-weight: 600;
+    }
+  }
 
 .add-sheet {
   padding: 4px 8px;
@@ -643,11 +739,16 @@ defineExpose({ isActive })
 .nav-item {
   font-size: 14px;
   color: #515767;
-  cursor: default;
+  cursor: pointer;
+  padding: 0 4px;
 
   &.active {
     color: #1e80ff;
     font-weight: 500;
+  }
+
+  &:hover {
+    color: #1e80ff;
   }
 }
 
@@ -655,6 +756,7 @@ defineExpose({ isActive })
   display: flex;
   align-items: center;
   gap: 8px;
+  cursor: pointer;
 }
 
 .user-avatar {
@@ -701,6 +803,12 @@ defineExpose({ isActive })
   border-radius: 4px;
   font-size: 12px;
   color: #515767;
+  cursor: pointer;
+
+  &:hover {
+    background: #e4e6eb;
+    color: #1e80ff;
+  }
 }
 
 .forum-main {
@@ -720,9 +828,19 @@ defineExpose({ isActive })
   align-items: center;
   padding: 14px 16px;
   border-bottom: 1px solid #e8e8e8;
+  cursor: pointer;
+  transition: background 0.1s;
 
   &:last-child {
     border-bottom: none;
+  }
+
+  &:hover {
+    background: #fafafa;
+  }
+
+  &.active {
+    background: #f0f7ff;
   }
 }
 

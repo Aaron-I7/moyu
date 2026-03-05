@@ -18,18 +18,18 @@ const soundEngine = useSoundEngine()
 const { settings, saveSettings } = usePomodoro()
 const { t } = useI18n({ useScope: 'global' })
 
-const categories: { id: SoundCategory | 'mixes' | 'help', label: string, icon: string }[] = [
-  { id: 'mixes', label: 'My Mixes', icon: 'mdi:playlist-music' },
-  { id: 'animals', label: 'Animals', icon: 'mdi:paw' },
-  { id: 'nature', label: 'Nature', icon: 'mdi:pine-tree' },
-  { id: 'rain', label: 'Rain', icon: 'mdi:weather-rainy' },
-  { id: 'urban', label: 'Urban', icon: 'mdi:city' },
-  { id: 'places', label: 'Places', icon: 'mdi:map-marker' },
-  { id: 'transport', label: 'Transport', icon: 'mdi:train' },
-  { id: 'things', label: 'Things', icon: 'mdi:cube-outline' },
-  { id: 'noise', label: 'Noise', icon: 'mdi:blur' },
-  { id: 'help', label: 'Help', icon: 'mdi:help-circle-outline' },
-]
+const categories = computed(() => [
+  { id: 'mixes', label: t('whiteNoise.categories.mixes'), icon: 'mdi:playlist-music' },
+  { id: 'animals', label: t('whiteNoise.categories.animals'), icon: 'mdi:paw' },
+  { id: 'nature', label: t('whiteNoise.categories.nature'), icon: 'mdi:pine-tree' },
+  { id: 'rain', label: t('whiteNoise.categories.rain'), icon: 'mdi:weather-rainy' },
+  { id: 'urban', label: t('whiteNoise.categories.urban'), icon: 'mdi:city' },
+  { id: 'places', label: t('whiteNoise.categories.places'), icon: 'mdi:map-marker' },
+  { id: 'transport', label: t('whiteNoise.categories.transport'), icon: 'mdi:train' },
+  { id: 'things', label: t('whiteNoise.categories.things'), icon: 'mdi:cube-outline' },
+  { id: 'noise', label: t('whiteNoise.categories.noise'), icon: 'mdi:blur' },
+  { id: 'help', label: t('whiteNoise.categories.help'), icon: 'mdi:help-circle-outline' },
+]) as any
 
 const activeCategory = ref<SoundCategory | 'mixes' | 'help'>('animals')
 const newMixName = ref('')
@@ -96,7 +96,7 @@ const toggleGlobalPlayback = () => {
       <div class="modal-content" @click.stop>
         <header>
           <div class="header-title">
-            <h3>{{ t('whiteNoise.mixer', 'Ambience Mixer') }}</h3>
+            <h3>{{ t('whiteNoise.title') }}</h3>
             <div class="active-badge-wrapper" v-if="activeSoundsCount > 0">
               <button class="active-badge" @click="showActiveSoundsDropdown = !showActiveSoundsDropdown">
                 {{ activeSoundsCount }} active
@@ -121,19 +121,19 @@ const toggleGlobalPlayback = () => {
               class="global-playback-btn"
               :class="{ active: settings.allowGlobalPlayback }"
               @click="toggleGlobalPlayback"
-              :title="t('whiteNoise.settings.globalPlaybackDesc', 'Keep sounds playing when leaving this page')"
+              :title="t('whiteNoise.settings.globalPlaybackDesc')"
             >
               <Icon :icon="settings.allowGlobalPlayback ? 'mdi:play-circle' : 'mdi:play-circle-outline'" width="20" />
-              <span>{{ t('whiteNoise.settings.globalPlayback', 'Background Playback') }}</span>
+              <span>{{ t('whiteNoise.settings.globalPlayback') }}</span>
             </button>
             <button 
               v-if="activeSoundsCount > 0"
               class="stop-all-btn" 
               @click="handleStopAll"
-              :title="t('whiteNoise.stopAll', 'Stop All')"
+              :title="t('whiteNoise.stopAll')"
             >
               <Icon icon="mdi:stop" width="20" />
-              <span>{{ t('whiteNoise.stopAll', 'Stop All') }}</span>
+              <span>{{ t('whiteNoise.stopAll') }}</span>
             </button>
             <button class="close-btn" @click="emit('close')">
               <Icon icon="mdi:close" width="24" />
@@ -151,7 +151,7 @@ const toggleGlobalPlayback = () => {
               @click="activeCategory = cat.id"
             >
               <Icon :icon="cat.icon" width="20" />
-              <span>{{ t('whiteNoise.categories.' + cat.id, cat.label) }}</span>
+              <span>{{ cat.label }}</span>
             </div>
           </aside>
 
@@ -159,7 +159,7 @@ const toggleGlobalPlayback = () => {
             <!-- Mixes View -->
             <div v-if="activeCategory === 'mixes'" class="mixes-view">
               <div class="mixes-header">
-                <h4>{{ t('whiteNoise.mixes.title', 'Saved Mixes') }}</h4>
+                <h4>{{ t('whiteNoise.mixes.title') }}</h4>
                 <button 
                   v-if="!showSaveInput"
                   class="save-btn" 
@@ -167,7 +167,7 @@ const toggleGlobalPlayback = () => {
                   @click="showSaveInput = true"
                 >
                   <Icon icon="mdi:plus" width="18" />
-                  {{ t('whiteNoise.mixes.saveCurrent', 'Save Current Mix') }}
+                  {{ t('whiteNoise.mixes.saveCurrent') }}
                 </button>
               </div>
 
@@ -175,19 +175,19 @@ const toggleGlobalPlayback = () => {
                 <input 
                   v-model="newMixName" 
                   type="text" 
-                  :placeholder="t('whiteNoise.mixes.placeholder', 'Mix Name (e.g., Rainy Cafe)')"
+                  :placeholder="t('whiteNoise.mixes.placeholder')"
                   @keyup.enter="handleSaveMix"
                   autoFocus
                 />
-                <button class="confirm-btn" @click="handleSaveMix">{{ t('whiteNoise.mixes.save', 'Save') }}</button>
-                <button class="cancel-btn" @click="showSaveInput = false">{{ t('whiteNoise.mixes.cancel', 'Cancel') }}</button>
+                <button class="confirm-btn" @click="handleSaveMix">{{ t('whiteNoise.mixes.save') }}</button>
+                <button class="cancel-btn" @click="showSaveInput = false">{{ t('whiteNoise.mixes.cancel') }}</button>
               </div>
 
               <div class="mix-list">
                 <div v-if="soundEngine.savedMixes.value.length === 0" class="empty-state">
                   <Icon icon="mdi:playlist-remove" width="48" />
-                  <p>{{ t('whiteNoise.mixes.empty', 'No saved mixes yet.') }}</p>
-                  <p class="sub">{{ t('whiteNoise.mixes.emptySub', 'Activate some sounds and save them here.') }}</p>
+                  <p>{{ t('whiteNoise.mixes.empty') }}</p>
+                  <p class="sub">{{ t('whiteNoise.mixes.emptySub') }}</p>
                 </div>
 
                 <div 
@@ -200,10 +200,10 @@ const toggleGlobalPlayback = () => {
                     <span class="mix-details">{{ mix.sounds.length }} sounds</span>
                   </div>
                   <div class="mix-actions">
-                    <button class="play-btn" @click="soundEngine.loadMix(mix.id)" :title="t('whiteNoise.mixes.load', 'Load Mix')">
+                    <button class="play-btn" @click="soundEngine.loadMix(mix.id)" :title="t('whiteNoise.mixes.load')">
                       <Icon icon="mdi:play" width="20" />
                     </button>
-                    <button class="delete-btn" @click="mixToDelete = mix.id" :title="t('whiteNoise.mixes.delete', 'Delete')">
+                    <button class="delete-btn" @click="mixToDelete = mix.id" :title="t('whiteNoise.mixes.delete')">
                       <Icon icon="mdi:delete-outline" width="18" />
                     </button>
                   </div>
@@ -213,34 +213,34 @@ const toggleGlobalPlayback = () => {
 
             <!-- Help View -->
             <div v-else-if="activeCategory === 'help'" class="help-view">
-              <h4>{{ t('whiteNoise.help.title', 'How to use Ambience Mixer') }}</h4>
+              <h4>{{ t('whiteNoise.help.title') }}</h4>
               <div class="help-section">
                 <div class="help-item">
                   <Icon icon="mdi:cursor-default-click" width="24" />
                   <div>
-                    <h5>{{ t('whiteNoise.help.toggleTitle', 'Toggle Sounds') }}</h5>
-                    <p>{{ t('whiteNoise.help.toggleDesc', 'Click on any sound card to toggle it on or off. You can combine multiple sounds to create your perfect atmosphere.') }}</p>
+                    <h5>{{ t('whiteNoise.help.toggleTitle') }}</h5>
+                    <p>{{ t('whiteNoise.help.toggleDesc') }}</p>
                   </div>
                 </div>
                 <div class="help-item">
                   <Icon icon="mdi:volume-high" width="24" />
                   <div>
-                    <h5>{{ t('whiteNoise.help.volumeTitle', 'Adjust Volume') }}</h5>
-                    <p>{{ t('whiteNoise.help.volumeDesc', 'Use the slider on active sound cards to adjust their individual volume levels.') }}</p>
+                    <h5>{{ t('whiteNoise.help.volumeTitle') }}</h5>
+                    <p>{{ t('whiteNoise.help.volumeDesc') }}</p>
                   </div>
                 </div>
                 <div class="help-item">
                   <Icon icon="mdi:content-save" width="24" />
                   <div>
-                    <h5>{{ t('whiteNoise.help.saveTitle', 'Save Mixes') }}</h5>
-                    <p>{{ t('whiteNoise.help.saveDesc', 'Go to "My Mixes" and click "Save Current Mix" to save your current combination. Give it a name to easily find it later.') }}</p>
+                    <h5>{{ t('whiteNoise.help.saveTitle') }}</h5>
+                    <p>{{ t('whiteNoise.help.saveDesc') }}</p>
                   </div>
                 </div>
                 <div class="help-item">
                   <Icon icon="mdi:stop" width="24" />
                   <div>
-                    <h5>{{ t('whiteNoise.help.globalTitle', 'Global Control') }}</h5>
-                    <p>{{ t('whiteNoise.help.globalDesc', 'Sounds continue playing even if you close this modal or navigate away. Use the "Stop All" button in the header to silence everything at once.') }}</p>
+                    <h5>{{ t('whiteNoise.help.globalTitle') }}</h5>
+                    <p>{{ t('whiteNoise.help.globalDesc') }}</p>
                   </div>
                 </div>
               </div>
@@ -258,7 +258,7 @@ const toggleGlobalPlayback = () => {
                 <div class="icon-wrapper">
                   <Icon :icon="sound.icon" width="32" />
                 </div>
-                <span class="sound-label">{{ t('whiteNoise.sounds.' + sound.id, sound.label) }}</span>
+                <span class="sound-label">{{ t('whiteNoise.sounds.' + sound.id) }}</span>
                 
                 <div class="volume-control" @click.stop>
                   <input 
@@ -281,11 +281,11 @@ const toggleGlobalPlayback = () => {
       <Transition name="fade">
         <div v-if="mixToDelete" class="confirm-overlay" @click.stop>
           <div class="confirm-modal">
-            <h4>{{ t('whiteNoise.mixes.confirmTitle', 'Delete Mix?') }}</h4>
-            <p>{{ t('whiteNoise.mixes.confirmMessage', 'Are you sure you want to delete this sound mix? This action cannot be undone.') }}</p>
+            <h4>{{ t('whiteNoise.mixes.confirmTitle') }}</h4>
+            <p>{{ t('whiteNoise.mixes.confirmMessage') }}</p>
             <div class="confirm-actions">
-              <button class="cancel-btn" @click="mixToDelete = null">{{ t('whiteNoise.mixes.cancel', 'Cancel') }}</button>
-              <button class="delete-btn" @click="confirmDeleteMix">{{ t('whiteNoise.mixes.delete', 'Delete') }}</button>
+              <button class="cancel-btn" @click="mixToDelete = null">{{ t('whiteNoise.mixes.cancel') }}</button>
+              <button class="delete-btn" @click="confirmDeleteMix">{{ t('whiteNoise.mixes.delete') }}</button>
             </div>
           </div>
         </div>

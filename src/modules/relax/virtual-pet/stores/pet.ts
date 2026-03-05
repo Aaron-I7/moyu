@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { useCloudSync } from '@/composables/useCloudSync'
 
 const STORAGE_KEY = 'moyu-virtual-pet-v3'
 
@@ -328,9 +329,11 @@ export const usePetStore = defineStore('virtual-pet', {
     },
 
     save() {
+      const { pushData } = useCloudSync()
       this.lastSaved = Date.now()
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this.$state))
+        pushData('virtual-pet', this.$state)
       } catch {
         // ignore
       }

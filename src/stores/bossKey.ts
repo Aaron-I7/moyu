@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { useCloudSync } from '@/composables/useCloudSync'
 
 const STORAGE_KEY = 'moyu-boss-key-settings'
 
@@ -32,8 +33,10 @@ export const useBossKeyStore = defineStore('boss-key', {
     },
 
     save() {
+      const { pushData } = useCloudSync()
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this.$state))
+        pushData('boss-key', this.$state)
       } catch {
         // ignore
       }

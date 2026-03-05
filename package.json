@@ -13,8 +13,10 @@
   "dependencies": {
     "@iconify/vue": "^5.0.0",
     "@supabase/supabase-js": "^2.98.0",
+    "date-holidays": "^3.26.8",
     "dayjs": "^1.11.19",
     "howler": "^2.2.4",
+    "lunar-javascript": "^1.7.7",
     "naive-ui": "^2.43.2",
     "peerjs": "^1.5.5",
     "pinia": "^3.0.4",

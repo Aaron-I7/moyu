@@ -103,9 +103,9 @@ export interface JournalEntry {
   fishId: string
   caught: boolean
   count: number
-  maxSize: number
-  maxWeight: number
-  firstCaughtAt: number | null
+  // maxSize: number // 移除详细记录，改为只记录数量
+  // maxWeight: number
+  // firstCaughtAt: number | null
 }
 
 /** 玩家持久化状态 */
@@ -115,8 +115,8 @@ export interface PlayerState {
   exp: number
   totalCatch: number
   unlockedSpotIds: string[]
-  journal: Record<string, JournalEntry>
-  catchHistory: CatchRecord[]
+  journal: Record<string, number> // 简化为 fishId -> count 映射
+  // catchHistory: CatchRecord[] // 移除详细历史记录
   settings: PlayerSettings
 }
 

@@ -1,4 +1,7 @@
 {
+  "common": {
+    "more": "更多"
+  },
   "app": {
     "name": "摸鱼吧",
     "titleSuffix": "全球打工人碎片放松平台",
@@ -25,6 +28,7 @@
     "language": "语言",
     "voice": "语音",
     "share": "分享",
+    "stayDuration": "今日摸鱼时长（后台或播放音乐时不暂停）",
     "accessibility": "无障碍",
     "fontScale": "字体大小"
   },
@@ -46,7 +50,44 @@
     "avoidNow": "当前避免",
     "holidayFocus": "节日语境",
     "commuteFocus": "通勤语境",
-    "rhythmFocus": "工作节奏"
+    "rhythmFocus": "工作节奏",
+    "popularTools": "热门工具",
+    "popularGames": "热门游戏",
+    "popularRelax": "热门休闲"
+  },
+  "tools": {
+    "pomodoro": {
+      "title": "番茄钟",
+      "desc": "专注与休息循环"
+    },
+    "breathing": {
+      "title": "呼吸练习",
+      "desc": "1分钟快速解压"
+    },
+    "noise": {
+      "title": "白噪音",
+      "desc": "屏蔽干扰环境"
+    },
+    "calendar": {
+      "title": "日历",
+      "desc": "查看节假日",
+      "today": "今天"
+    }
+  },
+  "almanac": {
+    "ganzhi": "干支",
+    "wuxing": "五行",
+    "chong": "冲",
+    "sha": "煞",
+    "yi": "宜",
+    "ji": "忌",
+    "shengxiao": "生肖"
+  },
+  "divination": {
+    "title": "每日卜卦",
+    "good": "今日宜",
+    "bad": "今日忌",
+    "refresh": "重新占卜"
   },
   "views": {
     "gamesTitle": "游戏",
@@ -75,7 +116,7 @@
       "tags": ["专注", "睡眠", "环境音"]
     }
   },
-  "white_noise": {
+  "whiteNoise": {
     "rain": "雨声",
     "fire": "炉火",
     "forest": "森林",
@@ -84,10 +125,106 @@
     "thunder": "雷声",
     "birds": "鸟鸣",
     "night": "夏夜",
-    "keyboard": "键盘声"
+    "keyboard": "键盘声",
+    "mixer": "白噪音混合器",
+    "stopAll": "停止所有",
+    "categories": {
+      "mixes": "我的混音",
+      "animals": "动物",
+      "nature": "自然",
+      "rain": "雨声",
+      "urban": "城市",
+      "places": "场所",
+      "transport": "交通",
+      "things": "物品",
+      "noise": "噪音",
+      "help": "帮助"
+    },
+    "sounds": {
+      "birds": "鸟鸣",
+      "crickets": "蟋蟀",
+      "wolf": "狼嚎",
+      "cat": "猫咪",
+      "rain": "下雨",
+      "thunder": "雷声",
+      "wind": "风声",
+      "river": "河流",
+      "ocean": "海浪",
+      "fire": "篝火",
+      "train": "火车",
+      "car": "汽车",
+      "plane": "飞机",
+      "fan": "风扇",
+      "clock": "时钟",
+      "keyboard": "键盘",
+      "white_noise": "白噪音",
+      "pink_noise": "粉红噪音",
+      "brown_noise": "棕色噪音",
+      "cafe": "咖啡馆",
+      "library": "图书馆",
+      "office": "办公室"
+    },
+    "mixes": {
+      "title": "已保存混音",
+      "saveCurrent": "保存当前混音",
+      "placeholder": "混音名称 (如: 雨天咖啡馆)",
+      "save": "保存",
+      "cancel": "取消",
+      "empty": "暂无保存的混音",
+      "emptySub": "激活一些声音并保存到这里。",
+      "load": "加载混音",
+      "delete": "删除",
+      "confirmTitle": "删除混音？",
+      "confirmMessage": "确定要删除这个混音吗？此操作无法撤销。"
+    },
+    "help": {
+      "title": "如何使用混合器",
+      "toggleTitle": "开关声音",
+      "toggleDesc": "点击任意声音卡片可开启或关闭。你可以组合多种声音来创造完美的氛围。",
+      "volumeTitle": "调节音量",
+      "volumeDesc": "使用激活卡片上的滑块来调节单个声音的音量。",
+      "saveTitle": "保存混音",
+      "saveDesc": "前往“我的混音”点击“保存当前混音”即可保存组合，方便下次使用。",
+      "globalTitle": "全局控制",
+      "globalDesc": "即使关闭此弹窗或切换页面，声音也会继续播放。使用顶部的“停止所有”按钮可一键静音。"
+    },
+    "settings": {
+      "globalPlayback": "后台播放",
+      "globalPlaybackDesc": "离开此页面时保持声音播放"
+    }
+  },
+  "about": {
+    "title": "关于我们",
+    "description": "面向全球年轻打工人：即开即用、隐私优先、可随时抽离。",
+    "mission": "我们的使命",
+    "missionDesc": "打造一个专为全球打工人设计的碎片化放松平台，让你在繁忙的工作间隙，能够快速充电，恢复状态。",
+    "features": {
+      "title": "核心特色",
+      "instant": "秒开即用",
+      "instantDesc": "无繁琐加载，点击即玩，随时随地开启摸鱼时刻。",
+      "privacy": "隐私优先",
+      "privacyDesc": "无需注册，本地存储，我们尊重并保护你的每一份数据。",
+      "adaptive": "自适应布局",
+      "adaptiveDesc": "完美适配桌面与移动端，无论大屏小屏，体验始终如一。",
+      "free": "永久免费",
+      "freeDesc": "承诺核心功能永久免费，让快乐无门槛。"
+    },
+    "feedback": {
+      "title": "意见反馈",
+      "subtitle": "你的声音对我们很重要，帮助我们要改进。",
+      "contentLabel": "反馈内容",
+      "contentPlaceholder": "请详细描述你的建议或遇到的问题...",
+      "contactLabel": "联系方式 (可选)",
+      "contactPlaceholder": "邮箱或其它联系方式，方便我们回复",
+      "submit": "提交反馈",
+      "submitting": "提交中...",
+      "success": "反馈已收到，感谢你的建议！",
+      "error": "提交失败，请稍后重试。"
+    }
   },
   "routeTitle": {
     "home": "首页",
+    "about": "关于我们",
     "games": "游戏",
     "relax": "休闲",
     "tools": "工具",
@@ -120,6 +257,13 @@
   },
   "toolMenu": {
     "title": "工作台导航"
+  },
+  "settings": {
+    "title": "设置",
+    "theme": "外观主题",
+    "themeDesc": "选择你喜欢的界面风格。",
+    "bossKey": "老板键设置",
+    "bossKeyDesc": "紧急情况下快速切换到工作界面。"
   },
   "bossKey": {
     "title": "隐身模式设置",
@@ -184,5 +328,16 @@
     "start": "开始监听",
     "stop": "停止监听",
     "listening": "语音监听中，可说「首页、游戏、工具、阅读、休闲」。"
+  },
+  "auth": {
+    "nickname": "昵称",
+    "nicknamePlaceholder": "输入你的昵称",
+    "password": "密码",
+    "passwordPlaceholder": "输入你的密码",
+    "login": "登录",
+    "createAccount": "创建账户",
+    "noAccount": "没有账户？",
+    "hasAccount": "已有账户？",
+    "subtitle": "在不同设备间同步你的进度"
   }
 }
