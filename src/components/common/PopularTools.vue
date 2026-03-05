@@ -24,12 +24,12 @@ const tools = computed(() => [
     path: '/tools/pomodoro'
   },
   {
-    id: 'breathing',
-    name: t('tools.breathing.title'),
-    desc: t('tools.breathing.desc'),
-    icon: 'mdi:lungs',
+    id: 'memo',
+    name: t('tools.memo.title'),
+    desc: t('tools.memo.desc'),
+    icon: 'mdi:calendar-edit',
     color: '#4ECDC4',
-    path: '/relax/breathing'
+    path: '/tools/memo'
   },
   {
     id: 'noise',

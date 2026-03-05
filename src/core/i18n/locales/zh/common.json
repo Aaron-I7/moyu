@@ -1,6 +1,11 @@
 {
   "common": {
-    "more": "更多"
+    "more": "更多",
+    "save": "保存",
+    "cancel": "取消",
+    "edit": "编辑",
+    "delete": "删除",
+    "add": "添加"
   },
   "app": {
     "name": "摸鱼吧",
@@ -56,22 +61,34 @@
     "popularRelax": "热门休闲"
   },
   "tools": {
+    "title": "效率工具",
     "pomodoro": {
-      "title": "番茄钟",
-      "desc": "专注与休息循环"
+      "title": "番茄时钟",
+      "desc": "专注于工作，适度休息，保持高效率。"
     },
-    "breathing": {
-      "title": "呼吸练习",
-      "desc": "1分钟快速解压"
+    "calendar": {
+      "title": "摸鱼日历",
+      "desc": "查看假期调休、农历黄历与每日运势。",
+      "today": "今天"
+    },
+    "memo": {
+      "title": "备忘录",
+      "desc": "记录每日代办事项与灵感。"
     },
     "noise": {
       "title": "白噪音",
       "desc": "屏蔽干扰环境"
-    },
-    "calendar": {
-      "title": "日历",
-      "desc": "查看节假日",
-      "today": "今天"
+    }
+  },
+  "calendar": {
+    "memo": {
+      "title": "{date} 的备忘录",
+      "add": "添加备忘录",
+      "manage": "管理备忘录",
+      "empty": "暂无备忘录，来记点什么吧...",
+      "placeholder": "在此输入备忘录内容...",
+      "retention": "数据最多保留 30 天，请及时备份重要信息。",
+      "confirmDelete": "确定要删除这条备忘录吗？"
     }
   },
   "almanac": {
@@ -338,6 +355,7 @@
     "createAccount": "创建账户",
     "noAccount": "没有账户？",
     "hasAccount": "已有账户？",
-    "subtitle": "在不同设备间同步你的进度"
+    "subtitle": "在不同设备间同步你的进度",
+    "loginRequired": "该功能需要登录后才能使用，请先登录。"
   }
 }

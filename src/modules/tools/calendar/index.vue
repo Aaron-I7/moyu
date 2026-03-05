@@ -1,15 +1,84 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { Solar } from 'lunar-javascript'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import { getHolidayInfo, type CalendarRegion } from './holidayEngine'
 import SharedDivinationCard from '@/components/common/SharedDivinationCard.vue'
+import { useMemoStore } from './useMemoStore'
+import MemoModal from './components/MemoModal.vue'
+
+import { useAuth } from '@/composables/useAuth'
+import { useCloudSync } from '@/composables/useCloudSync'
 
 const { t, locale } = useI18n()
+const { user } = useAuth()
+const { pushData } = useCloudSync()
 const currentDate = ref(dayjs())
 const selectedDate = ref(dayjs())
+const CALENDAR_REGION_STORAGE_KEY = 'moyu-calendar-region'
+const availableRegionIds: CalendarRegion[] = ['cn', 'sg', 'my', 'kr', 'jp']
+const getStoredRegion = (): CalendarRegion => {
+  const stored = localStorage.getItem(CALENDAR_REGION_STORAGE_KEY)
+  return availableRegionIds.includes(stored as CalendarRegion) ? (stored as CalendarRegion) : 'cn'
+}
+
+// Memo Store
+const memoStore = useMemoStore()
+const showMemoModal = ref(false)
+const contextMenuVisible = ref(false)
+const contextMenuPos = ref({ x: 0, y: 0 })
+const contextMenuDate = ref('') // YYYY-MM-DD
+const showAuthModal = ref(false)
+
+// Load memos when month changes
+watch([currentDate, user], async ([newDate, newUser]) => {
+  if (newUser) {
+    const start = newDate.startOf('month').subtract(7, 'day').format('YYYY-MM-DD')
+    const end = newDate.endOf('month').add(7, 'day').format('YYYY-MM-DD')
+    await memoStore.fetchMemos(start, end)
+  }
+}, { immediate: true })
+
+const handleContextMenu = (event: MouseEvent, day: any) => {
+  event.preventDefault()
+  if (!user.value) {
+    showAuthModal.value = true
+    return
+  }
+  contextMenuPos.value = { x: event.clientX, y: event.clientY }
+  contextMenuDate.value = day.date.format('YYYY-MM-DD')
+  contextMenuVisible.value = true
+}
+
+const openMemoModal = (date?: string) => {
+  if (!user.value) {
+    showAuthModal.value = true
+    return
+  }
+  if (date) {
+    selectedDate.value = dayjs(date)
+    contextMenuDate.value = date
+  } else {
+    contextMenuDate.value = selectedDate.value.format('YYYY-MM-DD')
+  }
+  showMemoModal.value = true
+  contextMenuVisible.value = false
+}
+
+const handleAddMemo = async (content: string) => {
+  await memoStore.addMemo(content, contextMenuDate.value)
+}
+
+const handleUpdateMemo = async (id: string, content: string) => {
+  await memoStore.updateMemo(id, content)
+}
+
+const handleDeleteMemo = async (id: string) => {
+  await memoStore.deleteMemo(id)
+}
+
 
 // Region Switcher
 const regions: Array<{ id: CalendarRegion; name: string; icon: string }> = [
@@ -19,7 +88,7 @@ const regions: Array<{ id: CalendarRegion; name: string; icon: string }> = [
   { id: 'kr', name: '韩国', icon: 'twemoji:flag-south-korea' },
   { id: 'jp', name: '日本', icon: 'twemoji:flag-japan' },
 ]
-const currentRegion = ref<CalendarRegion>('cn')
+const currentRegion = ref<CalendarRegion>(getStoredRegion())
 const isRegionMenuOpen = ref(false)
 const currentRegionInfo = computed(() => regions.find(r => r.id === currentRegion.value))
 
@@ -37,6 +106,8 @@ const toggleRegionMenu = () => {
 
 const selectRegion = (regionId: CalendarRegion) => {
   currentRegion.value = regionId
+  localStorage.setItem(CALENDAR_REGION_STORAGE_KEY, regionId)
+  pushData('calendar-region', regionId)
   isRegionMenuOpen.value = false
 }
 
@@ -99,6 +170,26 @@ const selectDate = (day: any) => {
   if (!day.isCurrentMonth) {
     currentDate.value = day.date
   }
+}
+
+const handleDayClick = (day: any) => {
+  selectDate(day)
+}
+
+const handleDayDoubleClick = (day: any) => {
+  if (!user.value) {
+    showAuthModal.value = true
+    return
+  }
+  openMemoModal(day.date.format('YYYY-MM-DD'))
+}
+
+const showDatePicker = ref(false)
+const pickerYear = ref(dayjs().year())
+
+const selectMonth = (month: number) => {
+  currentDate.value = dayjs().year(pickerYear.value).month(month)
+  showDatePicker.value = false
 }
 
 // Formatters
@@ -224,6 +315,19 @@ const zodiacMeta = computed(() => {
 <template>
   <div class="calendar-tool">
     <div class="main-layout">
+      <!-- Context Menu -->
+      <div 
+        v-if="contextMenuVisible" 
+        class="context-menu" 
+        :style="{ top: contextMenuPos.y + 'px', left: contextMenuPos.x + 'px' }"
+        @click.stop
+      >
+        <div class="menu-item" @click="openMemoModal(contextMenuDate)">
+          <Icon icon="mdi:calendar-edit" width="16" />
+          <span>{{ t('calendar.memo.manage') }}</span>
+        </div>
+      </div>
+
       <!-- Left: Calendar -->
       <div class="calendar-card">
         <header>
@@ -232,7 +336,27 @@ const zodiacMeta = computed(() => {
           </div>
           <div class="calendar-nav">
             <button @click="handlePrevMonth"><Icon icon="mdi:chevron-left" width="24" /></button>
-            <span class="current-month">{{ currentMonthYear }}</span>
+            <div class="date-picker-wrapper">
+              <span class="current-month" @click="showDatePicker = !showDatePicker">{{ currentMonthYear }}</span>
+              <div v-if="showDatePicker" class="date-picker-popup" @click.stop>
+                <div class="picker-header">
+                  <button @click="pickerYear--"><Icon icon="mdi:chevron-left" /></button>
+                  <span>{{ pickerYear }}</span>
+                  <button @click="pickerYear++"><Icon icon="mdi:chevron-right" /></button>
+                </div>
+                <div class="picker-months">
+                  <div 
+                    v-for="m in 12" 
+                    :key="m" 
+                    class="picker-month"
+                    :class="{ active: pickerYear === currentDate.year() && (m - 1) === currentDate.month() }"
+                    @click="selectMonth(m - 1)"
+                  >
+                    {{ m }}月
+                  </div>
+                </div>
+              </div>
+            </div>
             <button @click="handleNextMonth"><Icon icon="mdi:chevron-right" width="24" /></button>
           </div>
           <div class="header-right">
@@ -275,9 +399,12 @@ const zodiacMeta = computed(() => {
                 'is-today': day.isToday,
                 'is-selected': day.isSelected,
                 'is-holiday': !!day.holiday && !day.isWork,
-                'is-work': day.isWork
+                'is-work': day.isWork,
+                'has-memo': memoStore.hasMemo(day.date.format('YYYY-MM-DD'))
               }"
-              @click="selectDate(day)"
+              @click="handleDayClick(day)"
+              @dblclick="handleDayDoubleClick(day)"
+              @contextmenu="handleContextMenu($event, day)"
             >
               <span class="solar-day">{{ day.date.date() }}</span>
               <span class="lunar-day">
@@ -286,6 +413,7 @@ const zodiacMeta = computed(() => {
               <span v-if="day.holiday" class="holiday-badge" :class="{ work: day.isWork }">
                 {{ day.isWork ? '班' : '休' }}
               </span>
+              <span v-if="memoStore.hasMemo(day.date.format('YYYY-MM-DD'))" class="memo-dot"></span>
             </div>
           </div>
         </div>
@@ -302,6 +430,10 @@ const zodiacMeta = computed(() => {
                 <span class="day-number">{{ selectedDate.date() }}</span>
               </div>
               <div class="week-day">{{ selectedDateDetail.weekDay }}</div>
+              
+              <button class="add-memo-btn" @click="openMemoModal(selectedDate.format('YYYY-MM-DD'))" :title="t('calendar.memo.add')">
+                <Icon icon="mdi:pencil-plus" width="18" />
+              </button>
             </div>
             
             <div class="lunar-section">
@@ -370,10 +502,88 @@ const zodiacMeta = computed(() => {
         <SharedDivinationCard class="divination-card" />
       </div>
     </div>
+    <MemoModal
+      :visible="showMemoModal"
+      :date="contextMenuDate"
+      :memos="memoStore.getMemosByDate(contextMenuDate)"
+      :loading="memoStore.loading.value"
+      @close="showMemoModal = false"
+      @add="handleAddMemo"
+      @update="handleUpdateMemo"
+      @delete="handleDeleteMemo"
+    />
+    <AuthModal :show="showAuthModal" @close="showAuthModal = false" />
   </div>
 </template>
 
 <style scoped lang="scss">
+.context-menu {
+  position: fixed;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  padding: 4px;
+  z-index: 1000;
+  min-width: 140px;
+  
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-text);
+    transition: all 0.2s;
+    
+    &:hover {
+      background: var(--color-background);
+      color: var(--color-primary);
+    }
+  }
+}
+
+.add-memo-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--color-background);
+  color: var(--color-text-secondary);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: var(--color-primary);
+    color: white;
+  }
+}
+
+.day-cell {
+  /* existing styles */
+  .memo-dot {
+    position: absolute;
+    bottom: 6px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    box-shadow: 0 0 0 1px var(--color-surface);
+  }
+  
+  &.has-memo {
+    /* Optional: special style for days with memo */
+  }
+}
+
 .calendar-tool {
   padding: 24px;
   max-width: 1200px;
@@ -793,6 +1003,74 @@ header {
   .side-panel { order: 2; }
   .almanac-card .almanac-header .solar-section .day-wrapper .day-number {
     font-size: 60px;
+  }
+}
+/* Date Picker */
+.date-picker-wrapper {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.current-month {
+  font-size: 18px;
+  font-weight: 600;
+  min-width: 140px;
+  text-align: center;
+  padding: 4px 8px;
+  border-radius: 8px;
+  &:hover {
+    background: var(--color-background);
+  }
+}
+
+.date-picker-popup {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  padding: 12px;
+  z-index: 100;
+  width: 200px;
+}
+
+.picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-weight: 600;
+  
+  button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    &:hover { color: var(--color-primary); }
+  }
+}
+
+.picker-months {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  
+  .picker-month {
+    text-align: center;
+    padding: 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    
+    &:hover { background: var(--color-background); }
+    &.active { 
+      background: var(--color-primary); 
+      color: white; 
+    }
   }
 }
 </style>

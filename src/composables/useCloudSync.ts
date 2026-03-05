@@ -47,6 +47,8 @@ export function useCloudSync() {
       if (settings.theme) setLocal('moyu-theme-id', settings.theme)
       if (settings.locale) setLocal('moyu-locale', settings.locale)
       if (settings.bossKey) setLocal('moyu-boss-key-settings', settings.bossKey)
+      if (settings.calendarRegion) setLocal('moyu-calendar-region', settings.calendarRegion)
+      if (settings.danmakuEnabled !== undefined) setLocal('moyu-danmaku-enabled', settings.danmakuEnabled)
       // Add other global settings here (e.g. danmaku)
 
       // Apply Game Data
@@ -60,7 +62,7 @@ export function useCloudSync() {
           if (record.module_key === 'pomodoro-stats') localKey = 'moyu-pomodoro-stats'
           
           // Skip legacy keys that are now in profile settings
-          if (['theme', 'locale', 'boss-key'].includes(record.module_key)) return
+          if (['theme', 'locale', 'boss-key', 'calendar-region', 'danmaku-enabled'].includes(record.module_key)) return
 
           if (localKey && record.data) {
             setLocal(localKey, record.data)
@@ -92,7 +94,7 @@ export function useCloudSync() {
         if (!supabase) return 
         
         // Check if this key belongs to Profile Settings
-        const profileKeys = ['theme', 'locale', 'boss-key'] // Add 'danmaku' etc.
+        const profileKeys = ['theme', 'locale', 'boss-key', 'calendar-region', 'danmaku-enabled']
         
         if (profileKeys.includes(moduleKey)) {
           // Update Profile Settings (Merge)
@@ -106,7 +108,9 @@ export function useCloudSync() {
           const propMap: Record<string, string> = {
             'theme': 'theme',
             'locale': 'locale',
-            'boss-key': 'bossKey'
+            'boss-key': 'bossKey',
+            'calendar-region': 'calendarRegion',
+            'danmaku-enabled': 'danmakuEnabled'
           }
           const propName = propMap[moduleKey]
 
@@ -159,6 +163,8 @@ export function useCloudSync() {
       'moyu-theme-id',
       'moyu-locale',
       'moyu-boss-key-settings',
+      'moyu-calendar-region',
+      'moyu-danmaku-enabled',
       'moyu-pomodoro-settings',
       'moyu-pomodoro-stats',
       'moyu-pomodoro-mixes'

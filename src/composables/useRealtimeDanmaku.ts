@@ -2,6 +2,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { i18n } from '@/core/i18n'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { hasSupabaseConfig, supabase } from '@/core/supabase/client'
+import { useCloudSync } from './useCloudSync'
 
 export interface DanmakuMessage {
   id: string
@@ -31,6 +32,7 @@ const danmakuEnabled = ref(true)
 
 let reconnectTimer: number | null = null
 let realtimeChannel: RealtimeChannel | null = null
+const { pushData } = useCloudSync()
 
 function buildDefaultUserName() {
   const suffix = Math.floor(Math.random() * 1000)
@@ -297,6 +299,7 @@ function disconnect() {
 function saveDanmakuEnabled(enabled: boolean) {
   danmakuEnabled.value = enabled
   localStorage.setItem(ENABLED_KEY, String(enabled))
+  pushData('danmaku-enabled', enabled)
   if (enabled) {
     void connect()
   } else {

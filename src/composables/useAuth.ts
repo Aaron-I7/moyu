@@ -48,9 +48,35 @@ export function useAuth() {
         .eq('id', user.value.id)
         .single()
       
-      if (err) throw err
+      if (err) {
+        // If profile not found (PGRST116), try to create it
+        if (err.code === 'PGRST116') {
+          console.log('Profile not found, attempting to create one...')
+          const nickname = user.value.user_metadata?.nickname || user.value.email?.split('@')[0] || 'User'
+          
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert([{
+              id: user.value.id,
+              nickname: nickname,
+              settings: {}
+            }])
+            .select()
+            .single()
+            
+          if (createError) {
+            // If creation fails (e.g. nickname taken), just log it
+            console.error('Failed to create profile:', createError)
+            return
+          }
+          
+          profile.value = newProfile
+          return
+        }
+        throw err
+      }
       profile.value = data
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error fetching profile:', e)
     }
   }

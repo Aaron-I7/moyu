@@ -1,6 +1,11 @@
 {
   "common": {
-    "more": "More"
+    "more": "More",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "add": "Add"
   },
   "app": {
     "name": "Breakflow",
@@ -56,22 +61,34 @@
     "popularRelax": "Popular Relax"
   },
   "tools": {
+    "title": "Efficiency Tools",
     "pomodoro": {
       "title": "Pomodoro",
-      "desc": "Focus & Break Cycles"
+      "desc": "Stay focused and take breaks efficiently."
     },
-    "breathing": {
-      "title": "Breathing",
-      "desc": "1-Min Stress Relief"
+    "calendar": {
+      "title": "Moyu Calendar",
+      "desc": "Check holidays, lunar dates, and fortunes.",
+      "today": "Today"
+    },
+    "memo": {
+      "title": "Memos",
+      "desc": "Track your daily todos and ideas."
     },
     "noise": {
       "title": "White Noise",
       "desc": "Block Distractions"
-    },
-    "calendar": {
-      "title": "Calendar",
-      "desc": "Check Holidays",
-      "today": "Today"
+    }
+  },
+  "calendar": {
+    "memo": {
+      "title": "Memos for {date}",
+      "add": "Add Memo",
+      "manage": "Manage Memos",
+      "empty": "No memos yet. Write something down...",
+      "placeholder": "Type your memo here...",
+      "retention": "Data is kept for 30 days max. Please backup important info.",
+      "confirmDelete": "Are you sure you want to delete this memo?"
     }
   },
   "almanac": {
@@ -338,6 +355,7 @@
     "createAccount": "Create Account",
     "noAccount": "New here?",
     "hasAccount": "Already have an account?",
-    "subtitle": "Sync your progress across devices"
+    "subtitle": "Sync your progress across devices",
+    "loginRequired": "You need to log in to use this feature."
   }
 }

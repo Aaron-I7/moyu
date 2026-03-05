@@ -3,12 +3,13 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Icon } from '@iconify/vue'
-import GlobalSettingsModal from '@/components/common/GlobalSettingsModal.vue'
+import BossKeySettings from '@/components/common/BossKeySettings.vue'
 import SharePanel from '@/components/common/SharePanel.vue'
 import AuthModal from '@/components/auth/AuthModal.vue'
 import { useBossKeyStore } from '@/stores/bossKey'
 import { availableLocales, localeMetaMap, setLocale, type AppLocale } from '@/core/i18n'
 import { useAuth } from '@/composables/useAuth'
+import { useCloudSync } from '@/composables/useCloudSync'
 import { useSoundEngine } from '@/modules/tools/pomodoro/composables/useSoundEngine'
 
 const router = useRouter()
@@ -16,6 +17,7 @@ const route = useRoute()
 const { t, locale } = useI18n({ useScope: 'global' })
 const bossKeyStore = useBossKeyStore()
 const { user, nickname, logout, initAuth } = useAuth()
+const { pushData } = useCloudSync()
 const { isPlaying: isMusicPlaying } = useSoundEngine()
 
 const showSettingsModal = ref(false)
@@ -118,6 +120,7 @@ const handleNavigate = (path: string) => {
 
 const selectLocale = async (nextLocale: AppLocale) => {
   await setLocale(nextLocale)
+  pushData('locale', nextLocale)
   locale.value = nextLocale
   await router.push({
     path: buildLocalizedPath(routePathWithoutLocale.value, nextLocale),
@@ -280,11 +283,11 @@ const toggleUser = (e: Event) => {
       </nav>
     </Transition>
     
-    <GlobalSettingsModal 
+    <BossKeySettings 
       :visible="showSettingsModal" 
       :current-mode="bossKeyStore.mode"
       @close="showSettingsModal = false"
-      @change-boss-key-mode="bossKeyStore.setMode"
+      @change-mode="bossKeyStore.setMode"
     />
     
     <AuthModal :show="showAuthModal" @close="showAuthModal = false" />

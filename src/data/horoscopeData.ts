@@ -66,19 +66,21 @@ export async function fetchDailyQuote(): Promise<QuoteItem> {
       }
     }
 
-    // 2. 尝试调用 API (使用 ZenQuotes Free API 通过代理或直接调用)
-    // 注意：ZenQuotes 免费版有 CORS 限制，通常需要后端代理。
-    // 这里我们尝试使用一个支持 CORS 的免费 Quotes API，如 Quotable 或 API Ninjas (需要 key)
-    // 为了简单且无需 key，我们尝试使用 quotable.io (开源免费)
-    const response = await fetch('https://api.quotable.io/random?tags=wisdom|inspirational')
+    // 2. 尝试调用 API 
+    // 使用备选 API 源，quotable.io 经常不稳定
+    // 这里使用一个更稳定的开源 API 或直接使用本地 fallback 
+    // 由于外部公共 API 不稳定，我们优先使用本地随机库，
+    // 或者可以换成 https://v1.hitokoto.cn/ (一言，国内访问快)
+    
+    const response = await fetch('https://v1.hitokoto.cn/?c=d&c=i&c=k&encode=json') // d=文学, i=诗词, k=哲学
     
     if (!response.ok) throw new Error('API request failed')
     
     const data = await response.json()
     const quote: QuoteItem = {
-      id: data._id,
-      text: data.content,
-      author: data.author
+      id: data.id.toString(),
+      text: data.hitokoto,
+      author: data.from_who || data.from || '佚名'
     }
 
     // 3. 写入缓存

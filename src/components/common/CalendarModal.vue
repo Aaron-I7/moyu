@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { Solar, HolidayUtil } from 'lunar-javascript'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
-
 import { useRouter } from 'vue-router'
+import { useMemoStore } from '@/modules/tools/calendar/useMemoStore'
+import { useAuth } from '@/composables/useAuth'
 
 const props = defineProps<{
   show: boolean
@@ -17,8 +18,19 @@ const emit = defineEmits<{
 
 const router = useRouter()
 const { t, locale } = useI18n()
+const { user } = useAuth()
 const currentDate = ref(dayjs())
 const selectedDate = ref(dayjs())
+const memoStore = useMemoStore()
+
+// Fetch memos when visible or month changes
+watch([() => props.show, currentDate, user], async ([show, newDate, newUser]) => {
+  if (show && newUser) {
+    const start = newDate.startOf('month').subtract(7, 'day').format('YYYY-MM-DD')
+    const end = newDate.endOf('month').add(7, 'day').format('YYYY-MM-DD')
+    await memoStore.fetchMemos(start, end)
+  }
+}, { immediate: true })
 
 // Generate calendar grid
 const calendarDays = computed(() => {
@@ -101,6 +113,10 @@ const selectedDateDetail = computed(() => {
     desc: holiday ? (holiday.isWork() ? '调休上班' : '假期') : ''
   }
 })
+
+const selectedDateMemos = computed(() => {
+  return memoStore.getMemosByDate(selectedDate.value.format('YYYY-MM-DD'))
+})
 </script>
 
 <template>
@@ -110,7 +126,7 @@ const selectedDateDetail = computed(() => {
         <header>
           <div class="header-left">
             <h3>{{ t('tools.calendar.title') }}</h3>
-            <button class="today-btn" @click="handleToday">{{ t('tools.calendar.today') }}</button>
+            <button class="today-btn" @click="handleToday">{{ t('calendar.today') }}</button>
           </div>
           <div class="header-actions">
             <button class="more-btn" @click="handleMore">
@@ -146,7 +162,8 @@ const selectedDateDetail = computed(() => {
                 'is-today': day.isToday,
                 'is-selected': day.isSelected,
                 'is-holiday': !!day.holiday && !day.isWork,
-                'is-work': day.isWork
+                'is-work': day.isWork,
+                'has-memo': memoStore.hasMemo(day.date.format('YYYY-MM-DD'))
               }"
               @click="selectDate(day)"
             >
@@ -157,6 +174,7 @@ const selectedDateDetail = computed(() => {
               <span v-if="day.holiday" class="holiday-badge" :class="{ work: day.isWork }">
                 {{ day.isWork ? '班' : '休' }}
               </span>
+              <span v-if="memoStore.hasMemo(day.date.format('YYYY-MM-DD'))" class="memo-dot"></span>
             </div>
           </div>
           
@@ -174,6 +192,19 @@ const selectedDateDetail = computed(() => {
               <span class="holiday-name">{{ selectedDateDetail.holiday }}</span>
               <span class="holiday-desc">{{ selectedDateDetail.desc }}</span>
             </div>
+            
+            <!-- Memo Preview -->
+            <div v-if="selectedDateMemos.length > 0" class="detail-memos">
+              <div class="memo-header">
+                <Icon icon="mdi:calendar-edit" width="14" />
+                <span>{{ t('calendar.memo.title', { date: '' }).replace('的备忘录', '').trim() }}</span>
+              </div>
+              <div class="memo-list">
+                <div v-for="memo in selectedDateMemos" :key="memo.id" class="memo-item">
+                  {{ memo.content }}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -182,6 +213,53 @@ const selectedDateDetail = computed(() => {
 </template>
 
 <style scoped lang="scss">
+/* ... existing styles ... */
+
+.day-cell {
+  /* ... existing styles ... */
+  
+  .memo-dot {
+    position: absolute;
+    bottom: 4px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    box-shadow: 0 0 0 1px var(--color-surface);
+  }
+}
+
+.detail-memos {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--color-border);
+  
+  .memo-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    margin-bottom: 8px;
+  }
+  
+  .memo-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  .memo-item {
+    font-size: 13px;
+    color: var(--color-text);
+    background: var(--color-background);
+    padding: 6px 10px;
+    border-radius: 6px;
+    border-left: 2px solid var(--color-primary);
+  }
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
