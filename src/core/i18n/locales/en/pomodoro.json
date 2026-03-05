@@ -1,0 +1,20 @@
+{
+  "mode": {
+    "work": "Work",
+    "short-break": "Short Break",
+    "long-break": "Long Break"
+  },
+  "taskPlaceholder": "What are you working on?",
+  "settings": {
+    "title": "Timer Settings",
+    "workDuration": "Work Duration (min)",
+    "shortBreak": "Short Break (min)",
+    "longBreak": "Long Break (min)",
+    "longBreakInterval": "Long Break Interval",
+    "autoStartBreaks": "Auto-start Breaks",
+    "autoStartPomodoros": "Auto-start Pomodoros",
+    "allowGlobalPlayback": "Background Playback",
+    "allowGlobalPlaybackDesc": "Keep sounds playing when leaving this page",
+    "save": "Save Changes"
+  }
+}

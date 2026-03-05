@@ -3,21 +3,63 @@
   "subtitle": "选择声音，调节音量，享受宁静时光。",
   "stopAll": "停止全部",
   "nowPlaying": "正在播放",
+  "categories": {
+    "mixes": "我的组合",
+    "animals": "动物",
+    "nature": "自然",
+    "rain": "雨声",
+    "urban": "城市",
+    "places": "场所",
+    "transport": "交通",
+    "things": "物品",
+    "noise": "噪声",
+    "help": "帮助",
+    "settings": "设置"
+  },
+  "settings": {
+    "title": "全局设置",
+    "globalPlayback": "后台播放",
+    "globalPlaybackDesc": "离开页面后保持白噪音播放"
+  },
+  "mixes": {
+    "title": "已保存的组合",
+    "saveCurrent": "保存当前组合",
+    "placeholder": "组合名称 (例如: 雨中咖啡馆)",
+    "save": "保存",
+    "cancel": "取消",
+    "empty": "暂无保存的组合",
+    "emptySub": "激活一些声音并在此保存。",
+    "load": "加载组合",
+    "delete": "删除",
+    "confirmTitle": "删除组合？",
+    "confirmMessage": "确定要删除这个声音组合吗？此操作无法撤销。"
+  },
+  "help": {
+    "title": "如何使用白噪音混音器",
+    "toggleTitle": "开关声音",
+    "toggleDesc": "点击任意声音卡片即可开启或关闭。您可以组合多种声音来营造完美的氛围。",
+    "volumeTitle": "调节音量",
+    "volumeDesc": "使用激活卡片上的滑块来调节单个声音的音量。",
+    "saveTitle": "保存组合",
+    "saveDesc": "前往“我的组合”并点击“保存当前组合”来保存您当前的搭配。给它起个名字以便稍后查找。",
+    "globalTitle": "全局控制",
+    "globalDesc": "即使关闭此弹窗或切换页面，声音也会继续播放。使用顶部的“停止全部”按钮可一键静音。"
+  },
+  "sounds": {
+    "beehive": "蜂巢", "birds": "鸟鸣", "cat-purring": "猫咪呼噜", "chickens": "鸡鸣", "cows": "牛叫", "crickets": "蟋蟀", "crows": "乌鸦", "dog-barking": "狗叫", "frog": "青蛙", "horse-gallop": "马蹄声", "owl": "猫头鹰", "seagulls": "海鸥", "sheep": "绵羊", "whale": "鲸鱼", "wolf": "狼嚎", "woodpecker": "啄木鸟",
+    "campfire": "篝火", "droplets": "水滴", "field": "田野", "howling-wind": "狂风", "jungle": "丛林", "lake": "湖泊", "river": "河流", "walk-in-snow": "雪地行走", "walk-on-gravel": "碎石路行走", "walk-on-leaves": "落叶行走", "waterfall": "瀑布", "waves": "海浪", "wind-in-trees": "林间风声", "wind": "风声",
+    "brown-noise": "红噪声", "eating-chips": "吃薯片", "piano": "钢琴", "pink-noise": "粉红噪声", "study": "学习声", "white-noise": "白噪声",
+    "airport": "机场", "cafe": "咖啡馆", "carousel": "旋转木马", "church": "教堂", "construction-site": "工地", "crowded-bar": "拥挤酒吧", "kitchen": "厨房", "laboratory": "实验室", "laundry-room": "洗衣房", "library": "图书馆", "night-village": "夜晚村庄", "office": "办公室", "restaurant": "餐厅", "subway-station": "地铁站", "supermarket": "超市", "temple": "寺庙", "underwater": "水下",
+    "heavy-rain-on-glass": "玻璃雨声", "heavy_rain": "大雨", "light-rain": "小雨", "rain-on-car-roof": "车顶雨声", "rain-on-eaves": "屋檐雨声", "rain-on-empty-street": "空街雨声", "rain-on-leaves": "叶上雨声", "rain-on-raincoat": "雨衣雨声", "rain-on-tent": "帐篷雨声", "rain-on-umbrella": "伞上雨声", "rain-on-windowsill": "窗台雨声", "rain-on-wooden-house": "木屋雨声", "rain-while-driving": "驾车雨声", "thunderstorm": "雷暴",
+    "boiling-water": "烧水", "bubbles": "气泡", "ceiling-fan": "吊扇", "clock": "时钟", "dryer": "烘干机", "ear-cleaning-1": "采耳1", "ear-cleaning-2": "采耳2", "guitar": "吉他", "guzheng": "古筝", "keyboard-sound": "键盘声", "light-piano": "轻钢琴", "morse-code": "摩尔斯电码", "paper": "翻书声", "singing-bowl": "颂钵", "slide-projector": "幻灯机", "tuning-radio": "调频收音机", "typewriter": "打字机", "vinyl-effect": "黑胶唱片", "washing-machine": "洗衣机", "wind-chimes": "风铃", "windshield-wipers": "雨刮器",
+    "airplane": "飞机", "inside-a-train": "火车车厢", "rowing-boat": "划船", "sailboat": "帆船", "submarine": "潜水艇", "train": "火车",
+    "ambulance-siren": "救护车", "busy-street": "繁忙街道", "crowd": "人群", "fireworks": "烟花", "highway": "高速公路", "road": "马路", "traffic": "交通"
+  },
   "timers": {
     "0": "关闭",
     "5": "5分钟",
     "15": "15分钟",
     "30": "30分钟",
     "60": "60分钟"
-  },
-  "sounds": {
-    "rain": "雨声",
-    "wind": "风声",
-    "thunder": "雷声",
-    "fire": "壁炉",
-    "cafe": "咖啡厅",
-    "ocean": "海浪",
-    "birds": "鸟鸣",
-    "night": "夜晚"
   }
 }

@@ -19,11 +19,6 @@
     "description": "Blend ambient sounds for focus, commute, or sleep.",
     "tags": ["focus", "sleep", "ambient"]
   },
-  "pngToSvg": {
-    "name": "PNG to SVG",
-    "description": "Convert PNG assets into scalable vectors quickly.",
-    "tags": ["image", "convert", "svg"]
-  },
   "reading": {
     "name": "Novel Reader",
     "description": "Read local TXT books with lightweight controls.",

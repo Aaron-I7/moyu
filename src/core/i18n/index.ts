@@ -3,14 +3,14 @@ import { createI18n } from 'vue-i18n'
 import enCommon from './locales/en/common.json'
 import enModules from './locales/en/modules.json'
 import enWhiteNoise from './locales/en/whiteNoise.json'
-import enPngToSvg from './locales/en/pngToSvg.json'
 import enPixelFishing from './locales/en/pixelFishing.json'
+import enPomodoro from './locales/en/pomodoro.json'
 
 import zhCommon from './locales/zh/common.json'
 import zhModules from './locales/zh/modules.json'
 import zhWhiteNoise from './locales/zh/whiteNoise.json'
-import zhPngToSvg from './locales/zh/pngToSvg.json'
 import zhPixelFishing from './locales/zh/pixelFishing.json'
+import zhPomodoro from './locales/zh/pomodoro.json'
 
 export type AppLocale = 'en' | 'zh'
 export const defaultLocale: AppLocale = 'en'
@@ -53,15 +53,15 @@ const localeMessages: Record<AppLocale, Record<string, unknown>> = {
     ...enCommon,
     modules: enModules,
     whiteNoise: enWhiteNoise,
-    pngToSvg: enPngToSvg,
-    pixelFishing: enPixelFishing
+    pixelFishing: enPixelFishing,
+    pomodoro: enPomodoro
   },
   zh: {
     ...zhCommon,
     modules: zhModules,
     whiteNoise: zhWhiteNoise,
-    pngToSvg: zhPngToSvg,
-    pixelFishing: zhPixelFishing
+    pixelFishing: zhPixelFishing,
+    pomodoro: zhPomodoro
   }
 }
 

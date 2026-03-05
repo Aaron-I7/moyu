@@ -19,11 +19,6 @@
     "description": "混合环境声，适配专注、通勤与睡眠。",
     "tags": ["专注", "睡眠", "环境声"]
   },
-  "pngToSvg": {
-    "name": "PNG 转 SVG",
-    "description": "将 PNG 素材快速转换为可缩放矢量图。",
-    "tags": ["图片", "转换", "矢量"]
-  },
   "reading": {
     "name": "小说阅读",
     "description": "支持本地 TXT 文件的轻量阅读器。",

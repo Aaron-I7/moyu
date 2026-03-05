@@ -63,6 +63,29 @@
     "emptyTools": "No tools available yet",
     "emptyToolsDesc": "More globally useful tools are coming soon."
   },
+  "modules": {
+    "pomodoro": {
+      "name": "Pomodoro Focus",
+      "description": "Boost productivity with Pomodoro timer and ambient sounds.",
+      "tags": ["Focus", "Timer", "Ambient"]
+    },
+    "whiteNoise": {
+      "name": "White Noise Mixer",
+      "description": "Blend ambient tracks for focus, commute, and winding down.",
+      "tags": ["Focus", "Sleep", "Ambient"]
+    }
+  },
+  "white_noise": {
+    "rain": "Rain",
+    "fire": "Fireplace",
+    "forest": "Forest",
+    "waves": "Ocean Waves",
+    "cafe": "Cafe",
+    "thunder": "Thunder",
+    "birds": "Birds",
+    "night": "Night",
+    "keyboard": "Keyboard"
+  },
   "routeTitle": {
     "home": "Home",
     "games": "Games",

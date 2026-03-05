@@ -12,12 +12,15 @@ import AdSlot from '@/components/common/AdSlot.vue'
 import { bindGestureNavigation } from '@/composables/useGestureNavigation'
 import { applyRouteSeo } from '@/core/seo'
 import { adsConfig } from '@/core/ads/config'
+import AmbienceModal from '@/modules/tools/pomodoro/components/AmbienceModal.vue'
+import { useSoundEngine } from '@/modules/tools/pomodoro/composables/useSoundEngine'
 
 const router = useRouter()
 const route = useRoute()
 const { locale } = useI18n({ useScope: 'global' })
 const appMainRef = ref<HTMLElement | null>(null)
 const showAds = computed(() => adsConfig.enabled && route.name !== 'NotFound' && route.name !== 'LegacyPath')
+const soundEngine = useSoundEngine()
 
 let cleanupGesture: (() => void) | null = null
 
@@ -52,6 +55,10 @@ watch(
     <GlobalToolMenu />
     <GlobalBossKey />
     <DanmakuFab />
+    <AmbienceModal 
+      :show="soundEngine.isGlobalMixerOpen.value"
+      @close="soundEngine.isGlobalMixerOpen.value = false"
+    />
     <!-- PrivacyConsentBanner 已移除 -->
     <UsageReminder />
   </div>
@@ -62,7 +69,6 @@ watch(
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  padding-top: 88px;
 }
 
 .app-main {

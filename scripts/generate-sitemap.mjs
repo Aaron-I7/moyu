@@ -11,8 +11,7 @@ const routes = [
   '/games/pixel-fishing',
   '/relax/wooden-fish',
   '/relax/virtual-pet',
-  '/tools/white-noise',
-  '/tools/png-to-svg'
+  '/tools/white-noise'
 ]
 const locales = ['en', 'zh']
 const localizedRoutes = locales.flatMap(locale =>

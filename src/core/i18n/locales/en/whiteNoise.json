@@ -1,23 +1,65 @@
 {
   "title": "White Noise Mixer",
   "subtitle": "Pick sounds, tune volume, and stay in a calm flow.",
-  "stopAll": "Stop all",
+  "stopAll": "Stop All",
   "nowPlaying": "Now playing",
+  "categories": {
+    "mixes": "My Mixes",
+    "animals": "Animals",
+    "nature": "Nature",
+    "rain": "Rain",
+    "urban": "Urban",
+    "places": "Places",
+    "transport": "Transport",
+    "things": "Things",
+    "noise": "Noise",
+    "help": "Help",
+    "settings": "Settings"
+  },
+  "settings": {
+    "title": "Global Settings",
+    "globalPlayback": "Background Playback",
+    "globalPlaybackDesc": "Keep sounds playing when leaving this page"
+  },
+  "mixes": {
+    "title": "Saved Mixes",
+    "saveCurrent": "Save Current Mix",
+    "placeholder": "Mix Name (e.g., Rainy Cafe)",
+    "save": "Save",
+    "cancel": "Cancel",
+    "empty": "No saved mixes yet.",
+    "emptySub": "Activate some sounds and save them here.",
+    "load": "Load Mix",
+    "delete": "Delete",
+    "confirmTitle": "Delete Mix?",
+    "confirmMessage": "Are you sure you want to delete this sound mix? This action cannot be undone."
+  },
+  "help": {
+    "title": "How to use Ambience Mixer",
+    "toggleTitle": "Toggle Sounds",
+    "toggleDesc": "Click on any sound card to toggle it on or off. You can combine multiple sounds to create your perfect atmosphere.",
+    "volumeTitle": "Adjust Volume",
+    "volumeDesc": "Use the slider on active sound cards to adjust their individual volume levels.",
+    "saveTitle": "Save Mixes",
+    "saveDesc": "Go to \"My Mixes\" and click \"Save Current Mix\" to save your current combination. Give it a name to easily find it later.",
+    "globalTitle": "Global Control",
+    "globalDesc": "Sounds continue playing even if you close this modal or navigate away. Use the \"Stop All\" button in the header to silence everything at once."
+  },
+  "sounds": {
+    "beehive": "Beehive", "birds": "Birds", "cat-purring": "Cat Purring", "chickens": "Chickens", "cows": "Cows", "crickets": "Crickets", "crows": "Crows", "dog-barking": "Dog Barking", "frog": "Frog", "horse-gallop": "Horse Gallop", "owl": "Owl", "seagulls": "Seagulls", "sheep": "Sheep", "whale": "Whale", "wolf": "Wolf", "woodpecker": "Woodpecker",
+    "campfire": "Campfire", "droplets": "Droplets", "field": "Field", "howling-wind": "Howling Wind", "jungle": "Jungle", "lake": "Lake", "river": "River", "walk-in-snow": "Walk in Snow", "walk-on-gravel": "Walk on Gravel", "walk-on-leaves": "Walk on Leaves", "waterfall": "Waterfall", "waves": "Waves", "wind-in-trees": "Wind in Trees", "wind": "Wind",
+    "brown-noise": "Brown Noise", "eating-chips": "Eating Chips", "piano": "Piano", "pink-noise": "Pink Noise", "study": "Study", "white-noise": "White Noise",
+    "airport": "Airport", "cafe": "Cafe", "carousel": "Carousel", "church": "Church", "construction-site": "Construction", "crowded-bar": "Crowded Bar", "kitchen": "Kitchen", "laboratory": "Laboratory", "laundry-room": "Laundry Room", "library": "Library", "night-village": "Night Village", "office": "Office", "restaurant": "Restaurant", "subway-station": "Subway Station", "supermarket": "Supermarket", "temple": "Temple", "underwater": "Underwater",
+    "heavy-rain-on-glass": "Heavy Rain on Glass", "heavy_rain": "Heavy Rain", "light-rain": "Light Rain", "rain-on-car-roof": "Rain on Car Roof", "rain-on-eaves": "Rain on Eaves", "rain-on-empty-street": "Rain on Street", "rain-on-leaves": "Rain on Leaves", "rain-on-raincoat": "Rain on Raincoat", "rain-on-tent": "Rain on Tent", "rain-on-umbrella": "Rain on Umbrella", "rain-on-windowsill": "Rain on Windowsill", "rain-on-wooden-house": "Rain on Wooden House", "rain-while-driving": "Rain While Driving", "thunderstorm": "Thunderstorm",
+    "boiling-water": "Boiling Water", "bubbles": "Bubbles", "ceiling-fan": "Ceiling Fan", "clock": "Clock", "dryer": "Dryer", "ear-cleaning-1": "Ear Cleaning 1", "ear-cleaning-2": "Ear Cleaning 2", "guitar": "Guitar", "guzheng": "Guzheng", "keyboard-sound": "Keyboard", "light-piano": "Light Piano", "morse-code": "Morse Code", "paper": "Paper", "singing-bowl": "Singing Bowl", "slide-projector": "Slide Projector", "tuning-radio": "Tuning Radio", "typewriter": "Typewriter", "vinyl-effect": "Vinyl", "washing-machine": "Washing Machine", "wind-chimes": "Wind Chimes", "windshield-wipers": "Wipers",
+    "airplane": "Airplane", "inside-a-train": "Inside Train", "rowing-boat": "Rowing Boat", "sailboat": "Sailboat", "submarine": "Submarine", "train": "Train",
+    "ambulance-siren": "Ambulance", "busy-street": "Busy Street", "crowd": "Crowd", "fireworks": "Fireworks", "highway": "Highway", "road": "Road", "traffic": "Traffic"
+  },
   "timers": {
     "0": "Off",
     "5": "5 min",
     "15": "15 min",
     "30": "30 min",
     "60": "60 min"
-  },
-  "sounds": {
-    "rain": "Rain",
-    "wind": "Wind",
-    "thunder": "Thunder",
-    "fire": "Fireplace",
-    "cafe": "Cafe",
-    "ocean": "Ocean",
-    "birds": "Birds",
-    "night": "Night"
   }
 }

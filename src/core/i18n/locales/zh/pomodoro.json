@@ -1,0 +1,20 @@
+{
+  "mode": {
+    "work": "专注",
+    "short-break": "短休息",
+    "long-break": "长休息"
+  },
+  "taskPlaceholder": "当前专注任务是什么？",
+  "settings": {
+    "title": "计时器设置",
+    "workDuration": "专注时长 (分钟)",
+    "shortBreak": "短休息时长 (分钟)",
+    "longBreak": "长休息时长 (分钟)",
+    "longBreakInterval": "长休息间隔 (番茄数)",
+    "autoStartBreaks": "自动开始休息",
+    "autoStartPomodoros": "自动开始专注",
+    "allowGlobalPlayback": "后台播放白噪音",
+    "allowGlobalPlaybackDesc": "离开页面后保持白噪音播放",
+    "save": "保存设置"
+  }
+}

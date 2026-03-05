@@ -1,12 +1,10 @@
 import type { ModuleConfig } from '@/core/module/types'
 import moduleRegistry from '@/core/module/registry'
 
-import whiteNoiseConfig from './white-noise/config'
-import pngToSvgConfig from './png-to-svg/config'
+import pomodoroConfig from './pomodoro/config'
 
 const toolModules: ModuleConfig[] = [
-  whiteNoiseConfig,
-  pngToSvgConfig
+  pomodoroConfig
 ]
 
 toolModules.forEach(config => moduleRegistry.register(config))

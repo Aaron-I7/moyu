@@ -204,27 +204,30 @@ const selectLocale = async (nextLocale: AppLocale) => {
 
 <style scoped lang="scss">
 .app-header {
-  position: fixed;
-  top: 14px;
+  position: sticky;
+  top: 0;
   left: 0;
   right: 0;
   z-index: 100;
-  padding-inline: clamp(12px, 3vw, 32px);
+  padding: 0;
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  border-bottom: 1px solid var(--color-border);
+  backdrop-filter: blur(14px);
 }
 
 .header-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 66px;
-  padding: 0 18px;
+  height: 64px;
+  padding: 0 24px;
   max-width: 1240px;
   margin: 0 auto;
-  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-border) 82%, white);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-soft, var(--shadow));
-  backdrop-filter: blur(14px);
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  background: transparent;
 }
 
 .header-left {
@@ -395,9 +398,9 @@ const selectLocale = async (nextLocale: AppLocale) => {
 }
 
 [data-theme="night"] {
-  .header-inner {
-    background: color-mix(in srgb, var(--color-surface) 82%, transparent);
-    border-color: color-mix(in srgb, var(--color-border) 90%, #0b1220);
+  .app-header {
+    background: color-mix(in srgb, var(--color-surface) 95%, transparent);
+    border-bottom: 1px solid var(--color-border);
   }
 
   .header-right .theme-btn,
@@ -407,11 +410,9 @@ const selectLocale = async (nextLocale: AppLocale) => {
 }
 
 [data-theme="pixel"] {
-  .header-inner {
-    border-radius: 0;
-    border-width: 2px;
-    box-shadow: none;
-    backdrop-filter: none;
+  .app-header {
+    background: var(--color-surface);
+    border-bottom: 2px solid var(--color-border);
   }
 
   .header-nav .nav-item,

@@ -63,6 +63,29 @@
     "emptyTools": "暂无工具",
     "emptyToolsDesc": "更多国际化工具即将上线。"
   },
+  "modules": {
+    "pomodoro": {
+      "name": "番茄专注钟",
+      "description": "结合白噪音的沉浸式专注计时器。",
+      "tags": ["专注", "计时", "白噪音"]
+    },
+    "whiteNoise": {
+      "name": "白噪音混音",
+      "description": "混合环境音效，助你专注或放松。",
+      "tags": ["专注", "睡眠", "环境音"]
+    }
+  },
+  "white_noise": {
+    "rain": "雨声",
+    "fire": "炉火",
+    "forest": "森林",
+    "waves": "海浪",
+    "cafe": "咖啡馆",
+    "thunder": "雷声",
+    "birds": "鸟鸣",
+    "night": "夏夜",
+    "keyboard": "键盘声"
+  },
   "routeTitle": {
     "home": "首页",
     "games": "游戏",
