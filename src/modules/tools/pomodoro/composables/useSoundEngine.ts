@@ -125,8 +125,10 @@ export function useSoundEngine() {
 
   function stopAll(deactivate = false) {
     Object.keys(howls).forEach(key => {
-      howls[key].stop()
-      howls[key].unload()
+      if (howls[key]) {
+        howls[key].stop()
+        howls[key].unload()
+      }
       delete howls[key]
     })
 
