@@ -75,6 +75,7 @@ watch(
   flex: 1;
   overflow: auto;
   padding-inline: clamp(16px, 3vw, 36px);
-  padding-bottom: 28px;
+  padding-top: 12px;
+  padding-bottom: 30px;
 }
 </style>

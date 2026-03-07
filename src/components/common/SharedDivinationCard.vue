@@ -17,7 +17,7 @@ const refresh = async (forceQuoteOnly = false) => {
     const cached = localStorage.getItem(cacheKey)
     
     // Always fetch new data to get a fresh quote
-    const newData = await getDailyHoroscope()
+    const newData = await getDailyHoroscope(forceQuoteOnly)
     
     if (forceQuoteOnly && cached) {
       // Refresh click: update quote only, keep fortune

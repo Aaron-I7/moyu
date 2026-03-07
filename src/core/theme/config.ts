@@ -19,6 +19,8 @@ export interface ThemeConfig {
     success: string
     warning: string
     error: string
+    mint: string
+    orange: string
   }
   effects: {
     shadow: string
@@ -49,7 +51,9 @@ export const themes: Record<ThemeId, ThemeConfig> = {
       border: '#DCE2F0',
       success: '#0F9E77',
       warning: '#D97706',
-      error: '#DC2626'
+      error: '#DC2626',
+      mint: '#10B981',
+      orange: '#F97316'
     },
     effects: {
       shadow: '0 10px 26px rgba(30, 42, 86, 0.1)',
@@ -76,7 +80,9 @@ export const themes: Record<ThemeId, ThemeConfig> = {
       border: '#27324A',
       success: '#22C55E',
       warning: '#F59E0B',
-      error: '#F87171'
+      error: '#F87171',
+      mint: '#34D399',
+      orange: '#FB923C'
     },
     effects: {
       shadow: '0 16px 38px rgba(2, 6, 20, 0.55)',
@@ -103,7 +109,9 @@ export const themes: Record<ThemeId, ThemeConfig> = {
       border: '#3A3A3A',
       success: '#34D399',
       warning: '#FBBF24',
-      error: '#FB7185'
+      error: '#FB7185',
+      mint: '#2DD4BF',
+      orange: '#FB923C'
     },
     effects: {
       shadow: '0 0 0 2px rgba(0, 0, 0, 0.5)',

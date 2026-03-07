@@ -9,9 +9,9 @@
   },
   "app": {
     "name": "摸鱼吧",
-    "titleSuffix": "全球打工人碎片放松平台",
-    "heroSubtitle": "5分钟以内快速休闲专注",
-    "heroDescription": "面向全球年轻打工人：即开即用、隐私优先、可随时抽离。"
+    "titleSuffix": "碎片时间放松平台",
+    "heroSubtitle": "在忙碌的间隙，为自己偷一段松弛的时光。",
+    "heroDescription": "根据你的工作节奏，选择适合当下的放松方式。"
   },
   "nav": {
     "home": "首页",
@@ -44,13 +44,13 @@
   },
   "home": {
     "features": {
-      "instant": "秒开即用",
-      "privacy": "隐私优先",
-      "adaptive": "自适应布局",
-      "free": "永久免费"
+      "instant": "立即摸鱼",
+      "privacy": "无痕摸鱼",
+      "adaptive": "全设备适配",
+      "free": "摸鱼不花钱"
     },
     "strategyTitle": "今日内容策略",
-    "strategySubtitle": "结合本地节假日、通勤时段与工作节奏动态推荐。",
+    "strategySubtitle": "根据你的工作节奏，选择适合当下的放松方式。",
     "recommendNow": "当前建议",
     "avoidNow": "当前避免",
     "holidayFocus": "节日语境",
@@ -241,7 +241,7 @@
   },
   "routeTitle": {
     "home": "首页",
-    "about": "关于我们",
+    "about": "摸鱼指南",
     "games": "游戏",
     "relax": "休闲",
     "tools": "工具",

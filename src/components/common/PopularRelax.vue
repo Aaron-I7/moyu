@@ -51,7 +51,7 @@ const handleNavigate = (item: any) => {
       <div 
         v-for="item in relaxItems" 
         :key="item.id" 
-        class="relax-card"
+        class="relax-card glass-panel hover-lift"
         @click="handleNavigate(item)"
         :style="{ '--relax-color': item.color }"
       >
@@ -123,20 +123,17 @@ const handleNavigate = (item: any) => {
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
   border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s;
   
   &:hover {
-    border-color: var(--relax-color);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--relax-color) 15%, transparent);
-    
     .relax-icon {
       background: var(--relax-color);
       color: white;
+    }
+    
+    .relax-name {
+      color: var(--relax-color);
     }
   }
   
@@ -162,6 +159,7 @@ const handleNavigate = (item: any) => {
       font-weight: 600;
       color: var(--color-text);
       margin-bottom: 2px;
+      transition: color 0.2s;
     }
     
     .relax-desc {

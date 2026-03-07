@@ -4,7 +4,10 @@
       <div v-if="visible" class="settings-overlay" @click.self="$emit('close')">
         <div class="settings-modal">
           <header class="modal-header">
-            <h3 class="modal-title">🛡️ {{ t('bossKey.title') }}</h3>
+            <h3 class="modal-title">
+              <Icon icon="mdi:shield-crown-outline" width="20" />
+              <span>{{ t('bossKey.title') }}</span>
+            </h3>
             <button class="close-btn" @click="$emit('close')">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                 <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
@@ -15,7 +18,9 @@
           <main class="modal-body">
             <div class="setting-section">
               <div class="section-header">
-                <span class="section-icon">💬</span>
+                <span class="section-icon">
+                  <Icon icon="mdi:message-badge-outline" width="18" />
+                </span>
                 <div class="section-info">
                   <h4 class="section-title">{{ t('bossKey.danmaku') }}</h4>
                   <p class="section-desc">{{ t('bossKey.danmakuDesc') }}</p>
@@ -35,7 +40,9 @@
 
             <div class="setting-section">
               <div class="section-header">
-                <span class="section-icon">⌨️</span>
+                <span class="section-icon">
+                  <Icon icon="mdi:keyboard-variant" width="18" />
+                </span>
                 <div class="section-info">
                   <h4 class="section-title">{{ t('bossKey.hotkey') }}</h4>
                   <p class="section-desc">{{ t('bossKey.hotkeyDesc') }}</p>
@@ -45,7 +52,41 @@
 
             <div class="setting-section">
               <div class="section-header">
-                <span class="section-icon">🎭</span>
+                <span class="section-icon">
+                  <Icon icon="mdi:palette-outline" width="18" />
+                </span>
+                <div class="section-info">
+                  <h4 class="section-title">{{ t('settings.theme') }}</h4>
+                  <p class="section-desc">{{ t('settings.themeDesc') }}</p>
+                </div>
+              </div>
+
+              <div class="theme-grid">
+                <button
+                  v-for="theme in themeList"
+                  :key="theme.id"
+                  class="theme-card"
+                  :class="{ active: currentThemeId === theme.id }"
+                  @click="setTheme(theme.id)"
+                >
+                  <div class="theme-head">
+                    <Icon :icon="theme.icon" width="18" />
+                    <span>{{ t(theme.i18nKey) }}</span>
+                  </div>
+                  <div class="theme-palette">
+                    <span :style="{ background: theme.colors.primary }"></span>
+                    <span :style="{ background: theme.colors.accent }"></span>
+                    <span :style="{ background: theme.colors.surface, border: '1px solid ' + theme.colors.border }"></span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <div class="setting-section">
+              <div class="section-header">
+                <span class="section-icon">
+                  <Icon icon="mdi:incognito-circle" width="18" />
+                </span>
                 <div class="section-info">
                   <h4 class="section-title">{{ t('bossKey.camouflage') }}</h4>
                   <p class="section-desc">{{ t('bossKey.camouflageDesc') }}</p>
@@ -60,7 +101,7 @@
                   :class="{ active: currentMode === mode.value }"
                   @click="selectMode(mode.value)"
                 >
-                  <span class="mode-icon">{{ mode.icon }}</span>
+                  <Icon class="mode-icon" :icon="mode.icon" width="30" />
                   <span class="mode-name">{{ t(mode.labelKey) }}</span>
                   <span class="mode-desc">{{ t(mode.descKey) }}</span>
                 </button>
@@ -69,7 +110,9 @@
 
             <div class="setting-section">
               <div class="section-header">
-                <span class="section-icon">💡</span>
+                <span class="section-icon">
+                  <Icon icon="mdi:lightbulb-on-outline" width="18" />
+                </span>
                 <div class="section-info">
                   <h4 class="section-title">{{ t('bossKey.tips') }}</h4>
                   <p class="section-desc">{{ t('bossKey.tipsDesc') }}</p>
@@ -90,8 +133,11 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { Icon } from '@iconify/vue'
 import type { BossKeyMode } from '@/stores/bossKey'
 import { useRealtimeDanmaku } from '@/composables/useRealtimeDanmaku'
+import { useThemeStore } from '@/core/theme/store'
+import { themeList, type ThemeId } from '@/core/theme/config'
 
 defineProps<{
   visible: boolean
@@ -105,12 +151,14 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const { danmakuEnabled, loadDanmakuEnabled, saveDanmakuEnabled } = useRealtimeDanmaku()
+const themeStore = useThemeStore()
+const currentThemeId = themeStore.currentThemeId
 
 const modes: { value: BossKeyMode; icon: string; labelKey: string; descKey: string }[] = [
-  { value: 'code', icon: '💻', labelKey: 'bossKey.modes.code', descKey: 'bossKey.modeDesc.code' },
-  { value: 'excel', icon: '📊', labelKey: 'bossKey.modes.excel', descKey: 'bossKey.modeDesc.excel' },
-  { value: 'forum', icon: '💬', labelKey: 'bossKey.modes.forum', descKey: 'bossKey.modeDesc.forum' },
-  { value: 'terminal', icon: '⬛', labelKey: 'bossKey.modes.terminal', descKey: 'bossKey.modeDesc.terminal' }
+  { value: 'code', icon: 'mdi:code-braces-box', labelKey: 'bossKey.modes.code', descKey: 'bossKey.modeDesc.code' },
+  { value: 'excel', icon: 'mdi:microsoft-excel', labelKey: 'bossKey.modes.excel', descKey: 'bossKey.modeDesc.excel' },
+  { value: 'forum', icon: 'mdi:forum-outline', labelKey: 'bossKey.modes.forum', descKey: 'bossKey.modeDesc.forum' },
+  { value: 'terminal', icon: 'mdi:console-line', labelKey: 'bossKey.modes.terminal', descKey: 'bossKey.modeDesc.terminal' }
 ]
 
 function selectMode(mode: BossKeyMode) {
@@ -119,6 +167,10 @@ function selectMode(mode: BossKeyMode) {
 
 function toggleDanmaku() {
   saveDanmakuEnabled(!danmakuEnabled.value)
+}
+
+function setTheme(themeId: ThemeId) {
+  themeStore.setTheme(themeId)
 }
 
 onMounted(() => {
@@ -159,6 +211,9 @@ onMounted(() => {
 }
 
 .modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 18px;
   font-weight: 700;
   color: var(--color-text);
@@ -206,8 +261,63 @@ onMounted(() => {
 }
 
 .section-icon {
-  font-size: 24px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary);
   flex-shrink: 0;
+}
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.theme-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  transition: var(--transition);
+
+  &:hover {
+    border-color: var(--color-primary);
+    transform: translateY(-1px);
+  }
+
+  &.active {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-background));
+  }
+}
+
+.theme-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.theme-palette {
+  display: flex;
+  gap: 6px;
+
+  span {
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    display: inline-block;
+  }
 }
 
 .section-info {
@@ -269,7 +379,8 @@ onMounted(() => {
 }
 
 .mode-icon {
-  font-size: 32px;
+  color: var(--color-primary);
+  line-height: 1;
 }
 
 .mode-name {

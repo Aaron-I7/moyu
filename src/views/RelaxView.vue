@@ -20,9 +20,9 @@ const handleModuleClick = (module: ModuleConfig) => {
 </script>
 
 <template>
-  <div class="page">
+  <div class="page moyu-page">
     <div class="page-inner">
-      <div class="page-header">
+      <div class="page-header moyu-panel">
         <p>{{ t('views.relaxDesc') }}</p>
       </div>
       
@@ -30,7 +30,7 @@ const handleModuleClick = (module: ModuleConfig) => {
         <div 
           v-for="module in relaxModules" 
           :key="module.id"
-          class="module-card"
+          class="module-card moyu-panel"
           @click="handleModuleClick(module)"
         >
           <div class="card-icon">

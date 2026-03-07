@@ -23,5 +23,10 @@
     "name": "Novel Reader",
     "description": "Read local TXT books with lightweight controls.",
     "tags": ["reading", "novel"]
+  },
+  "divination": {
+    "name": "Spring Breeze",
+    "description": "Consult the I Ching when in doubt.",
+    "tags": ["Divination", "I Ching", "Wisdom"]
   }
 }

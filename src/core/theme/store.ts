@@ -35,6 +35,8 @@ export const useThemeStore = defineStore('theme', () => {
     root.style.setProperty('--color-success', theme.colors.success)
     root.style.setProperty('--color-warning', theme.colors.warning)
     root.style.setProperty('--color-error', theme.colors.error)
+    root.style.setProperty('--color-mint', theme.colors.mint)
+    root.style.setProperty('--color-orange', theme.colors.orange)
     root.style.setProperty('--shadow', theme.effects.shadow)
     root.style.setProperty('--border-radius', theme.effects.borderRadius)
     root.style.setProperty('--transition', theme.effects.transition)

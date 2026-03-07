@@ -44,24 +44,64 @@ const mainEntries = computed(() => [
   }
 ])
 
+const highlightChips = computed(() => [
+  t('home.features.instant'),
+  t('home.features.privacy'),
+  t('home.features.adaptive'),
+  t('home.features.free')
+])
+
 const handleNavigate = (path: string) => {
   const normalized = path === '/' ? '' : path
   router.push(`/${currentLocale.value}${normalized}`)
 }
+
+const hour = new Date().getHours()
+const timeState = computed(() => {
+  if (hour >= 5 && hour < 12) return 'morning'
+  if (hour >= 12 && hour < 18) return 'afternoon'
+  return 'night'
+})
 </script>
 
 <template>
-  <div class="home-page">
-    <!-- Hero Section Simplified -->
-    <section class="hero">
-      <div class="hero-content">
+  <div class="home-page moyu-page">
+    <section class="hero" :class="timeState">
+      <div class="hero-aura hero-aura-left" />
+      <div class="hero-aura hero-aura-right" />
+      <div class="hero-content moyu-panel">
         <p class="hero-kicker">{{ t('app.titleSuffix') }}</p>
-        <h1 class="hero-title">{{ t('app.name') }}</h1>
-        <p class="hero-desc">{{ t('home.strategySubtitle') }}</p>
+        <h1 class="hero-title" :class="{
+          'text-gradient-orange': timeState === 'morning',
+          'text-gradient': timeState === 'afternoon',
+          'text-gradient-mint': timeState === 'night'
+        }">{{ t('app.name') }}</h1>
+        <p class="hero-desc">{{ t('app.heroSubtitle') }}</p>
+        <button class="hero-about-entry-inline" @click="handleNavigate('/about')">
+          <Icon icon="mdi:compass-outline" :width="16" />
+          <span>{{ t('routeTitle.about') }}</span>
+        </button>
+        <div class="hero-highlights">
+          <span v-for="item in highlightChips" :key="item">{{ item }}</span>
+        </div>
       </div>
       
       <div class="hero-sidebar">
-        <SharedDivinationCard />
+        <div class="hover-lift">
+          <SharedDivinationCard />
+        </div>
+        <button class="ask-spring-card hover-lift" @click="handleNavigate('/tools/divination')">
+          <img src="/images/divination/遇事不决%20可问春风.png" alt="遇事不决 可问春风" />
+          <div class="card-overlay">
+            <div class="overlay-content">
+              <span class="card-action">
+                <Icon icon="mdi:sparkles" />
+                <span>问</span>
+              </span>
+              <p class="poetic-text">春风不语，即随本心</p>
+            </div>
+          </div>
+        </button>
       </div>
     </section>
 
@@ -70,7 +110,7 @@ const handleNavigate = (path: string) => {
         <div
           v-for="(entry, index) in mainEntries"
           :key="entry.path"
-          class="entry-card"
+          class="entry-card moyu-panel"
           :style="{ '--entry-color': entry.color }"
           @click="handleNavigate(entry.path)"
         >
@@ -109,11 +149,14 @@ const handleNavigate = (path: string) => {
 }
 
 .hero {
-  padding: 10px 18px 2px;
+  padding: 8px 18px 2px;
   text-align: start;
   flex-shrink: 0;
   display: flex;
   gap: 16px;
+  position: relative;
+  overflow: hidden;
+  border-radius: calc(var(--border-radius) + 8px);
   
   .hero-content {
     flex: 1;
@@ -123,7 +166,7 @@ const handleNavigate = (path: string) => {
     border: 1px solid var(--color-border);
     border-radius: var(--border-radius);
     padding: clamp(20px, 3.2vw, 32px);
-    box-shadow: var(--shadow);
+    box-shadow: 0 8px 24px rgba(86, 70, 149, 0.08);
     position: relative;
     overflow: hidden;
     display: flex;
@@ -141,11 +184,120 @@ const handleNavigate = (path: string) => {
       background: color-mix(in srgb, var(--color-primary) 12%, transparent);
       pointer-events: none;
     }
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: auto -20% -120px auto;
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+      filter: blur(8px);
+      pointer-events: none;
+    }
   }
   
   .hero-sidebar {
     width: 280px;
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .ask-spring-card {
+    width: 100%;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    
+    img {
+      width: 100%;
+      height: auto;
+      display: block;
+      object-fit: cover;
+      transition: transform 0.4s ease;
+    }
+
+    .card-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      backdrop-filter: blur(2px);
+    }
+
+    .overlay-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .poetic-text {
+      color: rgba(255, 255, 255, 0.95);
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      transform: translateY(10px);
+      transition: transform 0.4s ease 0.1s, opacity 0.4s ease 0.1s;
+      opacity: 0;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      height: 120px;
+      position: absolute;
+      right: 24px;
+      top: 50%;
+      margin-top: -60px;
+    }
+
+    .card-action {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      border-radius: 999px;
+      color: var(--color-primary);
+      font-weight: 600;
+      font-size: 14px;
+      transform: translateY(10px);
+      transition: transform 0.3s ease;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    &:hover {
+      border-color: var(--color-primary);
+      
+      img {
+        transform: scale(1.05);
+      }
+
+      .card-overlay {
+        opacity: 1;
+      }
+
+      .card-action {
+        transform: translateY(0);
+      }
+
+      .poetic-text {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
   }
 
   @media (max-width: 800px) {
@@ -164,7 +316,7 @@ const handleNavigate = (path: string) => {
     color: var(--color-primary);
     margin-bottom: 10px;
   }
-  
+
   .hero-title {
     font-size: clamp(34px, 5.2vw, 58px);
     font-weight: 600;
@@ -175,28 +327,115 @@ const handleNavigate = (path: string) => {
   }
 
   .hero-desc {
-    font-size: 14px;
-    color: var(--color-text-secondary);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-text);
     max-width: 60ch;
-    line-height: 1.65;
+    line-height: 1.5;
     margin-bottom: 14px;
   }
 
   .hero-highlights {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 10px;
 
     span {
       font-size: 12px;
       font-weight: 600;
-      color: var(--color-text-secondary);
-      border: 1px solid var(--color-border);
+      color: var(--color-text);
+      border: 1px solid color-mix(in srgb, var(--color-primary) 28%, var(--color-border));
       border-radius: 999px;
-      padding: 6px 10px;
-      background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+      padding: 7px 12px;
+      background: color-mix(in srgb, var(--color-surface) 84%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, white 22%, transparent);
     }
   }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.45; }
+  50% { transform: scale(1.1); opacity: 0.6; }
+}
+
+.hero-aura {
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  filter: blur(44px);
+  opacity: 0.45;
+  pointer-events: none;
+  animation: breathe 8s infinite ease-in-out;
+}
+
+.hero.morning {
+  .hero-aura-left {
+    background: color-mix(in srgb, var(--color-mint) 40%, transparent);
+    animation-delay: 0s;
+  }
+  .hero-aura-right {
+    background: color-mix(in srgb, var(--color-orange) 34%, transparent);
+    animation-delay: -4s;
+  }
+}
+
+.hero.afternoon {
+  .hero-aura-left {
+    background: color-mix(in srgb, var(--color-primary) 40%, transparent);
+  }
+  .hero-aura-right {
+    background: color-mix(in srgb, var(--color-secondary) 34%, transparent);
+  }
+}
+
+.hero.night {
+  .hero-aura-left {
+    background: color-mix(in srgb, #4F46E5 40%, transparent);
+  }
+  .hero-aura-right {
+    background: color-mix(in srgb, #7C3AED 34%, transparent);
+  }
+}
+
+.hero-aura-left {
+  left: -120px;
+  top: -80px;
+  background: color-mix(in srgb, var(--color-primary) 40%, transparent);
+}
+
+.hero-aura-right {
+  right: -90px;
+  bottom: -120px;
+  background: color-mix(in srgb, var(--color-accent) 34%, transparent);
+}
+
+.hero-about-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  text-align: left;
+  padding: 8px 12px;
+  margin: 0 0 14px;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 28%, var(--color-border));
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  border-radius: 999px;
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 700;
+  transition: var(--transition);
+
+  &:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--color-primary) 48%, var(--color-border));
+    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+    color: var(--color-primary);
+  }
+}
+
+.hero-about-entry-inline {
+  @extend .hero-about-entry;
 }
 
 .entries {
@@ -241,7 +480,7 @@ const handleNavigate = (path: string) => {
   
   &:hover {
     border-color: color-mix(in srgb, var(--entry-color) 45%, var(--color-border));
-    transform: translateY(-3px);
+    transform: translateY(-5px);
     box-shadow: 0 14px 30px color-mix(in srgb, var(--entry-color) 18%, transparent);
   }
 
@@ -319,6 +558,14 @@ const handleNavigate = (path: string) => {
   .entry-card .entry-icon {
     box-shadow: inset 0 0 0 1px color-mix(in srgb, white 18%, transparent);
   }
+
+  .hero-aura {
+    opacity: 0.3;
+  }
+
+  .hero-about-entry {
+    background: color-mix(in srgb, var(--color-surface) 72%, transparent);
+  }
 }
 
 [data-theme="pixel"] {
@@ -346,6 +593,11 @@ const handleNavigate = (path: string) => {
 
   .entry-card:hover {
     transform: translate(-2px, -2px);
+  }
+
+  .hero-about-entry {
+    border-radius: 0;
+    border-width: 2px;
   }
 }
 

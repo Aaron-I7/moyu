@@ -76,7 +76,7 @@ const handleNavigate = (tool: any) => {
       <div 
         v-for="tool in tools" 
         :key="tool.id" 
-        class="tool-card"
+        class="tool-card glass-panel hover-lift"
         @click="handleNavigate(tool)"
         :style="{ '--tool-color': tool.color }"
       >
@@ -150,20 +150,17 @@ const handleNavigate = (tool: any) => {
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
   border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s;
   
   &:hover {
-    border-color: var(--tool-color);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--tool-color) 15%, transparent);
-    
     .tool-icon {
       background: var(--tool-color);
       color: white;
+    }
+    
+    .tool-name {
+      color: var(--tool-color);
     }
   }
   
@@ -189,6 +186,7 @@ const handleNavigate = (tool: any) => {
       font-weight: 600;
       color: var(--color-text);
       margin-bottom: 2px;
+      transition: color 0.2s;
     }
     
     .tool-desc {

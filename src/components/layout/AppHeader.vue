@@ -11,11 +11,13 @@ import { availableLocales, localeMetaMap, setLocale, type AppLocale } from '@/co
 import { useAuth } from '@/composables/useAuth'
 import { useCloudSync } from '@/composables/useCloudSync'
 import { useSoundEngine } from '@/modules/tools/pomodoro/composables/useSoundEngine'
+import { useThemeStore } from '@/core/theme/store'
 
 const router = useRouter()
 const route = useRoute()
 const { t, locale } = useI18n({ useScope: 'global' })
 const bossKeyStore = useBossKeyStore()
+const themeStore = useThemeStore()
 const { user, nickname, logout, initAuth } = useAuth()
 const { pushData } = useCloudSync()
 const { isPlaying: isMusicPlaying } = useSoundEngine()
@@ -156,10 +158,36 @@ const toggleUser = (e: Event) => {
   showLocaleMenu.value = false
   showShareMenu.value = false
 }
+
+// Scroll handling
+const isScrolled = ref(false)
+const isHidden = ref(false)
+let lastScrollY = 0
+
+const handleScroll = () => {
+  const currentScrollY = window.scrollY
+  isScrolled.value = currentScrollY > 20
+  
+  // Hide on scroll down, show on scroll up
+  if (currentScrollY > lastScrollY && currentScrollY > 100) {
+    isHidden.value = true
+  } else {
+    isHidden.value = false
+  }
+  lastScrollY = currentScrollY
+}
+
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll, { passive: true })
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
 </script>
 
 <template>
-  <header class="app-header">
+  <header class="app-header" :class="{ 'scrolled': isScrolled, 'hidden': isHidden }">
     <div class="header-inner">
       <div class="header-left">
         <h1 class="logo" @click="handleNavigate('/')">
@@ -186,10 +214,6 @@ const toggleUser = (e: Event) => {
           <Icon icon="mdi:clock-outline" :width="16" />
           <span>{{ formattedDuration }}</span>
         </div>
-
-        <button class="boss-key-btn" @click="handleNavigate('/about')" :title="t('routeTitle.about')">
-          <Icon icon="mdi:information-variant-circle-outline" :width="18" />
-        </button>
 
         <div class="share-selector">
           <button class="theme-btn" :title="t('header.share')" @click="toggleShare">
@@ -224,6 +248,9 @@ const toggleUser = (e: Event) => {
 
         <button class="theme-btn" @click="showSettingsModal = true" :title="t('settings.title')">
           <Icon icon="mdi:cog" :width="18" />
+        </button>
+        <button class="theme-btn" @click="themeStore.cycleTheme()" :title="t('settings.theme')">
+          <Icon icon="mdi:palette-swatch-outline" :width="18" />
         </button>
 
         <div class="user-selector">
@@ -297,14 +324,26 @@ const toggleUser = (e: Event) => {
 <style scoped lang="scss">
 .app-header {
   position: sticky;
-  top: 0;
+  top: 10px;
   left: 0;
   right: 0;
   z-index: 100;
-  padding: 0;
-  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
-  border-bottom: 1px solid var(--color-border);
-  backdrop-filter: blur(14px);
+  padding: 0 12px;
+  background: transparent;
+  border-bottom: none;
+  backdrop-filter: none;
+  transition: transform 0.3s ease, top 0.3s ease;
+
+  &.hidden {
+    transform: translateY(-100%);
+  }
+
+  &.scrolled {
+    .header-inner {
+      background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+      box-shadow: var(--shadow);
+    }
+  }
 }
 
 .header-inner {
@@ -313,13 +352,21 @@ const toggleUser = (e: Event) => {
   justify-content: space-between;
   height: 64px;
   padding: 0 24px;
-  max-width: 1240px;
+  max-width: 1260px;
   margin: 0 auto;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
-  backdrop-filter: none;
-  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, var(--color-border));
+  border-radius: 18px;
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(8px);
+  background: color-mix(in srgb, var(--color-surface) 65%, transparent);
+  transition: all 0.3s ease;
+}
+
+.app-header.scrolled .header-inner {
+  backdrop-filter: blur(16px);
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  box-shadow: var(--shadow);
+  border-color: color-mix(in srgb, var(--color-primary) 24%, var(--color-border));
 }
 
 .header-left {
@@ -351,7 +398,7 @@ const toggleUser = (e: Event) => {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 10px 14px;
+    padding: 9px 14px;
     border-radius: 12px;
     cursor: pointer;
     color: var(--color-text-secondary);
@@ -361,12 +408,13 @@ const toggleUser = (e: Event) => {
     
     &:hover {
       color: var(--color-text);
-      background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+      background: color-mix(in srgb, var(--color-primary) 12%, transparent);
     }
     
     &.active {
       color: var(--color-primary);
-      background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+      background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 26%, transparent);
     }
   }
 }
@@ -396,36 +444,6 @@ const toggleUser = (e: Event) => {
       }
     }
   
-    .boss-key-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    border-radius: 12px;
-    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
-    border: 1px solid color-mix(in srgb, var(--color-primary) 30%, transparent);
-    color: var(--color-primary);
-    font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    
-    &:hover {
-      background: color-mix(in srgb, var(--color-primary) 18%, transparent);
-      border-color: var(--color-primary);
-    }
-    
-    @media (max-width: 900px) {
-      .boss-key-label {
-        display: none;
-      }
-    }
-    
-    @media (max-width: 768px) {
-      display: none;
-    }
-  }
-  
   .theme-btn {
     display: flex;
     align-items: center;
@@ -433,7 +451,8 @@ const toggleUser = (e: Event) => {
     width: 36px;
     height: 36px;
     border-radius: 12px;
-    background: color-mix(in srgb, var(--color-surface-muted, var(--color-background)) 80%, white);
+    background: color-mix(in srgb, var(--color-surface-muted, var(--color-background)) 84%, white);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 12%, var(--color-border));
     color: var(--color-text-secondary);
     cursor: pointer;
     transition: var(--transition);
@@ -441,6 +460,7 @@ const toggleUser = (e: Event) => {
     &:hover {
       color: var(--color-text);
       background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+      border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
     }
   }
 
@@ -610,8 +630,13 @@ const toggleUser = (e: Event) => {
 
 [data-theme="night"] {
   .app-header {
-    background: color-mix(in srgb, var(--color-surface) 95%, transparent);
-    border-bottom: 1px solid var(--color-border);
+    background: transparent;
+  }
+
+  .header-inner {
+    background: color-mix(in srgb, var(--color-surface) 74%, transparent);
+    border-color: color-mix(in srgb, var(--color-secondary) 36%, var(--color-border));
+    box-shadow: 0 18px 36px rgba(4, 8, 20, 0.5);
   }
 
   .header-right .theme-btn,
@@ -622,13 +647,18 @@ const toggleUser = (e: Event) => {
 
 [data-theme="pixel"] {
   .app-header {
+    background: transparent;
+  }
+
+  .header-inner {
+    border-radius: 0;
+    border-width: 2px;
+    box-shadow: none;
     background: var(--color-surface);
-    border-bottom: 2px solid var(--color-border);
   }
 
   .header-nav .nav-item,
   .header-right .theme-btn,
-  .header-right .boss-key-btn,
   .header-right .mobile-menu-btn {
     border-radius: 0;
     border: 2px solid var(--color-border);

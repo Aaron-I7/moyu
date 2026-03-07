@@ -54,15 +54,16 @@ const QUOTE_CACHE_KEY = 'moyu-daily-quote'
 const CACHE_DURATION = 1000 * 60 * 60 * 6 // 6小时缓存
 
 // 获取每日金句（优先使用 API，失败降级到本地）
-export async function fetchDailyQuote(): Promise<QuoteItem> {
+export async function fetchDailyQuote(forceRefresh = false): Promise<QuoteItem> {
   const fallback = QUOTES[Math.floor(Math.random() * QUOTES.length)] ?? { id: '0', text: 'Work hard, play hard.', author: 'Anonymous' }
   try {
-    // 1. 检查缓存
-    const cached = localStorage.getItem(QUOTE_CACHE_KEY)
-    if (cached) {
-      const { data, timestamp } = JSON.parse(cached)
-      if (Date.now() - timestamp < CACHE_DURATION) {
-        return data
+    if (!forceRefresh) {
+      const cached = localStorage.getItem(QUOTE_CACHE_KEY)
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached)
+        if (Date.now() - timestamp < CACHE_DURATION) {
+          return data
+        }
       }
     }
 
@@ -72,7 +73,10 @@ export async function fetchDailyQuote(): Promise<QuoteItem> {
     // 由于外部公共 API 不稳定，我们优先使用本地随机库，
     // 或者可以换成 https://v1.hitokoto.cn/ (一言，国内访问快)
     
-    const response = await fetch('https://v1.hitokoto.cn/?c=d&c=i&c=k&encode=json') // d=文学, i=诗词, k=哲学
+    const requestUrl = forceRefresh
+      ? `https://v1.hitokoto.cn/?c=d&c=i&c=k&encode=json&t=${Date.now()}`
+      : 'https://v1.hitokoto.cn/?c=d&c=i&c=k&encode=json'
+    const response = await fetch(requestUrl, { cache: 'no-store' })
     
     if (!response.ok) throw new Error('API request failed')
     
@@ -114,7 +118,7 @@ export const QUOTES: QuoteItem[] = [
 
 // 根据日期生成伪随机运势（保证同一天每个人看到的一样，或者刷新变动，这里选择基于日期+随机）
 // 为了趣味性，我们每次刷新随机展示，或者基于日期哈希
-export async function getDailyHoroscope(): Promise<HoroscopeData> {
+export async function getDailyHoroscope(forceRefreshQuote = false): Promise<HoroscopeData> {
   const today = new Date()
   
   // 随机选择 1 个宜，1 个忌 (保持本地随机，因为这部分是有趣的“玄学”)
@@ -122,7 +126,7 @@ export async function getDailyHoroscope(): Promise<HoroscopeData> {
   const bad = BAD_LIST[Math.floor(Math.random() * BAD_LIST.length)] ?? "通宵熬夜"
   
   // 异步获取真实金句
-  const quote = await fetchDailyQuote()
+  const quote = await fetchDailyQuote(forceRefreshQuote)
   
   return {
     date: today.toLocaleDateString(),

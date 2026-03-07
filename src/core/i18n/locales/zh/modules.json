@@ -23,5 +23,10 @@
     "name": "小说阅读",
     "description": "支持本地 TXT 文件的轻量阅读器。",
     "tags": ["阅读", "小说"]
+  },
+  "divination": {
+    "name": "春风解签",
+    "description": "遇事不决，可问春风。",
+    "tags": ["卜卦", "周易", "解惑"]
   }
 }

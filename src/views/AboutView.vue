@@ -77,7 +77,7 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <div class="about-page">
+  <div class="about-page moyu-page">
     <div class="about-container">
       <!-- Hero Section -->
       <section class="hero-section">
@@ -95,7 +95,7 @@ const handleSubmit = async () => {
           <div 
             v-for="feature in features" 
             :key="feature.title" 
-            class="feature-card"
+            class="feature-card moyu-panel"
             :style="{ '--feature-color': feature.color }"
           >
             <div class="feature-icon">
@@ -109,7 +109,7 @@ const handleSubmit = async () => {
 
       <!-- Feedback Section -->
       <section class="feedback-section">
-        <div class="feedback-card">
+        <div class="feedback-card moyu-panel">
           <div class="feedback-header">
             <Icon icon="mdi:message-draw" width="32" class="header-icon" />
             <div>

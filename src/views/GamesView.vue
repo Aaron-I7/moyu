@@ -20,9 +20,9 @@ const handleModuleClick = (module: ModuleConfig) => {
 </script>
 
 <template>
-  <div class="page">
+  <div class="page moyu-page">
     <div class="page-inner">
-      <div class="page-header">
+      <div class="page-header moyu-panel">
         <p>{{ t('views.gamesDesc') }}</p>
       </div>
       
@@ -30,7 +30,7 @@ const handleModuleClick = (module: ModuleConfig) => {
         <div 
           v-for="game in games" 
           :key="game.id"
-          class="module-card"
+          class="module-card moyu-panel"
           @click="handleModuleClick(game)"
         >
           <div class="card-icon">

@@ -43,7 +43,7 @@ const handleNavigate = (game: any) => {
       <div 
         v-for="game in games" 
         :key="game.id" 
-        class="game-card"
+        class="game-card glass-panel hover-lift"
         @click="handleNavigate(game)"
         :style="{ '--game-color': game.color }"
       >
@@ -115,20 +115,17 @@ const handleNavigate = (game: any) => {
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
   border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s;
   
   &:hover {
-    border-color: var(--game-color);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--game-color) 15%, transparent);
-    
     .game-icon {
       background: var(--game-color);
       color: white;
+    }
+    
+    .game-name {
+      color: var(--game-color);
     }
   }
   
@@ -154,6 +151,7 @@ const handleNavigate = (game: any) => {
       font-weight: 600;
       color: var(--color-text);
       margin-bottom: 2px;
+      transition: color 0.2s;
     }
     
     .game-desc {
