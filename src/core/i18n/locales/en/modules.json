@@ -37,6 +37,7 @@
     "toss": "Cast Line {n}",
     "tossStep": ["1st", "2nd", "3rd", "4th", "5th", "6th"],
     "quickCast": "Quick Cast",
+    "teaser": "The breeze stays silent, trust your heart",
     "wait": "Calm your mind to begin",
     "gotLine": "Got {n} Line",
     "complete": "Hexagram Complete",

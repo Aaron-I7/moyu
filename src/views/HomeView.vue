@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { useI18n } from 'vue-i18n'
 import SharedDivinationCard from '@/components/common/SharedDivinationCard.vue'
+import DivinationQuickModal from '@/components/common/DivinationQuickModal.vue'
 import PopularTools from '@/components/common/PopularTools.vue'
 import PopularGames from '@/components/common/PopularGames.vue'
 import PopularRelax from '@/components/common/PopularRelax.vue'
@@ -12,6 +13,7 @@ const router = useRouter()
 const route = useRoute()
 const { t } = useI18n({ useScope: 'global' })
 const currentLocale = computed(() => (route.params.locale === 'zh' ? 'zh' : 'en'))
+const quickDivinationVisible = ref(false)
 
 const mainEntries = computed(() => [
   {
@@ -56,6 +58,10 @@ const handleNavigate = (path: string) => {
   router.push(`/${currentLocale.value}${normalized}`)
 }
 
+const openQuickDivination = () => {
+  quickDivinationVisible.value = true
+}
+
 const hour = new Date().getHours()
 const timeState = computed(() => {
   if (hour >= 5 && hour < 12) return 'morning'
@@ -90,15 +96,15 @@ const timeState = computed(() => {
         <div class="hover-lift">
           <SharedDivinationCard />
         </div>
-        <button class="ask-spring-card hover-lift" @click="handleNavigate('/tools/divination')">
+        <button class="ask-spring-card hover-lift" @click="openQuickDivination">
           <img src="/images/divination/遇事不决%20可问春风.png" alt="遇事不决 可问春风" />
           <div class="card-overlay">
             <div class="overlay-content">
               <span class="card-action">
                 <Icon icon="mdi:sparkles" />
-                <span>问</span>
+                <span>{{ t('modules.divination.ask') }}</span>
               </span>
-              <p class="poetic-text">春风不语，即随本心</p>
+              <p class="poetic-text">{{ t('modules.divination.teaser') }}</p>
             </div>
           </div>
         </button>
@@ -131,6 +137,7 @@ const timeState = computed(() => {
     <PopularTools />
     <PopularGames />
     <PopularRelax />
+    <DivinationQuickModal v-model="quickDivinationVisible" />
 
   </div>
 </template>
