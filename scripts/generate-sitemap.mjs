@@ -16,6 +16,7 @@ try {
 const siteUrl = (process.env.VITE_SITE_URL || process.env.SITE_URL || envSiteUrl || 'https://muyu.click').replace(/\/$/, '')
 const routes = [
   '/',
+  '/about',
   '/games',
   '/relax',
   '/tools',
@@ -23,7 +24,10 @@ const routes = [
   '/games/pixel-fishing',
   '/relax/wooden-fish',
   '/relax/virtual-pet',
-  '/tools/white-noise'
+  '/tools/pomodoro',
+  '/tools/calendar',
+  '/tools/memo',
+  '/tools/divination'
 ]
 const locales = ['en', 'zh']
 const localizedRoutes = locales.flatMap(locale =>

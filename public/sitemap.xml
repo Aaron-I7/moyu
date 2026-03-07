@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://muyu.click/en</loc></url>
+  <url><loc>https://muyu.click/en/about</loc></url>
   <url><loc>https://muyu.click/en/games</loc></url>
   <url><loc>https://muyu.click/en/relax</loc></url>
   <url><loc>https://muyu.click/en/tools</loc></url>
@@ -8,8 +9,12 @@
   <url><loc>https://muyu.click/en/games/pixel-fishing</loc></url>
   <url><loc>https://muyu.click/en/relax/wooden-fish</loc></url>
   <url><loc>https://muyu.click/en/relax/virtual-pet</loc></url>
-  <url><loc>https://muyu.click/en/tools/white-noise</loc></url>
+  <url><loc>https://muyu.click/en/tools/pomodoro</loc></url>
+  <url><loc>https://muyu.click/en/tools/calendar</loc></url>
+  <url><loc>https://muyu.click/en/tools/memo</loc></url>
+  <url><loc>https://muyu.click/en/tools/divination</loc></url>
   <url><loc>https://muyu.click/zh</loc></url>
+  <url><loc>https://muyu.click/zh/about</loc></url>
   <url><loc>https://muyu.click/zh/games</loc></url>
   <url><loc>https://muyu.click/zh/relax</loc></url>
   <url><loc>https://muyu.click/zh/tools</loc></url>
@@ -17,5 +22,8 @@
   <url><loc>https://muyu.click/zh/games/pixel-fishing</loc></url>
   <url><loc>https://muyu.click/zh/relax/wooden-fish</loc></url>
   <url><loc>https://muyu.click/zh/relax/virtual-pet</loc></url>
-  <url><loc>https://muyu.click/zh/tools/white-noise</loc></url>
+  <url><loc>https://muyu.click/zh/tools/pomodoro</loc></url>
+  <url><loc>https://muyu.click/zh/tools/calendar</loc></url>
+  <url><loc>https://muyu.click/zh/tools/memo</loc></url>
+  <url><loc>https://muyu.click/zh/tools/divination</loc></url>
 </urlset>
