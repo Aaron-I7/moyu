@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { supabase } from '@/core/supabase/client'
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 import { YAO_MAP, HEXAGRAMS, type LineVal } from './data'
 import CoinToss from './components/CoinToss.vue'
 import YaoLine from './components/YaoLine.vue'
@@ -12,7 +13,12 @@ const step = ref<Step>('input')
 const question = ref('')
 const lines = ref<LineVal[]>([])
 const tossing = ref(false)
-const response = ref('')
+const resultData = ref<{
+  hexagram_name: string
+  original_text: string
+  interpretation: string
+} | null>(null)
+const errorMsg = ref('')
 const loading = ref(false)
 const bellRing = ref(false)
 
@@ -51,7 +57,8 @@ const handleTossComplete = () => {
 const askWind = async () => {
   step.value = 'result'
   loading.value = true
-  response.value = ''
+  resultData.value = null
+  errorMsg.value = ''
   
   const movingList = lines.value
     .map((l, i) => YAO_MAP[l].moving ? `第${i + 1}爻动` : null)
@@ -63,17 +70,20 @@ const askWind = async () => {
       throw new Error('Supabase client not initialized')
     }
 
-    const systemPrompt = `你是一位精通周易与心理疗愈的解签大师，你的名字叫“春风”。
-你的语言风格温暖、诗意、富有哲理，如同春风拂面。
-请根据用户的卦象和问题，给予解读和指引。
-不需要过多解释卦理术语，而是重点通过卦象的寓意，结合用户的问题，给出直指人心的建议和安慰。
-请以“【${hexName.value}】”开头（如果合适）。
-字数控制在200字以内。`
+    const systemPrompt = `角色设定：你是《剑来》世界观里的算卦亭老掌柜，说话带着江湖气却藏着文气，善用譬喻、语气温和有力量，懂周易解卦更懂人间行路的道理。。
+任务要求：以《剑来》的语言风格解读，输出内容包含3个部分，请务必以纯 JSON 格式返回结果（不要使用 markdown 代码块），包含以下字段：
+1. "hexagram_name": (String) 卦象名称（例如“乾为天”）。
+2. "original_text": (String) 仅提供本卦的卦辞与大象辞原文。若有变爻，仅补充变爻的爻辞。**请直接返回一段纯文本，严禁使用 JSON 对象或键值对结构**。"
+3. "interpretation": (String) 解卦正文。结合用户提问与卦象，给出温暖、诗意、富有哲理的指引。字数控制在80 - 150字以内。
+风格要求：
+- 避免生硬的周易术语，全部转化为江湖语言
+- 每段文字有画面感，读起来像听陈平安讲道理
+- 语气不绝对，留有余地，符合「算卦不问必死，只说进退」的江湖规矩`
 
     const userPrompt = `我求得一卦：${hexName.value}。
-${movingList ? `变爻情况：${movingList}。` : '本卦无变爻。'}
+${movingList ? `变爻情况：${movingList}。` : ''}
 我的困惑/问题是：“${question.value}”
-请为我解卦。`
+请为我解卦，并严格按照 JSON 格式返回。`
 
     const { data, error } = await supabase.functions.invoke('ai-divination', {
       body: {
@@ -81,6 +91,11 @@ ${movingList ? `变爻情况：${movingList}。` : '本卦无变爻。'}
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ]
+      },
+      // Explicitly set headers to avoid Supabase client from trying to refresh session
+      // This fixes the "Lock broken by another request" error when user is not logged in or session is unstable
+      headers: {
+        Authorization: `Bearer ${supabaseAnonKey}`
       }
     })
 
@@ -91,15 +106,44 @@ ${movingList ? `变爻情况：${movingList}。` : '本卦无变爻。'}
       throw new Error(data.error)
     }
     
-    if (data?.choices?.[0]?.message?.content) {
-      response.value = data.choices[0].message.content
+    const content = data?.choices?.[0]?.message?.content
+    console.log(content)
+    if (content) {
+      try {
+        // Try to parse JSON, removing any potential markdown code blocks if present
+        const jsonStr = content.replace(/^```json\s*|\s*```$/g, '').trim()
+        const parsed = JSON.parse(jsonStr)
+        
+        // Safety check: ensure original_text is a string
+        if (typeof parsed.original_text === 'object' && parsed.original_text !== null) {
+          // If AI returned an object, flatten it
+          parsed.original_text = Object.values(parsed.original_text).join(' ')
+        } else if (typeof parsed.original_text === 'string' && parsed.original_text.trim().startsWith('{')) {
+           // If AI returned a JSON string inside the field, try to parse and flatten
+           try {
+             const innerObj = JSON.parse(parsed.original_text)
+             parsed.original_text = Object.values(innerObj).join(' ')
+           } catch (e) {
+             // Keep as is if parsing fails
+           }
+        }
+        
+        resultData.value = parsed
+      } catch (e) {
+        console.error('JSON Parse Error', e)
+        // Fallback if JSON parsing fails, treat entire content as interpretation
+        resultData.value = {
+          hexagram_name: hexName.value || '未知之卦',
+          original_text: '（解析格式异常，暂无原文）',
+          interpretation: content
+        }
+      }
     } else {
       throw new Error('No content in response')
     }
   } catch (err) {
     console.error('Divination error:', err)
-    // Fallback or error message
-    response.value = `春风似乎有些犹豫，未能清晰传达意旨。\n\n或许是网络连接波动，请稍后再试。\n\n（${err instanceof Error ? err.message : '未知错误'}）`
+    errorMsg.value = `春风似乎有些犹豫，未能清晰传达意旨。\n\n或许是网络连接波动，请稍后再试。\n\n（${err instanceof Error ? err.message : '未知错误'}）`
   } finally {
     loading.value = false
   }
@@ -109,7 +153,8 @@ const reset = () => {
   step.value = 'input'
   question.value = ''
   lines.value = []
-  response.value = ''
+  resultData.value = null
+  errorMsg.value = ''
   loading.value = false
   tossing.value = false
 }
@@ -225,8 +270,15 @@ const reset = () => {
             <span class="loading-text">春风徐来……</span>
           </div>
           
-          <div v-else class="response-text fade-up">
-            {{ response }}
+          <div v-else-if="resultData" class="response-content fade-up">
+            <div class="res-hex-name">【{{ resultData.hexagram_name }}】</div>
+            <div class="res-original">{{ resultData.original_text }}</div>
+            <div class="res-interpretation">{{ resultData.interpretation }}</div>
+            <div class="res-disclaimer"> 弟子不必不如师，但凭本心 </div>
+          </div>
+          
+          <div v-else-if="errorMsg" class="response-text fade-up">
+            {{ errorMsg }}
           </div>
         </div>
         
@@ -530,6 +582,51 @@ const reset = () => {
     color: var(--color-text-secondary);
     letter-spacing: 3px;
   }
+}
+
+.response-content {
+  padding: 0 4px;
+}
+
+.res-hex-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-align: center;
+  margin-bottom: 12px;
+  letter-spacing: 2px;
+}
+
+.res-original {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  opacity: 0.8;
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--color-surface) 50%, transparent);
+  border-radius: 4px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  text-align: justify;
+}
+
+.res-interpretation {
+  font-size: 14px;
+  color: var(--color-text);
+  line-height: 2.3;
+  letter-spacing: 1.5px;
+  text-align: justify;
+  margin-bottom: 20px;
+  white-space: pre-wrap;
+}
+
+.res-disclaimer {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  text-align: right;
+  opacity: 0.6;
+  margin-top: 10px;
+  font-style: italic;
 }
 
 .response-text {
