@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { supabase } from '@/core/supabase/client'
 import { YAO_MAP, HEXAGRAMS, type LineVal } from './data'
 import CoinToss from './components/CoinToss.vue'
 import YaoLine from './components/YaoLine.vue'
@@ -57,31 +58,51 @@ const askWind = async () => {
     .filter(Boolean)
     .join("、")
     
-  // Mock AI response logic
-  // In a real app, you would call an API here.
-  // For now, we simulate a "Spring Breeze" response.
-  
-  setTimeout(() => {
-    const intros = [
-      "春风拂过，万物生长。",
-      "风起于青萍之末。",
-      "心中若有桃花源，何处不是水云间。",
-      "事缓则圆，人缓则安。"
-    ]
-    const intro = intros[Math.floor(Math.random() * intros.length)]
-    
-    response.value = `
-【${hexName.value}】
-${intro}
+  try {
+    if (!supabase) {
+      throw new Error('Supabase client not initialized')
+    }
 
-此卦显示，${(lines.value[5] || 0) % 2 !== 0 ? '阳气上升' : '阴气下降'}，局势正在变化之中。${movingList ? `变爻显示：${movingList}，意味着转折点已现。` : '卦象平稳，宜静守。'}
+    const systemPrompt = `你是一位精通周易与心理疗愈的解签大师，你的名字叫“春风”。
+你的语言风格温暖、诗意、富有哲理，如同春风拂面。
+请根据用户的卦象和问题，给予解读和指引。
+不需要过多解释卦理术语，而是重点通过卦象的寓意，结合用户的问题，给出直指人心的建议和安慰。
+请以“【${hexName.value}】”开头（如果合适）。
+字数控制在200字以内。`
 
-针对你的问题：“${question.value}”
-春风不语，但意已明。与其向外求索，不如向内观照。${question.value.length > 5 ? '此事看似复杂，实则' : '此事'}关键在于本心。顺应自然，无需强求，答案自会浮现。
-    `.trim()
+    const userPrompt = `我求得一卦：${hexName.value}。
+${movingList ? `变爻情况：${movingList}。` : '本卦无变爻。'}
+我的困惑/问题是：“${question.value}”
+请为我解卦。`
+
+    const { data, error } = await supabase.functions.invoke('ai-divination', {
+      body: {
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ]
+      }
+    })
+
+    if (error) throw error
     
+    // Handle error returned from Edge Function as 200 OK
+    if (data?.error) {
+      throw new Error(data.error)
+    }
+    
+    if (data?.choices?.[0]?.message?.content) {
+      response.value = data.choices[0].message.content
+    } else {
+      throw new Error('No content in response')
+    }
+  } catch (err) {
+    console.error('Divination error:', err)
+    // Fallback or error message
+    response.value = `春风似乎有些犹豫，未能清晰传达意旨。\n\n或许是网络连接波动，请稍后再试。\n\n（${err instanceof Error ? err.message : '未知错误'}）`
+  } finally {
     loading.value = false
-  }, 2500)
+  }
 }
 
 const reset = () => {
