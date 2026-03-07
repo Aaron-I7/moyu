@@ -16,30 +16,40 @@ const { t } = useI18n({ useScope: 'global' })
 const { login, register, loading, error: authError } = useAuth()
 
 const mode = ref<'login' | 'register'>('login')
-const nickname = ref('')
+const email = ref('')
 const password = ref('')
 const error = ref<string | null>(null)
+const successMessage = ref<string | null>(null)
 
 const toggleMode = () => {
   mode.value = mode.value === 'login' ? 'register' : 'login'
   error.value = null
   authError.value = null
+  successMessage.value = null
 }
 
 const handleSubmit = async () => {
-  if (!nickname.value || !password.value) {
-    error.value = 'Please fill in all fields'
+  if (!email.value || !password.value) {
+    error.value = t('auth.fillAll', 'Please fill in all fields')
     return
   }
   
   error.value = null
+  successMessage.value = null
+  
   try {
     if (mode.value === 'login') {
-      await login(nickname.value, password.value)
+      await login(email.value, password.value)
+      emit('close')
     } else {
-      await register(nickname.value, password.value)
+      const result = await register(email.value, password.value)
+      // If session is null, it means email confirmation is required
+      if (result && !result.session) {
+        successMessage.value = t('auth.checkEmail', 'Registration successful! Please check your email to confirm your account.')
+      } else {
+        emit('close')
+      }
     }
-    emit('close')
   } catch (e: any) {
     // Error is already handled in composable but we can show specific UI feedback here if needed
     console.error(e)
@@ -68,15 +78,24 @@ const submitText = computed(() => mode.value === 'login' ? t('auth.login', 'Logi
             <p class="subtitle">{{ t('auth.subtitle', 'Sync your progress across devices') }}</p>
           </div>
           
-          <form @submit.prevent="handleSubmit" class="auth-form">
+          <div v-if="successMessage" class="success-content">
+            <div class="icon-wrapper success">
+              <Icon icon="mdi:email-check" width="48" />
+            </div>
+            <h3>{{ t('auth.checkEmailTitle', 'Check your email') }}</h3>
+            <p>{{ successMessage }}</p>
+            <button @click="emit('close')" class="submit-btn">{{ t('common.close', 'Close') }}</button>
+          </div>
+          
+          <form v-else @submit.prevent="handleSubmit" class="auth-form">
             <div class="form-group">
-              <label>{{ t('auth.nickname', 'Nickname') }}</label>
+              <label>{{ t('auth.email', 'Email') }}</label>
               <div class="input-wrapper" :class="{ 'has-error': error }">
-                <Icon icon="mdi:account" class="input-icon" />
+                <Icon icon="mdi:email" class="input-icon" />
                 <input 
-                  v-model="nickname" 
-                  type="text" 
-                  :placeholder="t('auth.nicknamePlaceholder', 'Enter your nickname')"
+                  v-model="email" 
+                  type="email" 
+                  :placeholder="t('auth.emailPlaceholder', 'Enter your email')"
                   required
                   :disabled="loading"
                   autofocus
@@ -408,6 +427,35 @@ const submitText = computed(() => mode.value === 'login' ? t('auth.login', 'Logi
   
   .modal-container {
     transform: scale(0.95) translateY(10px);
+  }
+}
+
+.success-content {
+  text-align: center;
+  padding: 20px 0;
+  
+  .icon-wrapper {
+    margin: 0 auto 24px;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: color-mix(in srgb, #4ade80 10%, transparent);
+    color: #4ade80;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  
+  p {
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    margin-bottom: 24px;
   }
 }
 </style>

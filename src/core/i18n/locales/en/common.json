@@ -5,7 +5,8 @@
     "cancel": "Cancel",
     "edit": "Edit",
     "delete": "Delete",
-    "add": "Add"
+    "add": "Add",
+    "close": "Close"
   },
   "app": {
     "name": "Breakflow",
@@ -122,11 +123,6 @@
     "emptyToolsDesc": "More globally useful tools are coming soon."
   },
   "modules": {
-    "pomodoro": {
-      "name": "Pomodoro Focus",
-      "description": "Boost productivity with Pomodoro timer and ambient sounds.",
-      "tags": ["Focus", "Timer", "Ambient"]
-    },
     "whiteNoise": {
       "name": "White Noise Mixer",
       "description": "Blend ambient tracks for focus, commute, and winding down.",
@@ -347,8 +343,8 @@
     "listening": "Listening… say \"home\", \"games\", \"tools\", \"reading\", or \"recharge\"."
   },
   "auth": {
-    "nickname": "Nickname",
-    "nicknamePlaceholder": "Enter your nickname",
+    "email": "Email",
+    "emailPlaceholder": "Enter your email",
     "password": "Password",
     "passwordPlaceholder": "Enter your password",
     "login": "Login",
@@ -356,6 +352,9 @@
     "noAccount": "New here?",
     "hasAccount": "Already have an account?",
     "subtitle": "Sync your progress across devices",
-    "loginRequired": "You need to log in to use this feature."
+    "loginRequired": "You need to log in to use this feature.",
+    "fillAll": "Please fill in all fields",
+    "checkEmailTitle": "Check your email",
+    "checkEmail": "Registration successful! Please check your email to confirm your account."
   }
 }

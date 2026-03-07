@@ -5,7 +5,8 @@
     "cancel": "取消",
     "edit": "编辑",
     "delete": "删除",
-    "add": "添加"
+    "add": "添加",
+    "close": "关闭"
   },
   "app": {
     "name": "摸鱼吧",
@@ -122,11 +123,6 @@
     "emptyToolsDesc": "更多国际化工具即将上线。"
   },
   "modules": {
-    "pomodoro": {
-      "name": "番茄专注钟",
-      "description": "结合白噪音的沉浸式专注计时器。",
-      "tags": ["专注", "计时", "白噪音"]
-    },
     "whiteNoise": {
       "name": "白噪音混音",
       "description": "混合环境音效，助你专注或放松。",
@@ -347,8 +343,8 @@
     "listening": "语音监听中，可说「首页、游戏、工具、阅读、休闲」。"
   },
   "auth": {
-    "nickname": "昵称",
-    "nicknamePlaceholder": "输入你的昵称",
+    "email": "邮箱",
+    "emailPlaceholder": "输入你的邮箱",
     "password": "密码",
     "passwordPlaceholder": "输入你的密码",
     "login": "登录",
@@ -356,6 +352,9 @@
     "noAccount": "没有账户？",
     "hasAccount": "已有账户？",
     "subtitle": "在不同设备间同步你的进度",
-    "loginRequired": "该功能需要登录后才能使用，请先登录。"
+    "loginRequired": "该功能需要登录后才能使用，请先登录。",
+    "fillAll": "请填写所有字段",
+    "checkEmailTitle": "查收邮件",
+    "checkEmail": "注册成功！请查收邮件并确认你的账户。"
   }
 }

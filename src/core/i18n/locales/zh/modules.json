@@ -27,6 +27,29 @@
   "divination": {
     "name": "春风解签",
     "description": "遇事不决，可问春风。",
-    "tags": ["卜卦", "周易", "解惑"]
+    "tags": ["卜卦", "周易", "解惑"],
+    "title": "问春风",
+    "subtitle": "金钱卦 · 六爻占",
+    "inputHint": "遇事不决，可问春风",
+    "placeholder": "所惑之事……",
+    "cast": "起卦",
+    "casting": "掷中……",
+    "toss": "投掷第{n}爻",
+    "tossStep": ["一","二","三","四","五","六"],
+    "quickCast": "一键起卦",
+    "wait": "静心，方可起卦",
+    "gotLine": "已得第{n}爻",
+    "complete": "六爻已成",
+    "ask": "问春风",
+    "reset": "重新起卦",
+    "again": "再问一卦",
+    "loading": "春风徐来……",
+    "responseTitle": "· 春风有言 ·",
+    "disclaimer": "弟子不必不如师，但凭本心"
+  },
+  "pomodoro": {
+    "name": "番茄专注钟",
+    "description": "结合白噪音的沉浸式专注计时器。",
+    "tags": ["专注", "计时", "白噪音"]
   }
 }

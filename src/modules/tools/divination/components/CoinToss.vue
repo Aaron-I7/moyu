@@ -1,69 +1,46 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
 import CoinFace from './CoinFace.vue'
 
-const emit = defineEmits<{
-  (e: 'complete'): void
+const props = defineProps<{
+  tossing: boolean
+  coins: boolean[] // Array of 3 booleans: true = Yang (Head), false = Yin (Tail)
 }>()
 
-const stage = ref<'fly' | 'land'>('fly')
-
-// 生成随机动画参数
-const coinData = [0, 1, 2].map(i => ({
-  yang: Math.random() < 0.5,
-  dx: (Math.random() - 0.5) * 140,
-  peakY: -(55 + Math.random() * 50),
-  rot: (720 + Math.floor(Math.random() * 3) * 360) * (Math.random() < 0.5 ? 1 : -1),
-  dur: 700 + i * 60,
-  delay: i * 80,
-  // 动态生成 keyframes 名称
-  animName: `ct${i}_${Math.random().toString(36).substr(2, 5)}`
-}))
-
-let t1: any, t2: any
-
-onMounted(() => {
-  const maxDur = Math.max(...coinData.map(c => c.dur + c.delay))
-  
-  t1 = setTimeout(() => {
-    stage.value = 'land'
-  }, maxDur - 100)
-  
-  t2 = setTimeout(() => {
-    emit('complete')
-  }, maxDur + 400)
-})
-
-onUnmounted(() => {
-  clearTimeout(t1)
-  clearTimeout(t2)
-})
+// Animation configurations
+const coinConfig = [
+  { delay: '0ms', duration: '0.8s' },
+  { delay: '100ms', duration: '0.9s' },
+  { delay: '200ms', duration: '1.0s' }
+]
 </script>
 
 <template>
   <div class="coin-toss-container">
     <div 
-      v-for="(c, i) in coinData" 
+      v-for="(config, i) in coinConfig" 
       :key="i"
       class="coin-wrapper"
-      :style="{
-        animation: stage === 'fly' ? `${c.animName} ${c.dur}ms cubic-bezier(.15,.85,.35,1) ${c.delay}ms both` : 'none'
-      }"
     >
-      <!-- 动态样式注入 -->
-      <component is="style">
-        @keyframes {{ c.animName }} {
-          0% { transform: translate(0,0) rotateY(0deg) scale(0.9); opacity: 0.7; }
-          35% { transform: translate({{ c.dx * 0.45 }}px, {{ c.peakY }}px) rotateY({{ c.rot * 0.45 }}deg) scale(1.2); opacity: 1; }
-          100% { transform: translate({{ c.dx }}px, 0) rotateY({{ c.rot }}deg) scale(1); opacity: 1; }
-        }
-      </component>
-      
       <div 
         class="coin-inner"
-        :class="{ 'is-landed': stage === 'land' }"
+        :class="{
+          'is-tossing': tossing,
+          'is-head': props.coins[i],
+          'is-tail': !props.coins[i]
+        }"
+        :style="tossing ? { 
+          animationDelay: config.delay,
+          animationDuration: config.duration
+        } : {}"
       >
-        <CoinFace :yang="c.yang" />
+        <!-- Front (Yang/Head) -->
+        <div class="coin-side front">
+          <CoinFace :yang="true" />
+        </div>
+        <!-- Back (Yin/Tail) -->
+        <div class="coin-side back">
+          <CoinFace :yang="false" />
+        </div>
       </div>
     </div>
   </div>
@@ -74,18 +51,69 @@ onUnmounted(() => {
   position: relative;
   height: 120px;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  gap: 18px;
+  gap: 40px; 
+  z-index: 10;
+}
+
+.coin-wrapper {
+  width: 64px; 
+  height: 64px;
+  perspective: 1000px;
+  position: relative;
 }
 
 .coin-inner {
-  transition: transform 0.3s ease, filter 0.3s;
-  filter: drop-shadow(0 1px 3px rgba(150,110,20,0.2));
-  
-  &.is-landed {
-    transform: scale(1.05);
-    filter: drop-shadow(0 3px 6px rgba(150,110,20,0.45));
-  }
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.2s ease-out;
+}
+
+.coin-inner.is-tossing {
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: forwards;
+}
+
+.coin-inner.is-tossing.is-head {
+  animation-name: toss-jump-head;
+}
+
+.coin-inner.is-tossing.is-tail {
+  animation-name: toss-jump-tail;
+}
+
+.coin-inner.is-head {
+  transform: rotateY(0deg);
+}
+
+.coin-inner.is-tail {
+  transform: rotateY(180deg);
+}
+
+@keyframes toss-jump-head {
+  0% { transform: translateY(0) rotateY(0deg) scale(1); }
+  50% { transform: translateY(-120px) rotateY(900deg) scale(1.2); } 
+  100% { transform: translateY(0) rotateY(1800deg) scale(1); } /* 5 full spins, lands on Front */
+}
+
+@keyframes toss-jump-tail {
+  0% { transform: translateY(0) rotateY(0deg) scale(1); }
+  50% { transform: translateY(-120px) rotateY(990deg) scale(1.2); } /* Spin a bit more */
+  100% { transform: translateY(0) rotateY(1980deg) scale(1); } /* 5.5 spins, lands on Back */
+}
+
+.coin-side {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 50%;
+}
+
+.coin-side.back {
+  transform: rotateY(180deg);
 }
 </style>

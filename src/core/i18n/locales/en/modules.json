@@ -27,6 +27,29 @@
   "divination": {
     "name": "Spring Breeze",
     "description": "Consult the I Ching when in doubt.",
-    "tags": ["Divination", "I Ching", "Wisdom"]
+    "tags": ["Divination", "I Ching", "Wisdom"],
+    "title": "Ask the Breeze",
+    "subtitle": "I Ching · Hexagrams",
+    "inputHint": "Write your doubt here",
+    "placeholder": "What troubles you...",
+    "cast": "Cast",
+    "casting": "Casting...",
+    "toss": "Cast Line {n}",
+    "tossStep": ["1st", "2nd", "3rd", "4th", "5th", "6th"],
+    "quickCast": "Quick Cast",
+    "wait": "Calm your mind to begin",
+    "gotLine": "Got {n} Line",
+    "complete": "Hexagram Complete",
+    "ask": "Ask Breeze",
+    "reset": "Restart",
+    "again": "Ask Again",
+    "loading": "The breeze is coming...",
+    "responseTitle": "· The Breeze Says ·",
+    "disclaimer": "Trust your heart above all."
+  },
+  "pomodoro": {
+    "name": "Pomodoro Focus",
+    "description": "Boost productivity with Pomodoro timer and ambient sounds.",
+    "tags": ["Focus", "Timer", "Ambient"]
   }
 }

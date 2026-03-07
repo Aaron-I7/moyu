@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { supabase } from '@/core/supabase/client'
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+import { useI18n } from 'vue-i18n'
 import { YAO_MAP, HEXAGRAMS, type LineVal } from './data'
 import CoinToss from './components/CoinToss.vue'
 import YaoLine from './components/YaoLine.vue'
@@ -9,10 +9,14 @@ import WindBells from './components/WindBells.vue'
 
 type Step = 'input' | 'casting' | 'result'
 
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const { t, tm } = useI18n({ useScope: 'global' })
+
 const step = ref<Step>('input')
 const question = ref('')
 const lines = ref<LineVal[]>([])
 const tossing = ref(false)
+const currentCoins = ref<boolean[]>([true, true, true]) // true=Yang(Head)=3, false=Yin(Tail)=2
 const resultData = ref<{
   hexagram_name: string
   original_text: string
@@ -30,29 +34,73 @@ const hexKey = computed(() => {
 
 const hexName = computed(() => hexKey.value ? (HEXAGRAMS[hexKey.value] || "未知之卦") : null)
 
-const rollCoins = (): LineVal => {
+const tossStepLabels = computed<string[]>(() => {
+  const raw = tm('modules.divination.tossStep') as unknown
+  return Array.isArray(raw) ? raw.map(v => String(v)) : []
+})
+
+const getTossStepLabel = (index: number): string => {
+  return tossStepLabels.value[index] || String(index + 1)
+}
+
+const rollCoins = (): { val: LineVal, coins: boolean[] } => {
+  const coins: boolean[] = []
   let s = 0
-  for (let i = 0; i < 3; i++) s += Math.random() < 0.5 ? 2 : 3
-  return s as LineVal
+  for (let i = 0; i < 3; i++) {
+    const isYang = Math.random() < 0.5
+    coins.push(isYang)
+    s += isYang ? 3 : 2
+  }
+  return { val: s as LineVal, coins }
 }
 
 const handleToss = () => {
   if (!tossing.value && lines.value.length < 6) {
     tossing.value = true
+    // Pre-calculate result but wait for animation
+    const { val, coins } = rollCoins()
+    
+    // Update coins state immediately so they settle on this result after animation
+    // But we might want them to "spin" then settle.
+    // CoinToss component handles the "spin" when tossing=true.
+    // When tossing becomes false, it shows `currentCoins`.
+    // So we should update `currentCoins` right before or after we stop tossing?
+    // If we update it now, it doesn't matter because they are spinning.
+    currentCoins.value = coins
+    
+    setTimeout(() => {
+      lines.value.push(val)
+      tossing.value = false
+      
+      if (lines.value.length === 6) {
+        setTimeout(() => { bellRing.value = true }, 350)
+        setTimeout(() => { bellRing.value = false }, 2400)
+      }
+    }, 1200) // 1.2s animation
   }
 }
 
-const handleTossComplete = () => {
-  const yao = rollCoins()
-  lines.value.push(yao)
+const handleQuickToss = async () => {
+  if (tossing.value || lines.value.length >= 6) return
+  
+  // Generate remaining lines
+  const remaining = 6 - lines.value.length
+  
+  for (let i = 0; i < remaining; i++) {
+    const { val, coins } = rollCoins()
+    currentCoins.value = coins
+    lines.value.push(val)
+    // Small delay for visual effect
+    await new Promise(resolve => setTimeout(resolve, 200))
+  }
   
   if (lines.value.length === 6) {
     setTimeout(() => { bellRing.value = true }, 350)
     setTimeout(() => { bellRing.value = false }, 2400)
   }
-  
-  tossing.value = false
 }
+
+// Removed handleTossComplete as logic is now inside handleToss timeout
 
 const askWind = async () => {
   step.value = 'result'
@@ -107,7 +155,6 @@ ${movingList ? `变爻情况：${movingList}。` : ''}
     }
     
     const content = data?.choices?.[0]?.message?.content
-    console.log(content)
     if (content) {
       try {
         // Try to parse JSON, removing any potential markdown code blocks if present
@@ -170,18 +217,23 @@ const reset = () => {
       
       <!-- 标题 -->
       <div class="card-header">
-        <div class="title-text">问春风</div>
+        <div class="title-text">{{ t('modules.divination.title') }}</div>
         <div class="divider" />
-        <div class="subtitle">金钱卦 · 六爻占</div>
+        <div class="subtitle">{{ t('modules.divination.subtitle') }}</div>
+      </div>
+      
+      <!-- 铜钱装饰 (仅在input阶段显示，casting阶段有自己的CoinToss) -->
+      <div v-if="step === 'input'" class="coin-decoration fade-up">
+         <CoinToss :tossing="false" :coins="[true, true, true]" />
       </div>
       
       <!-- 阶段：输入 -->
       <div v-if="step === 'input'" class="fade-up">
-        <div class="input-hint">心中所惑，书于此处</div>
+        <div class="input-hint">{{ t('modules.divination.inputHint') }}</div>
         <textarea 
           v-model="question" 
           rows="4" 
-          placeholder="所惑之事……"
+          :placeholder="t('modules.divination.placeholder')"
           class="question-input"
         />
         <div class="action-area">
@@ -190,33 +242,20 @@ const reset = () => {
             :disabled="!question.trim()"
             @click="step = 'casting'"
           >
-            起卦
+            {{ t('modules.divination.cast') }}
           </button>
         </div>
       </div>
       
       <!-- 阶段：投掷 -->
       <div v-else-if="step === 'casting'" class="fade-up">
-        <div class="current-question">{{ question }}</div>
-        
-        <!-- 进度点 -->
-        <div class="dots">
-          <div 
-            v-for="(_, i) in 6" 
-            :key="i"
-            class="dot"
-            :class="{
-              active: i < lines.length,
-              current: i === lines.length
-            }"
-          />
-        </div>
+        <div class="current-question">“ {{ question }} ”</div>
         
         <!-- 铜钱区 -->
         <div class="coin-area">
-          <CoinToss v-if="tossing" @complete="handleTossComplete" />
-          <div v-else class="coin-placeholder">
-            {{ lines.length === 0 ? "静心，方可起卦" : lines.length < 6 ? `已得第${["一","二","三","四","五"][lines.length-1]}爻` : "六爻已成" }}
+          <CoinToss :tossing="tossing" :coins="currentCoins" />
+          <div v-if="!tossing" class="coin-placeholder">
+            {{ lines.length === 0 ? t('modules.divination.wait') : lines.length < 6 ? t('modules.divination.gotLine', { n: getTossStepLabel(lines.length - 1) }) : t('modules.divination.complete') }}
           </div>
         </div>
         
@@ -234,13 +273,16 @@ const reset = () => {
         <div class="action-area">
           <template v-if="lines.length < 6">
             <button class="btn-primary" @click="handleToss" :disabled="tossing">
-              {{ tossing ? "掷中……" : `投掷第${["一","二","三","四","五","六"][lines.length]}爻` }}
+              {{ tossing ? t('modules.divination.casting') : t('modules.divination.toss', { n: getTossStepLabel(lines.length) }) }}
+            </button>
+            <button class="btn-ghost" @click="handleQuickToss" :disabled="tossing">
+              {{ t('modules.divination.quickCast') }}
             </button>
           </template>
           <template v-else>
             <div class="hex-name-display">{{ hexName }}</div>
-            <button class="btn-primary" @click="askWind">问春风</button>
-            <button class="btn-ghost" @click="reset">重新起卦</button>
+            <button class="btn-primary" @click="askWind">{{ t('modules.divination.ask') }}</button>
+            <button class="btn-ghost" @click="reset">{{ t('modules.divination.reset') }}</button>
           </template>
         </div>
       </div>
@@ -263,18 +305,18 @@ const reset = () => {
         </div>
         
         <div class="response-section">
-          <div class="response-title">· 春风有言 ·</div>
+          <div class="response-title">{{ t('modules.divination.responseTitle') }}</div>
           
           <div v-if="loading" class="loading-dots">
             <div v-for="i in 3" :key="i" class="loading-dot" :style="{ animationDelay: `${(i-1)*0.28}s` }" />
-            <span class="loading-text">春风徐来……</span>
+            <span class="loading-text">{{ t('modules.divination.loading') }}</span>
           </div>
           
           <div v-else-if="resultData" class="response-content fade-up">
             <div class="res-hex-name">【{{ resultData.hexagram_name }}】</div>
             <div class="res-original">{{ resultData.original_text }}</div>
             <div class="res-interpretation">{{ resultData.interpretation }}</div>
-            <div class="res-disclaimer"> 弟子不必不如师，但凭本心 </div>
+            <div class="res-disclaimer"> {{ t('modules.divination.disclaimer') }} </div>
           </div>
           
           <div v-else-if="errorMsg" class="response-text fade-up">
@@ -283,7 +325,7 @@ const reset = () => {
         </div>
         
         <div v-if="!loading" class="action-area">
-          <button class="btn-primary" @click="reset">再问一卦</button>
+          <button class="btn-primary" @click="reset">{{ t('modules.divination.again') }}</button>
         </div>
       </div>
     </div>
@@ -305,59 +347,81 @@ const reset = () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: center; /* 垂直居中，如果内容多了会自动撑开 */
   font-family: 'Noto Serif SC', 'STSong', serif;
-  padding: 0;
+  padding: 60px 20px; /* 增加上下padding，防止内容贴边，特别是Header */
   z-index: 0; /* 降低层级，Header 通常是 100 */
-  overflow: hidden;
+  overflow-y: auto; /* 允许滚动 */
   color: var(--color-text);
+  box-sizing: border-box;
 }
 
 .main-card {
-  max-width: 460px;
+  max-width: 420px; /* 稍微调窄一点，更精致 */
   width: 100%;
   background: var(--card-glass);
   backdrop-filter: blur(12px);
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
-  padding: 36px 32px;
+  padding: 40px 32px;
   position: relative;
   z-index: 1;
-  box-shadow: var(--shadow);
-  margin: 20px;
+  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.1);
+  margin: auto; /* 配合 flex 布局居中 */
+  transition: all 0.3s ease;
 }
 
 .bells-container {
   text-align: center;
-  margin-bottom: 22px;
+  margin-bottom: 16px;
+  margin-top: -10px; /* 稍微上移 */
 }
 
 .card-header {
   text-align: center;
-  margin-bottom: 28px;
+  margin-bottom: 32px;
   
   .title-text {
-    font-size: 25px;
-    font-weight: 300;
-    letter-spacing: 16px;
+    font-size: 28px;
+    font-weight: 400;
+    letter-spacing: 12px;
+    margin-right: -12px; /* 视觉修正letter-spacing */
     background: linear-gradient(90deg, var(--color-primary), var(--color-secondary), var(--color-accent), var(--color-secondary), var(--color-primary));
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    animation: shimmer 5s linear infinite;
+    animation: shimmer 8s linear infinite;
   }
   
   .divider {
-    width: 72px;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--color-border), transparent);
-    margin: 11px auto 7px;
+    width: 40px;
+    height: 2px;
+    background: var(--color-primary);
+    opacity: 0.2;
+    margin: 16px auto 12px;
+    border-radius: 2px;
   }
   
   .subtitle {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--color-text-secondary);
-    letter-spacing: 5px;
+    letter-spacing: 6px;
+    margin-right: -6px;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+}
+
+.coin-decoration {
+  margin-bottom: 32px;
+  /* Override inner styles for decoration purpose if needed */
+  :deep(.coin-toss-container) {
+    height: auto; 
+    gap: 24px;
+  }
+  :deep(.coin-wrapper) {
+    width: 56px;
+    height: 56px;
   }
 }
 
@@ -490,10 +554,12 @@ const reset = () => {
 }
 
 .coin-area {
-  height: 118px;
+  height: 140px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 12px;
 }
 
 .coin-placeholder {
