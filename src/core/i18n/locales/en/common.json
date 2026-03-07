@@ -249,22 +249,22 @@
     "notFound": "Page Not Found"
   },
   "seo": {
-    "defaultDescription": "Breakflow is a lightweight break platform with games, relaxation tools, utilities, and local reading.",
+    "defaultDescription": "Breakflow is a free online micro-break platform for professionals. No download required. Features Pomodoro timer, White Noise, Wooden Fish, and Pixel Fishing to help you recharge and refocus.",
     "routes": {
       "home": {
-        "description": "Discover quick recharge modules for focus recovery, stress relief, and private break routines."
+        "description": "The ultimate online break companion. Access stress-relief games and productivity tools instantly. Privacy-first mode for safe work breaks."
       },
       "games": {
-        "description": "Explore low-pressure mini games designed for short breaks and better mood reset."
+        "description": "Free online browser games for quick breaks. Play Pixel Fishing and clicker games without installation. Perfect for reducing work stress."
       },
       "relax": {
-        "description": "Use calming interactions and mindful mini tools to reduce stress between tasks."
+        "description": "Online relaxation tools: Digital Wooden Fish, Virtual Pet. Gentle interactions to relieve anxiety and boost mental wellness."
       },
       "tools": {
-        "description": "Access practical productivity and utility tools built for fast daily workflows."
+        "description": "Best online productivity tools: Customizable Pomodoro timer, Ambient White Noise mixer, Daily Horoscope. Enhance your workflow state."
       },
       "notFound": {
-        "description": "The requested page is unavailable. Return to Breakflow home to continue browsing."
+        "description": "Page not found. Return to Breakflow home to discover more free online relaxation tools."
       }
     }
   },

@@ -1,7 +1,19 @@
-import { writeFileSync } from 'node:fs'
+import { writeFileSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-const siteUrl = (process.env.VITE_SITE_URL || process.env.SITE_URL || 'https://your-domain.com').replace(/\/$/, '')
+// Try to read .env file manually
+let envSiteUrl = ''
+try {
+  const envFile = readFileSync(resolve('.env'), 'utf-8')
+  const match = envFile.match(/VITE_SITE_URL=(.+)/)
+  if (match) {
+    envSiteUrl = match[1].trim()
+  }
+} catch (e) {
+  // .env might not exist in CI/CD or production
+}
+
+const siteUrl = (process.env.VITE_SITE_URL || process.env.SITE_URL || envSiteUrl || 'https://muyu.click').replace(/\/$/, '')
 const routes = [
   '/',
   '/games',
