@@ -1,9 +1,5 @@
-/**
- * Application-level configuration
- */
+const envDefaultLocale = import.meta.env.VITE_DEFAULT_LOCALE
 
-// Default locale from environment variable
-export const DEFAULT_LOCALE = (import.meta.env.VITE_DEFAULT_LOCALE || 'en') as 'en' | 'zh'
+export const DEFAULT_LOCALE: 'en' | 'zh' = envDefaultLocale === 'zh' ? 'zh' : 'en'
 
-// Site URL
 export const SITE_URL = import.meta.env.VITE_SITE_URL || ''

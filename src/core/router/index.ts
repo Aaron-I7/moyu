@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import moduleRegistry from '../module/registry'
+import { defaultLocale } from '@/core/i18n'
 
 const localePath = '/:locale(en|zh)'
 
@@ -55,7 +56,7 @@ function generateModuleRoutes(): RouteRecordRaw[] {
 const baseRoutes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/en'
+    redirect: `/${defaultLocale}`
   },
   {
     path: `${localePath}`,
