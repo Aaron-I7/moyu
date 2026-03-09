@@ -1,4 +1,5 @@
 import { createI18n } from 'vue-i18n'
+import { DEFAULT_LOCALE } from '../config/app'
 
 import enCommon from './locales/en/common.json'
 import enModules from './locales/en/modules.json'
@@ -13,7 +14,7 @@ import zhPixelFishing from './locales/zh/pixelFishing.json'
 import zhPomodoro from './locales/zh/pomodoro.json'
 
 export type AppLocale = 'en' | 'zh'
-export const defaultLocale: AppLocale = 'en'
+export const defaultLocale: AppLocale = DEFAULT_LOCALE
 
 export interface LocaleMeta {
   code: AppLocale
