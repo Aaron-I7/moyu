@@ -19,7 +19,8 @@ const router = useRouter()
 const route = useRoute()
 const { locale } = useI18n({ useScope: 'global' })
 const appMainRef = ref<HTMLElement | null>(null)
-const showAds = computed(() => adsConfig.enabled && route.name !== 'NotFound' && route.name !== 'LegacyPath')
+const isBlankLayout = computed(() => route.meta.layout === 'blank')
+const showAds = computed(() => adsConfig.enabled && !isBlankLayout.value && route.name !== 'NotFound' && route.name !== 'LegacyPath')
 const soundEngine = useSoundEngine()
 
 let cleanupGesture: (() => void) | null = null
@@ -44,23 +45,24 @@ watch(
 
 <template>
   <div class="app-container">
-    <GlobalDanmaku />
-    <AppHeader />
+    <GlobalDanmaku v-if="!isBlankLayout" />
+    <AppHeader v-if="!isBlankLayout" />
     <main ref="appMainRef" class="app-main">
       <AdSlot v-if="showAds" slot-id="top-banner" format="leaderboard" />
       <router-view />
       <AdSlot v-if="showAds" slot-id="in-feed" format="auto" />
     </main>
     <AdSlot v-if="showAds" slot-id="sticky-bottom" format="sticky" />
-    <GlobalToolMenu />
+    <GlobalToolMenu v-if="!isBlankLayout" />
     <GlobalBossKey />
-    <DanmakuFab />
-    <AmbienceModal 
+    <DanmakuFab v-if="!isBlankLayout" />
+    <AmbienceModal
+      v-if="!isBlankLayout"
       :show="soundEngine.isGlobalMixerOpen.value"
       @close="soundEngine.isGlobalMixerOpen.value = false"
     />
     <!-- PrivacyConsentBanner 已移除 -->
-    <UsageReminder />
+    <UsageReminder v-if="!isBlankLayout" />
   </div>
 </template>
 

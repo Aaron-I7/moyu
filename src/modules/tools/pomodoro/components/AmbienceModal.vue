@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { ref, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useSoundEngine } from '../composables/useSoundEngine'
 import { usePomodoro } from '../composables/usePomodoro'
 import { useI18n } from 'vue-i18n'
@@ -14,9 +15,10 @@ const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
+const router = useRouter()
 const soundEngine = useSoundEngine()
 const { settings, saveSettings } = usePomodoro()
-const { t } = useI18n({ useScope: 'global' })
+const { t, locale } = useI18n({ useScope: 'global' })
 
 const categories = computed(() => [
   { id: 'mixes', label: t('whiteNoise.categories.mixes'), icon: 'mdi:playlist-music' },
@@ -88,6 +90,11 @@ const toggleGlobalPlayback = () => {
   settings.value.allowGlobalPlayback = !settings.value.allowGlobalPlayback
   saveSettings()
 }
+
+const goToFocusMode = () => {
+  emit('close')
+  router.push(`/${locale.value}/tools/focus`)
+}
 </script>
 
 <template>
@@ -125,6 +132,14 @@ const toggleGlobalPlayback = () => {
             >
               <Icon :icon="settings.allowGlobalPlayback ? 'mdi:play-circle' : 'mdi:play-circle-outline'" width="20" />
               <span>{{ t('whiteNoise.settings.globalPlayback') }}</span>
+            </button>
+            <button 
+              class="focus-btn" 
+              @click="goToFocusMode"
+              :title="t('whiteNoise.focusMode')"
+            >
+              <Icon icon="mdi:fullscreen" width="20" />
+              <span>{{ t('whiteNoise.focusMode') }}</span>
             </button>
             <button 
               v-if="activeSoundsCount > 0"
@@ -446,6 +461,26 @@ header {
     background: color-mix(in srgb, var(--color-primary) 10%, transparent);
     color: var(--color-primary);
     border-color: var(--color-primary);
+  }
+}
+
+.focus-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: var(--color-background);
+    color: var(--color-text);
   }
 }
 

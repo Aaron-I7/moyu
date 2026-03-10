@@ -44,6 +44,8 @@
     "pixel": "像素"
   },
   "home": {
+    "focusModeCta": "开启松弛模式",
+    "focusModeHint": "番茄钟 + 白噪音，进入心流",
     "features": {
       "instant": "立即摸鱼",
       "privacy": "无痕摸鱼",
@@ -241,6 +243,7 @@
     "games": "游戏",
     "relax": "休闲",
     "tools": "工具",
+    "focus": "专注模式",
     "reading": "阅读",
     "notFound": "页面未找到"
   },
@@ -258,6 +261,9 @@
       },
       "tools": {
         "description": "好用的在线效率工具：自定义番茄钟、环境白噪音、每日运势日历。提升工作流心流体验。"
+      },
+      "focus": {
+        "description": "全屏专注模式：番茄钟 + 白噪音混音 + 放松科技感音浪动效，帮助你进入心流并减少干扰。"
       },
       "notFound": {
         "description": "当前页面不存在，可返回摸鱼吧首页继续探索更多好玩的在线工具。"
@@ -303,6 +309,28 @@
       "forum": "社区资讯流",
       "terminal": "PowerShell 风格"
     }
+  },
+  "danmakuPanel": {
+    "title": "弹幕",
+    "history": "弹幕记录",
+    "clear": "清空",
+    "clearConfirm": "确定要清空所有弹幕记录吗？",
+    "noRecords": "暂无记录",
+    "connecting": "连接中...",
+    "offline": "未连接",
+    "online": "{count}人在线",
+    "connect": "连接网络",
+    "placeholder": "说点什么...",
+    "send": "发送",
+    "settings": "设置",
+    "nickname": "昵称",
+    "nicknamePlaceholder": "你的昵称",
+    "customStyle": "自定义样式",
+    "on": "开启",
+    "off": "关闭",
+    "textColor": "文字颜色",
+    "backgroundColor": "背景颜色",
+    "userBadge": "用户弹幕"
   },
   "share": {
     "title": "分享",

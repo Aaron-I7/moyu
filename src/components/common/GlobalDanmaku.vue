@@ -9,6 +9,8 @@ interface DisplayDanmaku {
   content: string
   emoji?: string
   userName?: string
+  textColor?: string
+  backgroundColor?: string
   timestamp: number
   track: number
   color: string
@@ -21,7 +23,7 @@ interface DisplayDanmaku {
 const isPaused = ref(false)
 const danmakuList = ref<DisplayDanmaku[]>([])
 const hoveredDanmakuId = ref<string | null>(null)
-const { locale } = useI18n()
+const { t, locale } = useI18n({ useScope: 'global' })
 const isEn = () => locale.value === 'en'
 
 const {
@@ -82,6 +84,8 @@ function createDisplayDanmaku(
     emoji?: string
     userName?: string
     isUser?: boolean
+    textColor?: string
+    backgroundColor?: string
   } = {}
 ): DisplayDanmaku {
   const track = getAvailableTrack()
@@ -92,9 +96,11 @@ function createDisplayDanmaku(
     content,
     emoji: options.emoji,
     userName: options.userName,
+    textColor: options.textColor,
+    backgroundColor: options.backgroundColor,
     timestamp: Date.now(),
     track,
-    color: options.isUser ? '#FFD700' : getRandomColor(),
+    color: options.textColor || (options.isUser ? '#FFD700' : getRandomColor()),
     speed: MIN_SPEED + Math.random() * (MAX_SPEED - MIN_SPEED),
     isUser: options.isUser || false,
     isPaused: false,
@@ -106,6 +112,8 @@ function addDanmaku(content: string, options: {
   emoji?: string
   userName?: string
   isUser?: boolean
+  textColor?: string
+  backgroundColor?: string
 } = {}) {
   if (!danmakuEnabled.value) return
   
@@ -173,7 +181,9 @@ function processPendingMessages() {
       addDanmaku(message.content, {
         emoji: message.emoji,
         userName: message.userName,
-        isUser: true
+        isUser: true,
+        textColor: message.textColor,
+        backgroundColor: message.backgroundColor
       })
     }
   }
@@ -184,6 +194,16 @@ watch(receivedMessages, () => {
     processPendingMessages()
   }
 }, { deep: true })
+
+watch(danmakuEnabled, enabled => {
+  if (!enabled) {
+    return
+  }
+  processPendingMessages()
+  if (!isPaused.value) {
+    scheduleSystemDanmaku()
+  }
+})
 
 onMounted(() => {
   loadDanmakuEnabled()
@@ -232,6 +252,8 @@ onUnmounted(() => {
             top: `${danmaku.track * TRACK_HEIGHT + 60}px`,
             '--duration': `${danmaku.speed}s`,
             '--color': danmaku.color,
+            '--bg': danmaku.backgroundColor || undefined,
+            '--bg-hover': danmaku.backgroundColor || undefined,
             animationPlayState: danmaku.isPaused ? 'paused' : 'running'
           }"
           @animationend="onAnimationEnd(danmaku.id)"
@@ -253,7 +275,7 @@ onUnmounted(() => {
               <span class="tooltip-time">
                 {{ new Date(danmaku.timestamp).toLocaleTimeString(locale === 'en' ? 'en-US' : 'zh-CN') }}
               </span>
-              <span v-if="danmaku.isUser" class="tooltip-badge">{{ isEn() ? 'User' : '用户弹幕' }}</span>
+              <span v-if="danmaku.isUser" class="tooltip-badge">{{ t('danmakuPanel.userBadge') }}</span>
             </div>
           </Transition>
         </div>
@@ -263,7 +285,7 @@ onUnmounted(() => {
         <button
           v-if="isConnected"
           class="control-btn control-btn--online"
-          :title="isEn() ? `${onlineCount} online` : `${onlineCount}人在线`"
+          :title="t('danmakuPanel.online', { count: onlineCount })"
         >
           <span class="online-dot" />
           <span>{{ onlineCount }}</span>
@@ -343,10 +365,13 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: linear-gradient(
-    135deg,
-    rgba(0, 0, 0, 0.5) 0%,
-    rgba(20, 20, 40, 0.6) 100%
+  background: var(
+    --bg,
+    linear-gradient(
+      135deg,
+      rgba(0, 0, 0, 0.5) 0%,
+      rgba(20, 20, 40, 0.6) 100%
+    )
   );
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
@@ -360,10 +385,13 @@ onUnmounted(() => {
 }
 
 .danmaku-item--hovered .danmaku-inner {
-  background: linear-gradient(
-    135deg,
-    rgba(30, 30, 60, 0.95) 0%,
-    rgba(50, 30, 80, 0.95) 100%
+  background: var(
+    --bg-hover,
+    linear-gradient(
+      135deg,
+      rgba(30, 30, 60, 0.95) 0%,
+      rgba(50, 30, 80, 0.95) 100%
+    )
   );
   border-color: var(--color);
   box-shadow: 
@@ -376,10 +404,13 @@ onUnmounted(() => {
 
 .danmaku-item--user .danmaku-inner {
   border-color: rgba(255, 215, 0, 0.4);
-  background: linear-gradient(
-    135deg,
-    rgba(255, 215, 0, 0.15) 0%,
-    rgba(255, 165, 0, 0.2) 100%
+  background: var(
+    --bg,
+    linear-gradient(
+      135deg,
+      rgba(255, 215, 0, 0.15) 0%,
+      rgba(255, 165, 0, 0.2) 100%
+    )
   );
 }
 

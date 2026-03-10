@@ -36,6 +36,18 @@ function generateModuleRoutes(): RouteRecordRaw[] {
     meta: { title: 'Tools', titleKey: 'routeTitle.tools', descriptionKey: 'seo.routes.tools.description' }
   })
 
+  routes.push({
+    path: `${localePath}/tools/focus`,
+    name: 'Focus',
+    component: () => import('@/views/FocusView.vue'),
+    meta: { 
+      title: 'Focus Mode', 
+      titleKey: 'routeTitle.focus', 
+      descriptionKey: 'seo.routes.focus.description',
+      layout: 'blank'
+    }
+  })
+
   modules.forEach(module => {
     routes.push({
       path: `${localePath}${module.route}`,

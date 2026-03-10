@@ -44,6 +44,8 @@
     "pixel": "Pixel"
   },
   "home": {
+    "focusModeCta": "Start Flow Mode",
+    "focusModeHint": "Pomodoro + White Noise, get into flow",
     "features": {
       "instant": "Instant Play",
       "privacy": "Privacy First",
@@ -241,6 +243,7 @@
     "games": "Games",
     "relax": "Recharge",
     "tools": "Tools",
+    "focus": "Focus Mode",
     "reading": "Reading",
     "notFound": "Page Not Found"
   },
@@ -258,6 +261,9 @@
       },
       "tools": {
         "description": "Best online productivity tools: Customizable Pomodoro timer, Ambient White Noise mixer, Daily Horoscope. Enhance your workflow state."
+      },
+      "focus": {
+        "description": "Fullscreen Focus Mode: Pomodoro + ambient noise mixer + calming sci-fi waveform animation to help you stay in flow."
       },
       "notFound": {
         "description": "Page not found. Return to Breakflow home to discover more free online relaxation tools."
@@ -303,6 +309,28 @@
       "forum": "Community feed",
       "terminal": "PowerShell style"
     }
+  },
+  "danmakuPanel": {
+    "title": "Danmaku",
+    "history": "History",
+    "clear": "Clear",
+    "clearConfirm": "Clear all danmaku records?",
+    "noRecords": "No records",
+    "connecting": "Connecting...",
+    "offline": "Offline",
+    "online": "{count} online",
+    "connect": "Connect",
+    "placeholder": "Say something...",
+    "send": "Send",
+    "settings": "Settings",
+    "nickname": "Nickname",
+    "nicknamePlaceholder": "Your nickname",
+    "customStyle": "Custom style",
+    "on": "On",
+    "off": "Off",
+    "textColor": "Text color",
+    "backgroundColor": "Background color",
+    "userBadge": "User danmaku"
   },
   "share": {
     "title": "Share",

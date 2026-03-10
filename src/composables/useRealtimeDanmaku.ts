@@ -8,6 +8,8 @@ export interface DanmakuMessage {
   id: string
   content: string
   emoji?: string
+  textColor?: string
+  backgroundColor?: string
   userId: string
   userName: string
   timestamp: number
@@ -29,9 +31,12 @@ const userId = ref('')
 const receivedMessages = ref<DanmakuMessage[]>([])
 const danmakuHistory = ref<DanmakuMessage[]>([])
 const danmakuEnabled = ref(true)
+const sessionTextColor = ref<string | null>(null)
+const sessionBackgroundColor = ref<string | null>(null)
 
 let reconnectTimer: number | null = null
 let realtimeChannel: RealtimeChannel | null = null
+let lifecycleRefCount = 0
 const { pushData } = useCloudSync()
 
 function buildDefaultUserName() {
@@ -130,6 +135,13 @@ function mapRowToMessage(row: any): DanmakuMessage {
 
 function pushReceivedMessage(message: DanmakuMessage, persistHistory = true) {
   if (receivedMessages.value.some(item => item.id === message.id)) return
+  
+  if (receivedMessages.value.some(item => 
+    item.content === message.content && 
+    Math.abs(item.timestamp - message.timestamp) < 500 &&
+    item.userId === message.userId
+  )) return
+
   receivedMessages.value.push(message)
   if (persistHistory) addToHistory(message)
   if (receivedMessages.value.length > MAX_RECEIVED) {
@@ -180,14 +192,10 @@ function scheduleReconnect() {
 async function connect(customUserName?: string) {
   if (isConnected.value || isConnecting.value) return
   
-  const localUser = getLocalUser()
-  const name = customUserName || localUser?.userName || buildDefaultUserName()
-  
-  if (!localUser) {
+  const name = customUserName || userName.value || buildDefaultUserName()
+  userName.value = name
+  if (!userId.value) {
     userId.value = generateUserId()
-    saveLocalUser(name)
-  } else {
-    userId.value = localUser.userId || generateUserId()
   }
 
   if (!hasSupabaseConfig || !supabase) {
@@ -202,12 +210,22 @@ async function connect(customUserName?: string) {
   try {
     await loadRecentMessages()
 
+    if (realtimeChannel) {
+      void supabase.removeChannel(realtimeChannel)
+    }
+
     realtimeChannel = supabase
       .channel('moyu-danmaku', {
         config: {
           presence: {
             key: userId.value
           }
+        }
+      })
+      .on('broadcast', { event: 'danmaku' }, payload => {
+        const message = (payload as any)?.payload as DanmakuMessage | undefined
+        if (message && typeof message.id === 'string') {
+          pushReceivedMessage(message)
         }
       })
       .on(
@@ -275,9 +293,38 @@ async function sendDanmaku(content: string, emoji?: string): Promise<boolean> {
   }
 
   if (data) {
-    pushReceivedMessage(mapRowToMessage(data))
+    const message: DanmakuMessage = {
+      ...mapRowToMessage(data),
+      textColor: sessionTextColor.value || undefined,
+      backgroundColor: sessionBackgroundColor.value || undefined,
+      userName: userName.value
+    }
+    pushReceivedMessage(message)
+    if (realtimeChannel) {
+      void realtimeChannel.send({
+        type: 'broadcast',
+        event: 'danmaku',
+        payload: message
+      })
+    }
   }
   return true
+}
+
+function setSessionDanmakuProfile(profile: {
+  userName?: string
+  textColor?: string | null
+  backgroundColor?: string | null
+}) {
+  if (typeof profile.userName === 'string') {
+    userName.value = profile.userName.trim()
+  }
+  if (profile.textColor !== undefined) {
+    sessionTextColor.value = profile.textColor
+  }
+  if (profile.backgroundColor !== undefined) {
+    sessionBackgroundColor.value = profile.backgroundColor
+  }
 }
 
 function disconnect() {
@@ -309,9 +356,42 @@ function saveDanmakuEnabled(enabled: boolean) {
 
 function useLifecycle() {
   onMounted(() => {
+    lifecycleRefCount += 1
+    if (lifecycleRefCount !== 1) return
+
     loadDanmakuEnabled()
     loadHistory()
-    
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === ENABLED_KEY) {
+        if (event.newValue === null) {
+          danmakuEnabled.value = true
+        } else {
+          danmakuEnabled.value = event.newValue === 'true'
+        }
+
+        if (danmakuEnabled.value) {
+          void connect()
+        } else {
+          disconnect()
+        }
+      }
+    }
+
+    const onVisibilityChange = () => {
+      if (document.hidden) return
+      if (!danmakuEnabled.value) return
+      void connect()
+    }
+
+    window.addEventListener('storage', onStorage)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+
+    ;(useLifecycle as any)._cleanup = () => {
+      window.removeEventListener('storage', onStorage)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+
     if (danmakuEnabled.value) {
       getLocalUser()
       void connect()
@@ -319,6 +399,10 @@ function useLifecycle() {
   })
 
   onUnmounted(() => {
+    lifecycleRefCount = Math.max(0, lifecycleRefCount - 1)
+    if (lifecycleRefCount !== 0) return
+    const cleanup = (useLifecycle as any)._cleanup as (() => void) | undefined
+    if (cleanup) cleanup()
   })
 }
 
@@ -337,6 +421,7 @@ export function useRealtimeDanmaku() {
     connect,
     disconnect,
     sendDanmaku,
+    setSessionDanmakuProfile,
     saveLocalUser,
     loadHistory,
     clearHistory,

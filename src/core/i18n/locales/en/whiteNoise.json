@@ -2,6 +2,7 @@
   "title": "White Noise Mixer",
   "subtitle": "Pick sounds, tune volume, and stay in a calm flow.",
   "stopAll": "Stop All",
+  "focusMode": "Focus Mode",
   "nowPlaying": "Now playing",
   "categories": {
     "mixes": "My Mixes",

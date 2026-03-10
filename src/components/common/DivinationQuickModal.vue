@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { supabase } from '@/core/supabase/client'
 import CoinToss from '@/modules/tools/divination/components/CoinToss.vue'
@@ -14,7 +15,8 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
 }>()
 
-const { t } = useI18n({ useScope: 'global' })
+const router = useRouter()
+const { t, locale } = useI18n({ useScope: 'global' })
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 const question = ref('')
@@ -70,7 +72,7 @@ const askWind = async () => {
     .filter(Boolean)
     .join('、')
 
-  const systemPrompt = `角色设定：你是《剑来》世界观里的算卦亭老掌柜，说话带着江湖气却藏着文气，善用譬喻、语气温和有力量，懂周易解卦更懂人间行路的道理。任务要求：以《剑来》的语言风格解读，输出内容包含3个部分，请务必以纯 JSON 格式返回结果（不要使用 markdown 代码块），包含以下字段：1. "hexagram_name": (String) 卦象名称。2. "original_text": (String) 仅提供本卦的卦辞与大象辞原文。若有变爻，仅补充变爻的爻辞。请直接返回一段纯文本。3. "interpretation": (String) 结合用户提问与卦象，给出温暖、诗意、富有哲理的指引。字数控制在80-150字。`
+  const systemPrompt = `角色设定：你是《剑来》世界观里的算卦亭老掌柜，说话带着江湖气却藏着文气，善用譬喻、语气温和有力量，懂周易解卦更懂人间行路的道理。任务要求：以《剑来》的语言风格解读，输出内容包含3个部分，请务必以纯 JSON 格式返回结果（不要使用 markdown 代码块），包含以下字段：1. "hexagram_name": (String) 卦象名称。2. "original_text": (String) 仅提供本卦的卦辞与大象辞原文。若有变爻，仅补充变爻的爻辞。请直接返回一段纯文本。3. "interpretation": (String) 结合用户提问与卦象，给出温暖、诗意、富有哲理的指引，要求指引不能含糊其词，要有相对明确的回答。字数控制在80-150字。`
   const userPrompt = `我求得一卦：${hexName}。${movingList ? `变爻情况：${movingList}。` : ''}我的困惑/问题是：“${question.value}”请为我解卦，并严格按照 JSON 格式返回。`
 
   const { data, error } = await supabase.functions.invoke('ai-divination', {
@@ -120,6 +122,11 @@ const handleQuickCast = async () => {
     loading.value = false
   }
 }
+
+const goToDivination = () => {
+  close()
+  router.push(`/${locale.value}/tools/divination`)
+}
 </script>
 
 <template>
@@ -127,9 +134,14 @@ const handleQuickCast = async () => {
     <transition name="modal-fade">
       <div v-if="modelValue" class="quick-modal-mask" @click.self="handleClose">
         <div class="quick-modal">
-          <button class="close-btn" @click="handleClose">
-            <Icon icon="mdi:close" width="18" />
-          </button>
+          <div class="modal-actions">
+            <button class="icon-btn" :title="t('common.more')" @click="goToDivination">
+              <Icon icon="mdi:arrow-top-right" width="18" />
+            </button>
+            <button class="icon-btn" @click="handleClose">
+              <Icon icon="mdi:close" width="18" />
+            </button>
+          </div>
           <div class="modal-title">{{ t('modules.divination.title') }}</div>
           <div class="modal-subtitle">{{ t('modules.divination.subtitle') }}</div>
           <textarea
@@ -179,10 +191,15 @@ const handleQuickCast = async () => {
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
 }
 
-.close-btn {
+.modal-actions {
   position: absolute;
   top: 10px;
   right: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.icon-btn {
   width: 30px;
   height: 30px;
   border-radius: 50%;
@@ -193,6 +210,13 @@ const handleQuickCast = async () => {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--color-surface);
+    color: var(--color-primary);
+    transform: scale(1.05);
+  }
 }
 
 .modal-title {

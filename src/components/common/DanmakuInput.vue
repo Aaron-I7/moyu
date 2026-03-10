@@ -6,7 +6,7 @@ import { useRealtimeDanmaku } from '@/composables/useRealtimeDanmaku'
 const emit = defineEmits<{
   close: []
 }>()
-const { locale } = useI18n()
+const { t, locale } = useI18n({ useScope: 'global' })
 const isEn = computed(() => locale.value === 'en')
 
 const {
@@ -16,7 +16,7 @@ const {
   danmakuHistory,
   connect,
   sendDanmaku,
-  saveLocalUser,
+  setSessionDanmakuProfile,
   loadHistory,
   clearHistory
 } = useRealtimeDanmaku()
@@ -27,6 +27,9 @@ const showEmojiPicker = ref(false)
 const showSettings = ref(false)
 const showHistory = ref(false)
 const tempUserName = ref('')
+const useCustomStyle = ref(false)
+const tempTextColor = ref('#FFD700')
+const tempBackgroundColor = ref('#000000')
 
 const emojis = ['💬', '😄', '🎉', '💡', '🐟', '☕', '🎮', '📚', '🎵', '🌟', '💪', '🎯', '🔥', '✨', '🌈']
 
@@ -35,9 +38,9 @@ const canSend = computed(() => {
 })
 
 const connectionStatus = computed(() => {
-  if (isConnecting.value) return { text: isEn.value ? 'Connecting...' : '连接中...', color: '#FFA500' }
-  if (isConnected.value) return { text: isEn.value ? `${onlineCount.value} online` : `${onlineCount.value}人在线`, color: '#10B981' }
-  return { text: isEn.value ? 'Offline' : '未连接', color: '#EF4444' }
+  if (isConnecting.value) return { text: t('danmakuPanel.connecting'), color: '#FFA500' }
+  if (isConnected.value) return { text: t('danmakuPanel.online', { count: onlineCount.value }), color: '#10B981' }
+  return { text: t('danmakuPanel.offline'), color: '#EF4444' }
 })
 
 const sortedHistory = computed(() => {
@@ -45,15 +48,25 @@ const sortedHistory = computed(() => {
 })
 
 function handleConnect() {
-  if (tempUserName.value.trim()) {
-    saveLocalUser(tempUserName.value.trim())
-    showSettings.value = false
-  }
-  connect()
+  const name = tempUserName.value.trim()
+  setSessionDanmakuProfile({
+    userName: name || undefined,
+    textColor: useCustomStyle.value ? tempTextColor.value : null,
+    backgroundColor: useCustomStyle.value ? tempBackgroundColor.value : null
+  })
+  showSettings.value = false
+  connect(name || undefined)
 }
 
 async function handleSend() {
   if (!canSend.value) return
+
+  const name = tempUserName.value.trim()
+  setSessionDanmakuProfile({
+    userName: name || undefined,
+    textColor: useCustomStyle.value ? tempTextColor.value : null,
+    backgroundColor: useCustomStyle.value ? tempBackgroundColor.value : null
+  })
   
   const success = await sendDanmaku(inputText.value.trim(), selectedEmoji.value)
   
@@ -88,7 +101,7 @@ function formatTime(timestamp: number) {
 }
 
 function handleClearHistory() {
-  if (confirm(isEn.value ? 'Clear all danmaku records?' : '确定要清空所有弹幕记录吗？')) {
+  if (confirm(t('danmakuPanel.clearConfirm'))) {
     clearHistory()
   }
 }
@@ -103,13 +116,13 @@ onMounted(() => {
     <div class="panel-header">
       <div class="header-left">
         <span class="panel-icon">💬</span>
-        <h3 class="panel-title">{{ isEn ? 'Send Danmaku' : '发送弹幕' }}</h3>
+        <h3 class="panel-title">{{ t('danmakuPanel.title') }}</h3>
       </div>
       <div class="header-right">
         <button
           class="header-btn"
           :class="{ 'header-btn--active': showHistory }"
-          :title="isEn ? 'History' : '弹幕记录'"
+          :title="t('danmakuPanel.history')"
           @click="showHistory = !showHistory"
         >
           📋
@@ -129,13 +142,13 @@ onMounted(() => {
             class="clear-btn"
             @click="handleClearHistory"
           >
-            {{ isEn ? 'Clear' : '清空' }}
+            {{ t('danmakuPanel.clear') }}
           </button>
         </div>
         
         <div v-if="danmakuHistory.length === 0" class="history-empty">
           <span class="empty-icon">📭</span>
-          <p class="empty-text">{{ isEn ? 'No records' : '暂无记录' }}</p>
+          <p class="empty-text">{{ t('danmakuPanel.noRecords') }}</p>
         </div>
         
         <div v-else class="history-list">
@@ -163,13 +176,13 @@ onMounted(() => {
         <div v-if="!isConnected && !isConnecting" class="connect-section">
           <button class="connect-btn" @click="handleConnect">
             <span>🔗</span>
-            <span>{{ isEn ? 'Connect' : '连接网络' }}</span>
+            <span>{{ t('danmakuPanel.connect') }}</span>
           </button>
         </div>
 
         <div v-if="isConnecting" class="connecting-section">
           <div class="loading-spinner" />
-          <span>{{ isEn ? 'Connecting...' : '连接中...' }}</span>
+          <span>{{ t('danmakuPanel.connecting') }}</span>
         </div>
 
         <div v-if="isConnected" class="input-area">
@@ -200,7 +213,7 @@ onMounted(() => {
               v-model="inputText"
               type="text"
               class="text-input"
-              :placeholder="isEn ? 'Say something...' : '说点什么...'"
+              :placeholder="t('danmakuPanel.placeholder')"
               maxlength="100"
               @keydown="handleKeydown"
             />
@@ -211,7 +224,7 @@ onMounted(() => {
               :disabled="!canSend"
               @click="handleSend"
             >
-              {{ isEn ? 'Send' : '发送' }}
+              {{ t('danmakuPanel.send') }}
             </button>
           </div>
           
@@ -221,20 +234,38 @@ onMounted(() => {
         <div class="settings-section">
           <button class="settings-btn" @click="showSettings = !showSettings">
             <span>⚙️</span>
-            <span>{{ isEn ? 'Settings' : '设置' }}</span>
+            <span>{{ t('danmakuPanel.settings') }}</span>
           </button>
           
           <Transition name="slide">
             <div v-if="showSettings" class="settings-panel">
               <div class="setting-item">
-                <label class="setting-label">{{ isEn ? 'Nickname' : '昵称' }}</label>
+                <label class="setting-label">{{ t('danmakuPanel.nickname') }}</label>
                 <input
                   v-model="tempUserName"
                   type="text"
                   class="setting-input"
-                  :placeholder="isEn ? 'Your nickname' : '你的昵称'"
+                  :placeholder="t('danmakuPanel.nicknamePlaceholder')"
                   maxlength="20"
                 />
+              </div>
+
+              <div class="setting-item">
+                <label class="setting-label">{{ t('danmakuPanel.customStyle') }}</label>
+                <label class="setting-toggle">
+                  <input v-model="useCustomStyle" type="checkbox" />
+                  <span>{{ useCustomStyle ? t('danmakuPanel.on') : t('danmakuPanel.off') }}</span>
+                </label>
+              </div>
+
+              <div v-if="useCustomStyle" class="setting-item">
+                <label class="setting-label">{{ t('danmakuPanel.textColor') }}</label>
+                <input v-model="tempTextColor" type="color" class="color-input" />
+              </div>
+
+              <div v-if="useCustomStyle" class="setting-item">
+                <label class="setting-label">{{ t('danmakuPanel.backgroundColor') }}</label>
+                <input v-model="tempBackgroundColor" type="color" class="color-input" />
               </div>
             </div>
           </Transition>
@@ -738,6 +769,10 @@ onMounted(() => {
   gap: 6px;
 }
 
+.setting-item + .setting-item {
+  margin-top: 10px;
+}
+
 .setting-label {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.65);
@@ -761,6 +796,27 @@ onMounted(() => {
     outline: none;
     border-color: rgba(139, 92, 246, 0.5);
   }
+}
+
+.setting-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+}
+
+.color-input {
+  height: 32px;
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  border: none;
 }
 
 .fade-enter-active,
