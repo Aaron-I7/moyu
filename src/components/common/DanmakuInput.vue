@@ -7,7 +7,6 @@ const emit = defineEmits<{
   close: []
 }>()
 const { t, locale } = useI18n({ useScope: 'global' })
-const isEn = computed(() => locale.value === 'en')
 
 const {
   isConnected,
