@@ -8,6 +8,43 @@ const lastSyncTime = ref<number | null>(null)
 const debounceTimers: Record<string, number> = {}
 
 export function useCloudSync() {
+  const normalizeFavoriteSounds = (input: any): any[] => {
+    const list = Array.isArray(input) ? input : []
+    const normalized = list
+      .map((item: any) => {
+        const sounds = Array.isArray(item?.sounds) ? item.sounds : []
+        if (sounds.length === 0) return null
+        const normalizedSounds = sounds
+          .map((s: any) => ({ id: String(s.id || ''), volume: Number(s.volume ?? 0.5) }))
+          .filter((s: any) => !!s.id)
+          .map((s: any) => ({ id: s.id, volume: Math.max(0, Math.min(1, Number(s.volume.toFixed(2)))) }))
+          .sort((a: any, b: any) => a.id.localeCompare(b.id))
+        if (normalizedSounds.length === 0) return null
+        const fingerprint = normalizedSounds.map((s: any) => `${s.id}:${s.volume}`).join('|')
+        return {
+          id: typeof item?.id === 'string' ? item.id : crypto.randomUUID(),
+          name: typeof item?.name === 'string' ? item.name : '',
+          sounds: normalizedSounds,
+          createdAt: typeof item?.createdAt === 'number' ? item.createdAt : Date.now(),
+          fingerprint
+        }
+      })
+      .filter((item: any) => !!item)
+      .sort((a: any, b: any) => b.createdAt - a.createdAt)
+
+    const map = new Map<string, any>()
+    normalized.forEach((item: any) => {
+      if (!map.has(item.fingerprint)) {
+        map.set(item.fingerprint, item)
+      }
+    })
+    return Array.from(map.values()).slice(0, 10)
+  }
+
+  const mergeFavoriteSounds = (localVal: any, remoteVal: any) => {
+    return normalizeFavoriteSounds([...(Array.isArray(localVal) ? localVal : []), ...(Array.isArray(remoteVal) ? remoteVal : [])])
+  }
+
   
   const pullData = async () => {
     if (!supabase) return
@@ -53,7 +90,7 @@ export function useCloudSync() {
 
       // Apply Game Data
       if (gameData) {
-        gameData.forEach(record => {
+        for (const record of gameData) {
           let localKey = record.module_key
           
           if (record.module_key === 'pixel-fishing') localKey = 'pixel-fishing-data'
@@ -62,12 +99,25 @@ export function useCloudSync() {
           if (record.module_key === 'pomodoro-stats') localKey = 'moyu-pomodoro-stats'
           
           // Skip legacy keys that are now in profile settings
-          if (['theme', 'locale', 'boss-key', 'calendar-region', 'danmaku-enabled'].includes(record.module_key)) return
+          if (['theme', 'locale', 'boss-key', 'calendar-region', 'danmaku-enabled'].includes(record.module_key)) continue
 
           if (localKey && record.data) {
-            setLocal(localKey, record.data)
+            if (localKey === 'favoriteSounds') {
+              const localRaw = localStorage.getItem('favoriteSounds')
+              let localFavorites: any[] = []
+              try {
+                localFavorites = localRaw ? JSON.parse(localRaw) : []
+              } catch {
+                localFavorites = []
+              }
+              const merged = mergeFavoriteSounds(localFavorites, record.data)
+              setLocal(localKey, merged)
+              await pushData('favoriteSounds', merged)
+            } else {
+              setLocal(localKey, record.data)
+            }
           }
-        })
+        }
       }
         
       lastSyncTime.value = Date.now()
@@ -167,7 +217,9 @@ export function useCloudSync() {
       'moyu-danmaku-enabled',
       'moyu-pomodoro-settings',
       'moyu-pomodoro-stats',
-      'moyu-pomodoro-mixes'
+      'moyu-pomodoro-mixes',
+      'selectedSound',
+      'favoriteSounds'
     ]
     
     managedKeys.forEach(key => localStorage.removeItem(key))

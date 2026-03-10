@@ -1,9 +1,11 @@
-import { reactive, watch, ref, computed } from 'vue'
+import { reactive, ref, computed } from 'vue'
 import { Howl } from 'howler'
 import { PRESET_SOUNDS, type SoundItem, type SoundMix } from '../types'
 import { useCloudSync } from '@/composables/useCloudSync'
 
 const MIXES_KEY = 'moyu-pomodoro-mixes'
+const FAVORITES_KEY = 'favoriteSounds'
+const MAX_FAVORITE_COUNT = 10
 
 // Global State
 const sounds = reactive<SoundItem[]>(PRESET_SOUNDS.map(s => ({ ...s })))
@@ -11,6 +13,49 @@ const howls: Record<string, Howl> = {}
 const savedMixes = ref<SoundMix[]>([])
 const isGlobalMixerOpen = ref(false)
 const isPlaying = computed(() => sounds.some(s => s.active))
+const isActuallyPlaying = computed(() => sounds.some(s => s.active && (howls[s.id]?.playing() ?? false)))
+type FavoriteMix = SoundMix & { createdAt: number; fingerprint: string }
+const favoriteMixes = ref<FavoriteMix[]>([])
+
+function normalizeMixSounds(input: { id: string; volume: number }[]) {
+  const validIds = new Set(PRESET_SOUNDS.map(s => s.id))
+  return input
+    .filter(s => validIds.has(s.id))
+    .map(s => ({ id: s.id, volume: Math.max(0, Math.min(1, Number(s.volume.toFixed(2)))) }))
+    .sort((a, b) => a.id.localeCompare(b.id))
+}
+
+function createFingerprint(input: { id: string; volume: number }[]) {
+  return normalizeMixSounds(input).map(s => `${s.id}:${s.volume}`).join('|')
+}
+
+function normalizeFavoriteMix(raw: any): FavoriteMix | null {
+  if (!raw) return null
+  const sounds = normalizeMixSounds(Array.isArray(raw.sounds) ? raw.sounds : [])
+  if (sounds.length === 0) return null
+  const createdAt = typeof raw.createdAt === 'number' ? raw.createdAt : Date.now()
+  return {
+    id: typeof raw.id === 'string' ? raw.id : crypto.randomUUID(),
+    name: typeof raw.name === 'string' ? raw.name : '',
+    sounds,
+    createdAt,
+    fingerprint: typeof raw.fingerprint === 'string' && raw.fingerprint
+      ? raw.fingerprint
+      : createFingerprint(sounds)
+  }
+}
+
+function dedupeFavorites(input: FavoriteMix[]) {
+  const map = new Map<string, FavoriteMix>()
+  input
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .forEach(item => {
+      if (!map.has(item.fingerprint)) {
+        map.set(item.fingerprint, item)
+      }
+    })
+  return Array.from(map.values()).slice(0, MAX_FAVORITE_COUNT)
+}
 
 // Load mixes on init
 try {
@@ -22,14 +67,69 @@ try {
   console.error('Failed to load sound mixes', e)
 }
 
-// 监听音量变化
-watch(sounds, () => {
-  // 可以在这里处理持久化
-}, { deep: true })
+try {
+  const saved = localStorage.getItem(FAVORITES_KEY)
+  if (saved) {
+    const parsed = JSON.parse(saved)
+    favoriteMixes.value = dedupeFavorites(
+      (Array.isArray(parsed) ? parsed : [])
+        .map(normalizeFavoriteMix)
+        .filter((item): item is FavoriteMix => !!item)
+    )
+  }
+} catch (e) {
+  console.error('Failed to load favorite mixes', e)
+}
+
+function getSelectedMixFromState() {
+  return normalizeMixSounds(
+    sounds
+      .filter(s => s.active)
+      .map(s => ({ id: s.id, volume: s.volume }))
+  )
+}
 
 export function useSoundEngine() {
   const { pushData } = useCloudSync()
-  
+
+  function getActiveMixSounds() {
+    return getSelectedMixFromState()
+  }
+
+  function applyMixSounds(mixSounds: { id: string; volume: number }[]) {
+    const next = normalizeMixSounds(mixSounds)
+
+    sounds.forEach(s => {
+      const inNext = next.some(ms => ms.id === s.id)
+      if (s.active && !inNext) {
+        s.active = false
+        const howl = howls[s.id]
+        if (howl) {
+          howl.pause()
+        }
+      }
+    })
+
+    next.forEach(ms => {
+      const sound = sounds.find(s => s.id === ms.id)
+      if (!sound) return
+      sound.volume = ms.volume
+      sound.active = true
+      const howl = howls[sound.id] || initSound(sound)
+      if (!howl.playing()) {
+        howl.volume(sound.volume)
+        howl.play()
+      } else {
+        howl.volume(sound.volume)
+      }
+    })
+  }
+
+  function saveFavoriteMixesToStorage() {
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoriteMixes.value))
+    pushData(FAVORITES_KEY, favoriteMixes.value)
+  }
+
   // 初始化音频实例
   function initSound(sound: SoundItem): Howl {
     if (howls[sound.id]) return howls[sound.id] as Howl
@@ -61,23 +161,16 @@ export function useSoundEngine() {
 
     sound.active = !sound.active
     
-    // 如果激活，初始化并淡入
     if (sound.active) {
       const howl = howls[id] || initSound(sound)
       if (!howl.playing()) {
-        howl.volume(0)
+        howl.volume(sound.volume)
         howl.play()
-        howl.fade(0, sound.volume, 1000)
       }
     } else {
-      // 如果关闭，淡出并暂停
       const howl = howls[id]
-      if (howl && howl.playing()) {
-        howl.fade(howl.volume(), 0, 1000)
-        // 使用 setTimeout 在淡出后暂停，注意这里不清除实例
-        setTimeout(() => {
-          if (!sound.active) howl.pause()
-        }, 1000)
+      if (howl) {
+        howl.pause()
       }
     }
   }
@@ -89,39 +182,30 @@ export function useSoundEngine() {
     
     sound.volume = vol
     const howl = howls[id]
-    // 只有在播放且激活状态下才实时调整音量
     if (sound.active && howl && howl.playing()) {
       howl.volume(vol)
     }
   }
 
-  // 淡入所有激活的声音 (开始专注时)
+  // 恢复播放所有激活的声音
   function fadeInAll() {
     sounds.forEach(sound => {
       if (sound.active) {
         const howl = howls[sound.id] || initSound(sound)
         if (!howl.playing()) {
-          howl.volume(0)
+          howl.volume(sound.volume)
           howl.play()
-          howl.fade(0, sound.volume, 2000)
-        } else {
-          // 如果已经在播放（可能被暂停了），恢复音量
-          howl.fade(howl.volume(), sound.volume, 2000)
         }
       }
     })
   }
 
-  // 淡出所有声音 (暂停/休息时)
+  // 暂停所有声音
   function fadeOutAll() {
     sounds.forEach(sound => {
       const howl = howls[sound.id]
-      if (sound.active && howl && howl.playing()) {
-        howl.fade(howl.volume(), 0, 2000)
-        setTimeout(() => {
-          // 不真正停止，只是静音或暂停，保持 active 状态以便下次恢复
-          howl.pause()
-        }, 2000)
+      if (howl && howl.playing()) {
+        howl.pause()
       }
     })
   }
@@ -162,42 +246,7 @@ export function useSoundEngine() {
   function loadMix(mixId: string) {
     const mix = savedMixes.value.find(m => m.id === mixId)
     if (!mix) return
-
-    // Stop all sounds that are NOT in the mix
-    sounds.forEach(s => {
-      const inMix = mix.sounds.some(ms => ms.id === s.id)
-      if (s.active && !inMix) {
-        // 直接关闭，不调用 toggleSound 以避免逻辑混乱
-        s.active = false
-        const howl = howls[s.id]
-        if (howl) {
-            howl.fade(howl.volume(), 0, 500)
-            setTimeout(() => howl.pause(), 500)
-        }
-      }
-    })
-
-    // Start/Update sounds that ARE in the mix
-    mix.sounds.forEach(ms => {
-      const sound = sounds.find(s => s.id === ms.id)
-      if (sound) {
-        sound.volume = ms.volume // Update volume first
-        
-        // If not active, activate it
-        if (!sound.active) {
-           sound.active = true
-           const howl = howls[sound.id] || initSound(sound)
-           if (!howl.playing()) {
-               howl.volume(0)
-               howl.play()
-               howl.fade(0, sound.volume, 1000)
-           }
-        } else {
-           // If already active, ensure volume is updated in Howler
-           setVolume(sound.id, ms.volume)
-        }
-      }
-    })
+    applyMixSounds(mix.sounds)
   }
 
   function deleteMix(id: string) {
@@ -210,9 +259,72 @@ export function useSoundEngine() {
     pushData('moyu-pomodoro-mixes', savedMixes.value)
   }
 
+  function toggleFavoriteCurrentMix() {
+    const mixSounds = getActiveMixSounds()
+    if (mixSounds.length === 0) return
+    const fingerprint = createFingerprint(mixSounds)
+    const existing = favoriteMixes.value.find(m => m.fingerprint === fingerprint)
+    if (existing) {
+      favoriteMixes.value = favoriteMixes.value.filter(m => m.id !== existing.id)
+      saveFavoriteMixesToStorage()
+      return
+    }
+
+    const createdAt = Date.now()
+    const mix: FavoriteMix = {
+      id: crypto.randomUUID(),
+      name: '',
+      sounds: mixSounds,
+      createdAt,
+      fingerprint
+    }
+    favoriteMixes.value = dedupeFavorites([mix, ...favoriteMixes.value])
+    saveFavoriteMixesToStorage()
+  }
+
+  function loadFavoriteMix(id: string) {
+    const mix = favoriteMixes.value.find(m => m.id === id)
+    if (!mix) return
+    applyMixSounds(mix.sounds)
+  }
+
+  function deleteFavoriteMix(id: string) {
+    favoriteMixes.value = favoriteMixes.value.filter(m => m.id !== id)
+    saveFavoriteMixesToStorage()
+  }
+
+  function replaceFavoriteMixes(input: unknown) {
+    const normalized = dedupeFavorites(
+      (Array.isArray(input) ? input : [])
+        .map(normalizeFavoriteMix)
+        .filter((item): item is FavoriteMix => !!item)
+    )
+    favoriteMixes.value = normalized
+    saveFavoriteMixesToStorage()
+  }
+
+  function playRandomSounds(count: number) {
+    const allSounds = [...sounds]
+    if (allSounds.length === 0) return
+    
+    const actualCount = Math.min(count, allSounds.length, 5)
+    stopAll(true)
+    
+    const shuffled = allSounds.sort(() => Math.random() - 0.5)
+    const selected = shuffled.slice(0, actualCount)
+    
+    selected.forEach(sound => {
+      sound.active = true
+      const howl = howls[sound.id] || initSound(sound)
+      howl.volume(sound.volume)
+      howl.play()
+    })
+  }
+
   return {
     sounds,
     savedMixes,
+    favoriteMixes,
     isGlobalMixerOpen,
     toggleSound,
     setVolume,
@@ -222,6 +334,14 @@ export function useSoundEngine() {
     saveMix,
     loadMix,
     deleteMix,
-    isPlaying
+    isPlaying,
+    isActuallyPlaying,
+    toggleFavoriteCurrentMix,
+    loadFavoriteMix,
+    deleteFavoriteMix,
+    createFingerprint,
+    getActiveMixSounds,
+    replaceFavoriteMixes,
+    playRandomSounds
   }
 }

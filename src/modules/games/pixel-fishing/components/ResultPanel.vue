@@ -310,6 +310,8 @@ onMounted(() => {
 </template>
 
 <style scoped lang="scss">
+@use 'sass:math';
+
 // ═══════════════════════════════════════════════════════════════
 // 设计变量
 // ═══════════════════════════════════════════════════════════════
@@ -371,8 +373,8 @@ $rarity-legendary: #F59E0B;
   
   @for $i from 1 through 12 {
     &:nth-child(#{$i}) {
-      left: #{random(100)}%;
-      top: #{random(100)}%;
+      left: #{math.random(100)}%;
+      top: #{math.random(100)}%;
     }
   }
 }

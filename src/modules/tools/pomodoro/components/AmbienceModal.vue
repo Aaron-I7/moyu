@@ -86,6 +86,15 @@ const handleStopAll = () => {
   soundEngine.stopAll(true)
 }
 
+const playRandom = () => {
+  const count = Math.floor(Math.random() * 5) + 1
+  soundEngine.playRandomSounds(count)
+}
+
+const getCategoryActiveCount = (categoryId: string) => {
+  return soundEngine.sounds.filter(s => s.category === categoryId && s.active).length
+}
+
 const toggleGlobalPlayback = () => {
   settings.value.allowGlobalPlayback = !settings.value.allowGlobalPlayback
   saveSettings()
@@ -158,6 +167,13 @@ const goToFocusMode = () => {
 
         <div class="modal-body">
           <aside class="sidebar">
+            <button class="random-btn" @click="playRandom">
+              <Icon icon="mdi:shuffle-variant" width="20" />
+              <span>{{ t('whiteNoise.randomPlay') }}</span>
+            </button>
+            
+            <div class="sidebar-divider"></div>
+            
             <div 
               v-for="cat in categories" 
               :key="cat.id"
@@ -165,8 +181,13 @@ const goToFocusMode = () => {
               :class="{ active: activeCategory === cat.id }"
               @click="activeCategory = cat.id"
             >
-              <Icon :icon="cat.icon" width="20" />
-              <span>{{ cat.label }}</span>
+              <span class="category-left">
+                <Icon :icon="cat.icon" width="20" />
+                <span>{{ cat.label }}</span>
+              </span>
+              <span v-if="!['mixes', 'help'].includes(cat.id) && getCategoryActiveCount(cat.id) > 0" class="category-badge">
+                {{ getCategoryActiveCount(cat.id) }}
+              </span>
             </div>
           </aside>
 
@@ -534,29 +555,76 @@ header {
   flex-direction: column;
   gap: 4px;
   overflow-y: auto;
+}
 
-  .category-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 12px;
-    border-radius: 8px;
-    cursor: pointer;
-    color: var(--color-text-secondary);
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.2s;
+.sidebar-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 8px 0;
+}
 
-    &:hover {
-      background: var(--color-surface);
-      color: var(--color-text);
-    }
+.random-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  color: var(--color-primary);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 30%, transparent);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
 
-    &.active {
-      background: color-mix(in srgb, var(--color-primary) 10%, transparent);
-      color: var(--color-primary);
-    }
+  &:hover {
+    background: color-mix(in srgb, var(--color-primary) 15%, transparent);
   }
+}
+
+.category-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+
+  &:hover {
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+
+  &.active {
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    color: var(--color-primary);
+  }
+}
+
+.category-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.category-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+  color: var(--color-primary);
 }
 
 .main-content {

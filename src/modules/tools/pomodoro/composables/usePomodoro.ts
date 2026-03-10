@@ -150,20 +150,12 @@ export function usePomodoro() {
     if (status.value === 'running') return
     status.value = 'running'
     timerWorker?.postMessage('start')
-    
-    // 联动音频：如果是工作模式，且有激活的白噪音，开始播放
-    if (mode.value === 'work') {
-      soundEngine.fadeInAll()
-    }
   }
 
   function pause() {
     if (status.value !== 'running') return
     status.value = 'paused'
     timerWorker?.postMessage('stop')
-    
-    // 联动音频：暂停播放
-    soundEngine.fadeOutAll()
   }
 
   function resetTimer() {
@@ -184,6 +176,7 @@ export function usePomodoro() {
 
   function completePhase() {
     pause()
+    soundEngine.fadeOutAll()
     
     // 播放提示音
     // soundEngine.playAlert() (TODO)

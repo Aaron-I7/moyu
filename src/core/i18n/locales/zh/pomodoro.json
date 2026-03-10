@@ -1,7 +1,7 @@
 {
   "mode": {
     "work": "专注",
-    "short-break": "短休息",
+    "short-break": "休息",
     "long-break": "长休息"
   },
   "taskPlaceholder": "当前专注任务是什么？",
@@ -16,5 +16,17 @@
     "allowGlobalPlayback": "后台播放白噪音",
     "allowGlobalPlaybackDesc": "离开页面后保持白噪音播放",
     "save": "保存设置"
+  },
+  "focus": {
+    "relaxDuration": "时长",
+    "applyDuration": "应用",
+    "showDuration": "显示时长",
+    "hideDuration": "隐藏时长",
+    "timerStart": "开始",
+    "timerPause": "暂停",
+    "mute": "静音",
+    "unmute": "恢复声音",
+    "exit": "退出松弛模式",
+    "activeSounds": "已启用 {count} 个声音"
   }
 }

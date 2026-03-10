@@ -1,7 +1,7 @@
 {
   "mode": {
     "work": "Work",
-    "short-break": "Short Break",
+    "short-break": "Break",
     "long-break": "Long Break"
   },
   "taskPlaceholder": "What are you working on?",
@@ -16,5 +16,17 @@
     "allowGlobalPlayback": "Background Playback",
     "allowGlobalPlaybackDesc": "Keep sounds playing when leaving this page",
     "save": "Save Changes"
+  },
+  "focus": {
+    "relaxDuration": "Duration",
+    "applyDuration": "Apply",
+    "showDuration": "Show duration",
+    "hideDuration": "Hide duration",
+    "timerStart": "Start",
+    "timerPause": "Pause",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "exit": "Exit relax mode",
+    "activeSounds": "{count} sounds active"
   }
 }
