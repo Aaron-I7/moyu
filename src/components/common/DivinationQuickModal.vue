@@ -6,6 +6,7 @@ import { Icon } from '@iconify/vue'
 import { supabase } from '@/core/supabase/client'
 import CoinToss from '@/modules/tools/divination/components/CoinToss.vue'
 import { YAO_MAP, HEXAGRAMS, type LineVal } from '@/modules/tools/divination/data'
+import { useTracking } from '@/composables/useTracking'
 
 const props = defineProps<{
   modelValue: boolean
@@ -18,6 +19,7 @@ const emit = defineEmits<{
 const router = useRouter()
 const { t, locale } = useI18n({ useScope: 'global' })
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const { track } = useTracking()
 
 const question = ref('')
 const tossing = ref(false)
@@ -97,6 +99,12 @@ const askWind = async () => {
     parsed.original_text = Object.values(parsed.original_text).join(' ')
   }
   result.value = parsed
+  
+  // Track successful divination
+  track('divination_result', {
+    hexagram: hexName,
+    question_length: question.value.length
+  })
 }
 
 const handleQuickCast = async () => {

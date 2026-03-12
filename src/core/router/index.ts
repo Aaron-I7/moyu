@@ -77,6 +77,12 @@ const baseRoutes: RouteRecordRaw[] = [
     meta: { title: 'Home', titleKey: 'routeTitle.home', descriptionKey: 'seo.routes.home.description' }
   },
   {
+    path: `${localePath}/dashboard`,
+    name: 'Dashboard',
+    component: () => import('@/views/DashboardView.vue'),
+    meta: { title: 'Dashboard', requiresAdmin: true }
+  },
+  {
     path: `${localePath}/:pathMatch(.*)*`,
     name: 'NotFound',
     component: () => import('@/views/NotFoundView.vue'),

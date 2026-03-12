@@ -384,5 +384,10 @@
     "fillAll": "Please fill in all fields",
     "checkEmailTitle": "Check your email",
     "checkEmail": "Registration successful! Please check your email to confirm your account."
+  },
+  "notification": {
+    "updateTitle": "New Content Available",
+    "updateDesc": "✨ New features detected. Click to refresh!",
+    "refresh": "Refresh Now"
   }
 }

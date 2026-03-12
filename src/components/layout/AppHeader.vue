@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Icon } from '@iconify/vue'
@@ -29,6 +29,39 @@ const showAuthModal = ref(false)
 const showUserMenu = ref(false)
 const isMobileMenuOpen = ref(false)
 const localePrefixRegex = /^\/(en|zh)(?=\/|$)/
+
+// Watch for login query param
+watch(
+  () => route.query.login,
+  (val) => {
+    if (val === 'true') {
+      showAuthModal.value = true
+      // Clean up query param
+      const query = { ...route.query }
+      delete query.login
+      // If there's a redirect, we keep it? No, AuthModal handles redirect if implemented.
+      // But AuthModal usually just closes.
+      // For now, just open the modal.
+      router.replace({ query, hash: route.hash })
+    }
+  },
+  { immediate: true }
+)
+
+// Redirect after login if redirect query exists
+watch(
+  user,
+  (newUser) => {
+    if (newUser && route.query.redirect) {
+      const redirectPath = route.query.redirect as string
+      // Clean up query params
+      const query = { ...route.query }
+      delete query.redirect
+      delete query.login
+      router.push({ path: redirectPath, query })
+    }
+  }
+)
 
 // Click outside handler for dropdowns
 onMounted(() => {

@@ -3,6 +3,7 @@ import { i18n } from '@/core/i18n'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { hasSupabaseConfig, supabase } from '@/core/supabase/client'
 import { useCloudSync } from './useCloudSync'
+import { useTracking } from './useTracking'
 
 export interface DanmakuMessage {
   id: string
@@ -268,6 +269,8 @@ async function connect(customUserName?: string) {
 }
 
 async function sendDanmaku(content: string, emoji?: string): Promise<boolean> {
+  const { track } = useTracking()
+  
   if (!supabase || !isConnected.value) {
     return false
   }
@@ -277,38 +280,52 @@ async function sendDanmaku(content: string, emoji?: string): Promise<boolean> {
     return false
   }
 
-  const { data, error } = await supabase
-    .from(DANMAKU_TABLE)
-    .insert({
-      content: safeContent,
-      emoji: emoji || null,
-      user_id: userId.value,
-      user_name: userName.value
-    })
-    .select('id, content, emoji, user_id, user_name, created_at')
-    .single()
+  try {
+    const { data, error } = await supabase
+      .from(DANMAKU_TABLE)
+      .insert({
+        content: safeContent,
+        emoji: emoji || null,
+        user_id: userId.value,
+        user_name: userName.value
+      })
+      .select('id, content, emoji, user_id, user_name, created_at')
+      .single()
 
-  if (error) {
+    if (error) {
+      console.error('Failed to send danmaku:', error)
+      return false
+    }
+
+    if (data) {
+      const message: DanmakuMessage = {
+        ...mapRowToMessage(data),
+        textColor: sessionTextColor.value || undefined,
+        backgroundColor: sessionBackgroundColor.value || undefined,
+        userName: userName.value
+      }
+      
+      // Track danmaku event
+      track('danmaku_sent', {
+        has_emoji: !!emoji,
+        length: safeContent.length
+      })
+
+      pushReceivedMessage(message)
+      if (realtimeChannel) {
+        await realtimeChannel.send({
+          type: 'broadcast',
+          event: 'danmaku',
+          payload: message
+        })
+      }
+      return true
+    }
+  } catch (e) {
+    console.error('Error sending danmaku:', e)
     return false
   }
-
-  if (data) {
-    const message: DanmakuMessage = {
-      ...mapRowToMessage(data),
-      textColor: sessionTextColor.value || undefined,
-      backgroundColor: sessionBackgroundColor.value || undefined,
-      userName: userName.value
-    }
-    pushReceivedMessage(message)
-    if (realtimeChannel) {
-      void realtimeChannel.send({
-        type: 'broadcast',
-        event: 'danmaku',
-        payload: message
-      })
-    }
-  }
-  return true
+  return false
 }
 
 function setSessionDanmakuProfile(profile: {

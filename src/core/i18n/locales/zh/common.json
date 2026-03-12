@@ -384,5 +384,10 @@
     "fillAll": "请填写所有字段",
     "checkEmailTitle": "查收邮件",
     "checkEmail": "注册成功！请查收邮件并确认你的账户。"
+  },
+  "notification": {
+    "updateTitle": "发现新内容",
+    "updateDesc": "✨ 发现新好玩的内容，点我刷新加载！",
+    "refresh": "立即刷新"
   }
 }

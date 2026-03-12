@@ -4,9 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "npm run version:generate && vite",
+    "version:generate": "node scripts/generate-version.mjs",
     "seo:generate": "node scripts/generate-sitemap.mjs",
-    "build": "vue-tsc -b && vite build",
+    "build": "npm run version:generate && vue-tsc -b && vite build",
     "preview": "npm run build && wrangler dev",
     "deploy": "npm run build && wrangler deploy"
   },
@@ -17,6 +18,7 @@
     "@vueuse/core": "^14.2.1",
     "date-holidays": "^3.26.8",
     "dayjs": "^1.11.19",
+    "echarts": "^6.0.0",
     "howler": "^2.2.4",
     "lunar-javascript": "^1.7.7",
     "naive-ui": "^2.43.2",
@@ -25,6 +27,7 @@
     "pixi.js": "^8.16.0",
     "three": "^0.183.2",
     "vue": "^3.5.25",
+    "vue-echarts": "^8.0.1",
     "vue-i18n": "^9.14.4",
     "vue-router": "^4.6.4"
   },
@@ -39,6 +42,8 @@
     "sass": "^1.97.3",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
+    "vite-plugin-image-optimizer": "^2.0.3",
+    "vite-plugin-pwa": "^1.2.0",
     "vue-tsc": "^3.1.5",
     "wrangler": "^4.70.0"
   }
