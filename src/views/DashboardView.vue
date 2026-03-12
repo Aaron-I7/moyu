@@ -138,9 +138,11 @@ const toolUsageOption = computed(() => {
     
     if (toolName) {
       const name = TOOL_PATH_MAP[toolName]
-      if (!grouped[name]) grouped[name] = { total: 0, registered: 0 }
-      grouped[name].total++
-      if (isRegistered(e)) grouped[name].registered++
+      if (name) {
+        if (!grouped[name]) grouped[name] = { total: 0, registered: 0 }
+        grouped[name].total++
+        if (isRegistered(e)) grouped[name].registered++
+      }
     }
   })
   
@@ -247,7 +249,7 @@ onMounted(async () => {
     return
   }
   
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from('analytics_events')
     .select('*')
     .order('created_at', { ascending: false })
