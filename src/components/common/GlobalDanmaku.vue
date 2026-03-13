@@ -38,26 +38,12 @@ const TRACK_COUNT = 6
 const TRACK_HEIGHT = 60
 const MIN_SPEED = 10
 const MAX_SPEED = 18
+const SYSTEM_DEFAULT_TEXT_COLOR = '#FFFFFF'
+const SYSTEM_DEFAULT_BG_COLOR = '#000000'
+const USER_DEFAULT_TEXT_COLOR = '#FFD700'
+const USER_DEFAULT_BG_COLOR = '#000000'
 
 const trackUsage = reactive<number[]>(new Array(TRACK_COUNT).fill(0))
-
-const COLORS = [
-  '#FF6B6B',
-  '#4ECDC4',
-  '#45B7D1',
-  '#96CEB4',
-  '#FFEAA7',
-  '#DDA0DD',
-  '#98D8C8',
-  '#F7DC6F',
-  '#BB8FCE',
-  '#85C1E9'
-]
-
-function getRandomColor(): string {
-  const index = Math.floor(Math.random() * COLORS.length)
-  return COLORS[index] ?? '#FFFFFF'
-}
 
 function getAvailableTrack(): number {
   const now = Date.now()
@@ -90,19 +76,22 @@ function createDisplayDanmaku(
 ): DisplayDanmaku {
   const track = getAvailableTrack()
   trackUsage[track] = Date.now()
+  const isUser = options.isUser || false
+  const defaultTextColor = isUser ? USER_DEFAULT_TEXT_COLOR : SYSTEM_DEFAULT_TEXT_COLOR
+  const defaultBgColor = isUser ? USER_DEFAULT_BG_COLOR : SYSTEM_DEFAULT_BG_COLOR
   
   return {
     id: `danmaku_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     content,
     emoji: options.emoji,
     userName: options.userName,
-    textColor: options.textColor,
-    backgroundColor: options.backgroundColor,
+    textColor: options.textColor || defaultTextColor,
+    backgroundColor: options.backgroundColor || defaultBgColor,
     timestamp: Date.now(),
     track,
-    color: options.textColor || (options.isUser ? '#FFD700' : getRandomColor()),
+    color: options.textColor || defaultTextColor,
     speed: MIN_SPEED + Math.random() * (MAX_SPEED - MIN_SPEED),
-    isUser: options.isUser || false,
+    isUser,
     isPaused: false,
     isHovered: false
   }
@@ -406,11 +395,7 @@ onUnmounted(() => {
   border-color: rgba(255, 215, 0, 0.4);
   background: var(
     --bg,
-    linear-gradient(
-      135deg,
-      rgba(255, 215, 0, 0.15) 0%,
-      rgba(255, 165, 0, 0.2) 100%
-    )
+    #000000
   );
 }
 

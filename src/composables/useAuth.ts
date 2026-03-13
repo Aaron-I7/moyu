@@ -21,7 +21,10 @@ export function useAuth() {
   const { pullData, clearLocalData } = useCloudSync()
 
   const isAuthenticated = computed(() => !!user.value)
-  const nickname = computed(() => profile.value?.nickname || (user.value ? `User_${user.value.id.slice(0, 4)}` : 'Guest'))
+  const nickname = computed(() => {
+    const idSegment = String(user.value?.id || '').slice(0, 4) || 'Guest'
+    return profile.value?.nickname || (user.value ? `User_${idSegment}` : 'Guest')
+  })
 
   // Initialize session
   const initAuth = async () => {
@@ -43,14 +46,14 @@ export function useAuth() {
   }
 
   const fetchProfile = async () => {
-    if (!user.value) return
+    if (!user.value?.id) return
     
     try {
       const { data, error: _err } = await dbAdapter.getProfile(user.value.id)
       
       if (!data) {
         console.log('Profile not found, attempting to create one...')
-        const defaultName = `User_${user.value.id.slice(0, 4)}`
+        const defaultName = `User_${String(user.value.id).slice(0, 4)}`
         
         const { data: newProfile, error: createError } = await dbAdapter.updateProfile(user.value.id, {
           nickname: defaultName,
@@ -177,15 +180,14 @@ export function useAuth() {
       console.error('Logout error:', e)
       error.value = resolveErrorMessage(e)
     } finally {
-      // Ensure local state is cleared regardless of adapter error
       profile.value = null
-      clearLocalData()
+      await clearLocalData()
       loading.value = false
     }
   }
 
   const updateNickname = async (newNickname: string) => {
-    if (!user.value) return false
+    if (!user.value?.id) return false
     loading.value = true
     error.value = null
     try {

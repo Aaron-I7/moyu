@@ -25,6 +25,14 @@ const relaxItems = computed(() => [
     icon: 'mdi:cat',
     color: '#EC4899',
     path: '/relax/virtual-pet'
+  },
+  {
+    id: 'vent-wall',
+    name: t('modules.ventWall.name'),
+    desc: t('modules.ventWall.description'),
+    icon: 'mdi:message-text-outline',
+    color: '#22C55E',
+    path: '/relax/vent-wall'
   }
 ])
 

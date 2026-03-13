@@ -25,6 +25,8 @@ const resultData = ref<{
 const errorMsg = ref('')
 const loading = ref(false)
 const bellRing = ref(false)
+const loadingCountdown = ref(60)
+let loadingTimer: number | null = null
 
 const hexKey = computed(() => {
   if (lines.value.length !== 6) return null
@@ -105,6 +107,15 @@ const handleQuickToss = async () => {
 const askWind = async () => {
   step.value = 'result'
   loading.value = true
+  loadingCountdown.value = 60
+  if (loadingTimer) {
+    clearInterval(loadingTimer)
+  }
+  loadingTimer = window.setInterval(() => {
+    if (loadingCountdown.value > 0) {
+      loadingCountdown.value -= 1
+    }
+  }, 1000)
   resultData.value = null
   errorMsg.value = ''
   
@@ -191,6 +202,10 @@ ${movingList ? `变爻情况：${movingList}。` : ''}
     console.error('Divination error:', err)
     errorMsg.value = `春风似乎有些犹豫，未能清晰传达意旨。\n\n或许是网络连接波动，请稍后再试。\n\n（${err instanceof Error ? err.message : '未知错误'}）`
   } finally {
+    if (loadingTimer) {
+      clearInterval(loadingTimer)
+      loadingTimer = null
+    }
     loading.value = false
   }
 }
@@ -203,6 +218,11 @@ const reset = () => {
   errorMsg.value = ''
   loading.value = false
   tossing.value = false
+  loadingCountdown.value = 60
+  if (loadingTimer) {
+    clearInterval(loadingTimer)
+    loadingTimer = null
+  }
 }
 </script>
 
@@ -309,6 +329,7 @@ const reset = () => {
           <div v-if="loading" class="loading-dots">
             <div v-for="i in 3" :key="i" class="loading-dot" :style="{ animationDelay: `${(i-1)*0.28}s` }" />
             <span class="loading-text">{{ t('modules.divination.loading') }}</span>
+            <span class="loading-countdown">{{ t('modules.divination.loadingCountdown', { seconds: loadingCountdown }) }}</span>
           </div>
           
           <div v-else-if="resultData" class="response-content fade-up">
@@ -646,6 +667,13 @@ const reset = () => {
     font-size: 12px;
     color: var(--color-text-secondary);
     letter-spacing: 3px;
+  }
+
+  .loading-countdown {
+    margin-left: 8px;
+    font-size: 12px;
+    color: var(--color-primary);
+    letter-spacing: 1px;
   }
 }
 

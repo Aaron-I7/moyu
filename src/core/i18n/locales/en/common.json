@@ -82,6 +82,61 @@
     "noise": {
       "title": "White Noise",
       "desc": "Block Distractions"
+    },
+    "textDiff": {
+      "title": "Text Diff",
+      "desc": "Compare two text versions with line-level highlights.",
+      "tags": ["text", "diff", "review"],
+      "leftLabel": "Old Version",
+      "rightLabel": "New Version",
+      "leftPlaceholder": "Paste old text...",
+      "rightPlaceholder": "Paste new text...",
+      "compare": "Compare",
+      "reset": "Reset",
+      "copy": "Copy Result",
+      "download": "Download Result",
+      "empty": "Please input at least one side of text.",
+      "done": "Done: {add} added, {remove} removed, {same} unchanged lines.",
+      "copied": "Result copied.",
+      "copyFailed": "Copy failed. Please copy manually.",
+      "state": {
+        "idle": "Waiting for input",
+        "processing": "Comparing...",
+        "success": "Comparison complete",
+        "empty": "No comparable content",
+        "error": "Process failed, please retry"
+      }
+    },
+    "textFormatter": {
+      "title": "Text Formatter",
+      "desc": "Batch clean text format with rule-based actions.",
+      "tags": ["text", "clean", "format"],
+      "run": "Run Cleanup",
+      "reset": "Reset",
+      "copy": "Copy Result",
+      "download": "Download Result",
+      "source": "Source Text",
+      "result": "Formatted Result",
+      "sourcePlaceholder": "Paste text to clean...",
+      "resultPlaceholder": "Result appears here after cleanup...",
+      "empty": "Please enter text first.",
+      "done": "Cleanup complete with {lines} output lines.",
+      "copied": "Result copied.",
+      "copyFailed": "Copy failed. Please copy manually.",
+      "stats": "Source {sourceLines} lines / Result {resultLines} lines",
+      "options": {
+        "trimLine": "Trim each line",
+        "blankLine": "Collapse blank lines",
+        "punctuation": "Normalize punctuation",
+        "uppercase": "Convert to UPPERCASE",
+        "lowercase": "Convert to lowercase"
+      },
+      "state": {
+        "idle": "Ready",
+        "processing": "Processing...",
+        "success": "Completed",
+        "empty": "No content to process"
+      }
     }
   },
   "calendar": {

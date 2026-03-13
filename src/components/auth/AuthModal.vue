@@ -13,7 +13,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
-const { login, register, sendLoginOtp, loginWithOtp, sendRegisterOtp, registerWithOtp, loading, error: authError, capabilities, provider } = useAuth()
+const { login, register, sendLoginOtp, loginWithOtp, sendRegisterOtp, registerWithOtp, loading, error: authError, capabilities } = useAuth()
 
 const mode = ref<'login' | 'register'>('login')
 const authMethod = ref<'password' | 'otp'>('password')
@@ -28,7 +28,6 @@ const successMessage = ref<string | null>(null)
 const isEmailSupported = computed(() => capabilities.email)
 const isAnonymousSupported = computed(() => capabilities.anonymous)
 const isOtpSupported = computed(() => capabilities.otp)
-const isCloudBase = computed(() => provider === 'cloudbase')
 const accountLabel = computed(() => t('auth.email'))
 const accountPlaceholder = computed(() => t('auth.emailPlaceholder'))
 const accountType = computed(() => 'email')
@@ -175,8 +174,6 @@ const submitText = computed(() => {
               <Icon :icon="isEmailSupported ? (mode === 'login' ? 'mdi:login-variant' : 'mdi:account-plus') : 'mdi:account-outline'" width="28" />
             </div>
             <h3>{{ title }}</h3>
-            <p class="subtitle">{{ t('auth.subtitle', 'Sync your progress across devices') }}</p>
-            <p v-if="isCloudBase && isEmailSupported" class="subtitle provider-tip">{{ t('auth.cloudbaseHint') }}</p>
           </div>
           
           <div v-if="successMessage && mode === 'register'" class="success-content">

@@ -17,6 +17,14 @@ const games = computed(() => [
     icon: 'mdi:fishbowl',
     color: '#3B82F6',
     path: '/games/pixel-fishing'
+  },
+  {
+    id: 'math-24',
+    name: t('modules.math24.name'),
+    desc: t('modules.math24.description'),
+    icon: 'mdi:numeric-24-box-outline',
+    color: '#F59E0B',
+    path: '/games/math-24'
   }
 ])
 

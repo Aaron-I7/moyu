@@ -1,12 +1,14 @@
 import { ref } from 'vue'
 import { supabase } from '@/core/supabase/client'
+import { checkVentContent } from '@/core/contentSafety'
 import type { 
   AuthAdapter, 
   DatabaseAdapter, 
   RealtimeAdapter, 
   FunctionAdapter,
   UnifiedUser,
-  DanmakuMessage
+  DanmakuMessage,
+  VentPost
 } from './types'
 
 // --- Auth Adapter ---
@@ -30,8 +32,13 @@ export class SupabaseAuthAdapter implements AuthAdapter {
       this.user.value = null
       return
     }
+    const resolvedId = String(sbUser.id || sbUser.user_id || sbUser.sub || '')
+    if (!resolvedId) {
+      this.user.value = null
+      return
+    }
     this.user.value = {
-      id: sbUser.id,
+      id: resolvedId,
       email: sbUser.email,
       isAnonymous: false,
       provider: 'supabase'
@@ -119,7 +126,6 @@ export class SupabaseAuthAdapter implements AuthAdapter {
   async logout() {
     if (!supabase) return
     try {
-      // Race signOut with 2s timeout
       await Promise.race([
         supabase.auth.signOut(),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Logout timeout')), 2000))
@@ -223,6 +229,40 @@ export class SupabaseDatabaseAdapter implements DatabaseAdapter {
       contact
     })
     return !error
+  }
+
+  async createVent(userId: string | null, userName: string, content: string) {
+    if (!supabase) return { ok: false, reason: 'not_initialized' }
+    const checked = checkVentContent(content)
+    if (!checked.ok) return { ok: false, reason: checked.reason }
+    const { error } = await supabase.from('danmaku_messages').insert({
+      user_id: userId,
+      user_name: userName.trim().slice(0, 24) || 'Guest',
+      content: content.trim(),
+      emoji: 'vent'
+    })
+    if (error) return { ok: false, reason: 'db_error' }
+    return { ok: true }
+  }
+
+  async listVents(limit = 80) {
+    if (!supabase) return { data: [], error: 'Supabase not initialized' }
+    const { data, error } = await supabase
+      .from('danmaku_messages')
+      .select('id, content, user_id, user_name, created_at, emoji')
+      .eq('emoji', 'vent')
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (error || !data) return { data: [], error }
+    const vents: VentPost[] = data.map((row: any) => ({
+      id: String(row.id),
+      content: row.content,
+      user_id: row.user_id ? String(row.user_id) : null,
+      user_name: String(row.user_name || '') || 'Guest',
+      created_at: row.created_at
+    }))
+    return { data: vents, error: null }
   }
 
   async getRecentDanmaku() {

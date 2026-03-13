@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
@@ -24,6 +24,7 @@ const { track } = useTracking()
 const question = ref('')
 const tossing = ref(false)
 const loading = ref(false)
+const loadingCountdown = ref(60)
 const currentCoins = ref<boolean[]>([true, true, true])
 const result = ref<{
   hexagram_name: string
@@ -31,6 +32,7 @@ const result = ref<{
   interpretation: string
 } | null>(null)
 const errorMsg = ref('')
+let loadingTimer: number | null = null
 
 const lines = ref<LineVal[]>([])
 const canCast = computed(() => !!question.value.trim() && !loading.value && !tossing.value)
@@ -43,10 +45,15 @@ const reset = () => {
   question.value = ''
   tossing.value = false
   loading.value = false
+  loadingCountdown.value = 60
   currentCoins.value = [true, true, true]
   result.value = null
   errorMsg.value = ''
   lines.value = []
+  if (loadingTimer) {
+    clearInterval(loadingTimer)
+    loadingTimer = null
+  }
 }
 
 const handleClose = () => {
@@ -109,6 +116,15 @@ const askWind = async () => {
 const handleQuickCast = async () => {
   if (!canCast.value) return
   loading.value = true
+  loadingCountdown.value = 60
+  if (loadingTimer) {
+    clearInterval(loadingTimer)
+  }
+  loadingTimer = window.setInterval(() => {
+    if (loadingCountdown.value > 0) {
+      loadingCountdown.value -= 1
+    }
+  }, 1000)
   errorMsg.value = ''
   result.value = null
   lines.value = []
@@ -126,6 +142,10 @@ const handleQuickCast = async () => {
   } catch (err) {
     errorMsg.value = err instanceof Error ? err.message : 'Unknown Error'
   } finally {
+    if (loadingTimer) {
+      clearInterval(loadingTimer)
+      loadingTimer = null
+    }
     loading.value = false
   }
 }
@@ -134,6 +154,13 @@ const goToDivination = () => {
   close()
   router.push(`/${locale.value}/tools/divination`)
 }
+
+onBeforeUnmount(() => {
+  if (loadingTimer) {
+    clearInterval(loadingTimer)
+    loadingTimer = null
+  }
+})
 </script>
 
 <template>
@@ -163,6 +190,9 @@ const goToDivination = () => {
           <button class="quick-btn" :disabled="!canCast" @click="handleQuickCast">
             {{ loading ? t('modules.divination.loading') : t('modules.divination.quickCast') }}
           </button>
+          <div v-if="loading" class="loading-countdown">
+            {{ t('modules.divination.loadingCountdown', { seconds: loadingCountdown }) }}
+          </div>
           <div v-if="result" class="result-wrap">
             <div class="result-name">【{{ result.hexagram_name }}】</div>
             <div class="result-text">{{ result.interpretation }}</div>
@@ -277,6 +307,13 @@ const goToDivination = () => {
 .quick-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.loading-countdown {
+  margin-top: 8px;
+  text-align: center;
+  color: var(--color-primary);
+  font-size: 12px;
 }
 
 .result-wrap {

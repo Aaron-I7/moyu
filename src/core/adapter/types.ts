@@ -49,6 +49,8 @@ export interface DatabaseAdapter {
   
   // Feedback
   sendFeedback(userId: string | null, content: string, contact?: string): Promise<boolean>
+  createVent(userId: string | null, userName: string, content: string): Promise<{ ok: boolean; reason?: string }>
+  listVents(limit?: number): Promise<{ data: VentPost[]; error: any }>
   
   // Danmaku History
   getRecentDanmaku(): Promise<{ data: DanmakuMessage[]; error: any }>
@@ -63,6 +65,14 @@ export interface DanmakuMessage {
   created_at: string
   textColor?: string
   backgroundColor?: string
+}
+
+export interface VentPost {
+  id: string
+  content: string
+  user_id: string | null
+  user_name: string
+  created_at: string
 }
 
 export interface RealtimeAdapter {

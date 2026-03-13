@@ -175,12 +175,69 @@ export function useCloudSync() {
     debounceTimers[moduleKey] = timerId
   }
 
-  const clearLocalData = () => {
-    // Clear all local storage to ensure auth tokens (CloudBase/Supabase) are also removed
+  const clearLocalData = async () => {
     localStorage.clear()
+    sessionStorage.clear()
+
+    document.cookie.split(';').forEach((cookie) => {
+      const eqPos = cookie.indexOf('=')
+      const name = eqPos > -1 ? cookie.slice(0, eqPos).trim() : cookie.trim()
+      if (!name) return
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`
+    })
+
+    const idb = window.indexedDB as any
+    const names = new Set<string>([
+      'firebaseLocalStorageDb',
+      'supabase.auth.token'
+    ])
+    try {
+      if (typeof idb?.databases === 'function') {
+        const dbs = await idb.databases()
+        ;(dbs || []).forEach((db: any) => {
+          const n = String(db?.name || '')
+          if (n) names.add(n)
+        })
+      }
+    } catch {}
+
+    const deleting = Array.from(names).map((name) => {
+      const n = name.toLowerCase()
+      if (!(n.includes('cloudbase') || n.includes('tcb') || n.includes('supabase') || n.includes('firebase'))) {
+        return Promise.resolve()
+      }
+      return new Promise<void>((resolve) => {
+        try {
+          const req = indexedDB.deleteDatabase(name)
+          req.onsuccess = () => resolve()
+          req.onerror = () => resolve()
+          req.onblocked = () => resolve()
+        } catch {
+          resolve()
+        }
+      })
+    })
+
+    await Promise.race([
+      Promise.allSettled(deleting),
+      new Promise((resolve) => setTimeout(resolve, 500))
+    ])
+
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations()
+        await Promise.allSettled(registrations.map((r) => r.unregister()))
+      }
+    } catch {}
+
+    try {
+      if ('caches' in window) {
+        const cacheKeys = await caches.keys()
+        await Promise.allSettled(cacheKeys.map((key) => caches.delete(key)))
+      }
+    } catch {}
+
     window.dispatchEvent(new Event('storage'))
-    
-    // A page reload is the cleanest way to reset app state after logout.
     window.location.reload()
   }
 

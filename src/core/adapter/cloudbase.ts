@@ -1,12 +1,14 @@
 import { ref } from 'vue'
 import cloudbase from '@cloudbase/js-sdk'
+import { checkVentContent } from '@/core/contentSafety'
 import type { 
   AuthAdapter, 
   DatabaseAdapter, 
   RealtimeAdapter, 
   FunctionAdapter,
   UnifiedUser,
-  DanmakuMessage
+  DanmakuMessage,
+  VentPost
 } from './types'
 
 const envId = import.meta.env.VITE_CLOUDBASE_ENV_ID
@@ -56,8 +58,21 @@ export class CloudBaseAuthAdapter implements AuthAdapter {
       this.user.value = null
       return
     }
+    const resolvedId = String(
+      cbUser.uid ||
+      cbUser.id ||
+      cbUser.openid ||
+      cbUser._openid ||
+      cbUser.uuid ||
+      cbUser.userId ||
+      ''
+    )
+    if (!resolvedId) {
+      this.user.value = null
+      return
+    }
     this.user.value = {
-      id: cbUser.uid,
+      id: resolvedId,
       email: cbUser.email,
       isAnonymous: !cbUser.email,
       provider: 'cloudbase'
@@ -295,7 +310,6 @@ export class CloudBaseAuthAdapter implements AuthAdapter {
 
   async logout() {
     try {
-      // Race signOut with 2s timeout to prevent hanging due to network issues
       await Promise.race([
         auth.signOut(),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Logout timeout')), 2000))
@@ -470,6 +484,49 @@ export class CloudBaseDatabaseAdapter implements DatabaseAdapter {
       return true
     } catch (e) {
       return false
+    }
+  }
+
+  async createVent(userId: string | null, userName: string, content: string) {
+    const checked = checkVentContent(content)
+    if (!checked.ok) return { ok: false, reason: checked.reason }
+    const danmakuModel = app.models.danmaku_messages
+    if (!danmakuModel) return { ok: false, reason: 'db_error' }
+    try {
+      await danmakuModel.create({
+        data: {
+          user_id: userId,
+          user_name: userName.trim().slice(0, 24) || 'Guest',
+          content: content.trim(),
+          emoji: 'vent',
+          _openid: userId
+        }
+      })
+      return { ok: true }
+    } catch {
+      return { ok: false, reason: 'db_error' }
+    }
+  }
+
+  async listVents(limit = 80) {
+    const danmakuModel = app.models.danmaku_messages
+    if (!danmakuModel) return { data: [], error: 'danmaku model unavailable' }
+    try {
+      const { data } = await danmakuModel.list({
+        filter: { where: { emoji: { $eq: 'vent' } } },
+        orderBy: [{ created_at: 'desc' }],
+        pageSize: limit
+      })
+      const vents: VentPost[] = (data?.records || []).map((row: any) => ({
+        id: String(row.id || row._id),
+        content: row.content,
+        user_id: row.user_id || null,
+        user_name: String(row.user_name || '') || 'Guest',
+        created_at: row.created_at
+      }))
+      return { data: vents, error: null }
+    } catch (error) {
+      return { data: [], error }
     }
   }
 
