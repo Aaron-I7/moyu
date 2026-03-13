@@ -1,0 +1,7 @@
+{
+  "name": "ai-divination",
+  "version": "1.0.0",
+  "description": "AI Divination Function",
+  "main": "index.js",
+  "dependencies": {}
+}

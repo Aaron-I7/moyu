@@ -5,7 +5,7 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart, BarChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
-import { supabase } from '@/core/supabase/client'
+import { dbAdapter } from '@/core/adapter'
 import dayjs from 'dayjs'
 
 use([
@@ -244,16 +244,12 @@ const sessionList = computed(() => {
 })
 
 onMounted(async () => {
-  if (!supabase) {
+  if (!dbAdapter) {
     loading.value = false
     return
   }
   
-  const { data } = await supabase
-    .from('analytics_events')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(2000)
+  const { data } = await dbAdapter.getAnalyticsEvents(2000)
     
   if (data) {
     events.value = data

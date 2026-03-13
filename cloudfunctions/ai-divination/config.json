@@ -1,0 +1,7 @@
+{
+  "timeout": 60,
+  "envVariables": {
+    "ZHIPU_API_KEY": ""
+  },
+  "runtime": "Nodejs18"
+}

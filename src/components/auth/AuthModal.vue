@@ -13,23 +13,63 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
-const { login, register, loading, error: authError } = useAuth()
+const { login, register, sendLoginOtp, loginWithOtp, sendRegisterOtp, registerWithOtp, loading, error: authError, capabilities, provider } = useAuth()
 
 const mode = ref<'login' | 'register'>('login')
+const authMethod = ref<'password' | 'otp'>('password')
+const username = ref('')
 const email = ref('')
 const password = ref('')
+const otpCode = ref('')
+const otpSent = ref(false)
 const error = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
 
+const isEmailSupported = computed(() => capabilities.email)
+const isAnonymousSupported = computed(() => capabilities.anonymous)
+const isOtpSupported = computed(() => capabilities.otp)
+const isCloudBase = computed(() => provider === 'cloudbase')
+const accountLabel = computed(() => t('auth.email'))
+const accountPlaceholder = computed(() => t('auth.emailPlaceholder'))
+const accountType = computed(() => 'email')
+
 const toggleMode = () => {
   mode.value = mode.value === 'login' ? 'register' : 'login'
+  authMethod.value = 'password'
+  username.value = ''
+  otpSent.value = false
+  otpCode.value = ''
   error.value = null
   authError.value = null
   successMessage.value = null
 }
 
+const switchAuthMethod = (method: 'password' | 'otp') => {
+  authMethod.value = method
+  otpSent.value = false
+  otpCode.value = ''
+  error.value = null
+  authError.value = null
+}
+
 const handleSubmit = async () => {
-  if (!email.value || !password.value) {
+  if (isEmailSupported.value && !email.value) {
+    error.value = t('auth.fillAll', 'Please fill in all fields')
+    return
+  }
+  if (mode.value === 'login' && authMethod.value === 'password' && !password.value) {
+    error.value = t('auth.fillAll', 'Please fill in all fields')
+    return
+  }
+  if ((mode.value === 'login' || mode.value === 'register') && authMethod.value === 'otp' && !otpCode.value) {
+    error.value = t('auth.enterOtpCode')
+    return
+  }
+  if (mode.value === 'register' && !password.value) {
+    error.value = t('auth.fillAll', 'Please fill in all fields')
+    return
+  }
+  if (mode.value === 'register' && !username.value) {
     error.value = t('auth.fillAll', 'Please fill in all fields')
     return
   }
@@ -38,17 +78,31 @@ const handleSubmit = async () => {
   successMessage.value = null
   
   try {
-    if (mode.value === 'login') {
+    if (!isEmailSupported.value) {
+      // Anonymous Login
+      await login()
+      emit('close')
+      return
+    }
+
+    if (mode.value === 'login' && authMethod.value === 'password') {
       await login(email.value, password.value)
       emit('close')
-    } else {
-      const result = await register(email.value, password.value)
-      // If session is null, it means email confirmation is required
-      if (result && !result.session) {
+    } else if (mode.value === 'login' && authMethod.value === 'otp') {
+      await loginWithOtp(email.value, otpCode.value)
+      emit('close')
+    } else if (mode.value === 'register' && authMethod.value === 'password') {
+      const result = await register(email.value, password.value, username.value)
+      // If no error thrown (handled by catch), check if user is fully logged in
+      // If user is null or still anonymous, it means email confirmation is required
+      if (!result.user || result.user.isAnonymous) {
         successMessage.value = t('auth.checkEmail', 'Registration successful! Please check your email to confirm your account.')
       } else {
         emit('close')
       }
+    } else {
+      await registerWithOtp(email.value, otpCode.value)
+      emit('close')
     }
   } catch (e: any) {
     // Error is already handled in composable but we can show specific UI feedback here if needed
@@ -56,8 +110,54 @@ const handleSubmit = async () => {
   }
 }
 
-const title = computed(() => mode.value === 'login' ? t('auth.login', 'Welcome Back') : t('auth.createAccount', 'Join Moyu'))
-const submitText = computed(() => mode.value === 'login' ? t('auth.login', 'Login') : t('auth.createAccount', 'Create Account'))
+const handleSendOtp = async () => {
+  if (!email.value) {
+    error.value = t('auth.fillAll', 'Please fill in all fields')
+    return
+  }
+  error.value = null
+  successMessage.value = null
+  const ok = await sendLoginOtp(email.value)
+  if (ok) {
+    otpSent.value = true
+  }
+}
+
+const handleSendRegisterOtp = async () => {
+  if (!email.value || !password.value || !username.value) {
+    error.value = t('auth.fillAll', 'Please fill in all fields')
+    return
+  }
+  error.value = null
+  successMessage.value = null
+  const ok = await sendRegisterOtp(email.value, password.value, username.value)
+  if (ok) {
+    otpSent.value = true
+  }
+}
+
+const handleGuestLogin = async () => {
+  error.value = null
+  successMessage.value = null
+  try {
+    await login()
+    emit('close')
+  } catch (e: any) {
+    console.error(e)
+  }
+}
+
+const title = computed(() => {
+  if (!isEmailSupported.value) return t('auth.guestLogin')
+  return mode.value === 'login' ? t('auth.login', 'Welcome Back') : t('auth.createAccount', 'Join Moyu')
+})
+
+const submitText = computed(() => {
+  if (!isEmailSupported.value) return t('auth.enterAsGuest')
+  if (mode.value === 'login' && authMethod.value === 'otp') return t('auth.verifyAndLogin')
+  if (mode.value === 'register' && authMethod.value === 'otp') return t('auth.verifyAndRegister')
+  return mode.value === 'login' ? t('auth.login', 'Login') : t('auth.createAccount', 'Create Account')
+})
 
 </script>
 
@@ -72,13 +172,14 @@ const submitText = computed(() => mode.value === 'login' ? t('auth.login', 'Logi
           
           <div class="modal-header">
             <div class="icon-wrapper">
-              <Icon :icon="mode === 'login' ? 'mdi:login-variant' : 'mdi:account-plus'" width="28" />
+              <Icon :icon="isEmailSupported ? (mode === 'login' ? 'mdi:login-variant' : 'mdi:account-plus') : 'mdi:account-outline'" width="28" />
             </div>
             <h3>{{ title }}</h3>
             <p class="subtitle">{{ t('auth.subtitle', 'Sync your progress across devices') }}</p>
+            <p v-if="isCloudBase && isEmailSupported" class="subtitle provider-tip">{{ t('auth.cloudbaseHint') }}</p>
           </div>
           
-          <div v-if="successMessage" class="success-content">
+          <div v-if="successMessage && mode === 'register'" class="success-content">
             <div class="icon-wrapper success">
               <Icon icon="mdi:email-check" width="48" />
             </div>
@@ -88,36 +189,97 @@ const submitText = computed(() => mode.value === 'login' ? t('auth.login', 'Logi
           </div>
           
           <form v-else @submit.prevent="handleSubmit" class="auth-form">
-            <div class="form-group">
-              <label>{{ t('auth.email', 'Email') }}</label>
-              <div class="input-wrapper" :class="{ 'has-error': error }">
-                <Icon icon="mdi:email" class="input-icon" />
-                <input 
-                  v-model="email" 
-                  type="email" 
-                  :placeholder="t('auth.emailPlaceholder', 'Enter your email')"
-                  required
+            <template v-if="isEmailSupported">
+              <div v-if="isOtpSupported" class="method-switch">
+                <button
+                  type="button"
+                  class="method-btn"
+                  :class="{ active: authMethod === 'password' }"
                   :disabled="loading"
-                  autofocus
-                  autocomplete="username"
-                />
-              </div>
-            </div>
-            
-            <div class="form-group">
-              <label>{{ t('auth.password', 'Password') }}</label>
-              <div class="input-wrapper" :class="{ 'has-error': error }">
-                <Icon icon="mdi:lock" class="input-icon" />
-                <input 
-                  v-model="password" 
-                  type="password" 
-                  :placeholder="t('auth.passwordPlaceholder', 'Enter your password')"
-                  required
+                  @click="switchAuthMethod('password')"
+                >
+                  {{ t('auth.passwordLogin') }}
+                </button>
+                <button
+                  type="button"
+                  class="method-btn"
+                  :class="{ active: authMethod === 'otp' }"
                   :disabled="loading"
-                  autocomplete="current-password"
-                />
+                  @click="switchAuthMethod('otp')"
+                >
+                  {{ t('auth.otpLogin') }}
+                </button>
               </div>
-            </div>
+
+              <div v-if="mode === 'register'" class="form-group">
+                <label>{{ t('auth.username') }}</label>
+                <div class="input-wrapper" :class="{ 'has-error': error }">
+                  <Icon icon="mdi:account-outline" class="input-icon" />
+                  <input
+                    v-model="username"
+                    type="text"
+                    :placeholder="t('auth.usernamePlaceholder')"
+                    required
+                    :disabled="loading"
+                    autocomplete="username"
+                  />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>{{ accountLabel }}</label>
+                <div class="input-wrapper" :class="{ 'has-error': error }">
+                  <Icon icon="mdi:email" class="input-icon" />
+                  <input 
+                    v-model="email" 
+                    :type="accountType" 
+                    :placeholder="accountPlaceholder"
+                    required
+                    :disabled="loading"
+                    autofocus
+                    autocomplete="username"
+                  />
+                </div>
+              </div>
+              
+              <div v-if="mode === 'register' || authMethod === 'password'" class="form-group">
+                <label>{{ t('auth.password', 'Password') }}</label>
+                <div class="input-wrapper" :class="{ 'has-error': error }">
+                  <Icon icon="mdi:lock" class="input-icon" />
+                  <input 
+                    v-model="password" 
+                    type="password" 
+                    :placeholder="t('auth.passwordPlaceholder', 'Enter your password')"
+                    required
+                    :disabled="loading"
+                    autocomplete="current-password"
+                  />
+                </div>
+              </div>
+
+              <template v-if="authMethod === 'otp'">
+                <div class="form-group">
+                  <label>{{ t('auth.otpCode') }}</label>
+                  <div class="otp-row">
+                    <div class="input-wrapper" :class="{ 'has-error': error }">
+                      <Icon icon="mdi:shield-key-outline" class="input-icon" />
+                      <input
+                        v-model="otpCode"
+                        type="text"
+                        maxlength="8"
+                        :placeholder="t('auth.otpPlaceholder')"
+                        :disabled="loading"
+                        autocomplete="one-time-code"
+                      />
+                    </div>
+                    <button type="button" class="otp-btn" :disabled="loading" @click="mode === 'login' ? handleSendOtp() : handleSendRegisterOtp()">
+                      {{ otpSent ? t('auth.resendOtp') : t('auth.sendOtp') }}
+                    </button>
+                  </div>
+                  <p v-if="otpSent" class="otp-tip">{{ mode === 'login' ? t('auth.otpSent') : t('auth.registerOtpSent') }}</p>
+                </div>
+              </template>
+            </template>
             
             <div v-if="error || authError" class="error-banner">
               <Icon icon="mdi:alert-circle-outline" width="16" />
@@ -128,9 +290,19 @@ const submitText = computed(() => mode.value === 'login' ? t('auth.login', 'Logi
               <span v-if="!loading">{{ submitText }}</span>
               <Icon v-else icon="mdi:loading" class="spin" />
             </button>
+
+            <template v-if="isAnonymousSupported && isEmailSupported">
+              <div class="or-divider">
+                <span>{{ t('auth.or') }}</span>
+              </div>
+              <button type="button" class="ghost-btn" :disabled="loading" @click="handleGuestLogin">
+                <Icon icon="mdi:account-outline" width="16" />
+                <span>{{ t('auth.enterAsGuest') }}</span>
+              </button>
+            </template>
           </form>
           
-          <div class="modal-footer">
+          <div class="modal-footer" v-if="isEmailSupported">
             <p class="switch-text">
               {{ mode === 'login' ? t('auth.noAccount', 'New here?') : t('auth.hasAccount', 'Already have an account?') }}
               <button class="switch-btn" @click="toggleMode" :disabled="loading">
@@ -229,12 +401,46 @@ const submitText = computed(() => mode.value === 'login' ? t('auth.login', 'Logi
     font-size: 14px;
     line-height: 1.5;
   }
+
+  .provider-tip {
+    margin-top: 8px;
+    font-size: 12px;
+  }
 }
 
 .auth-form {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.method-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.method-btn {
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-text-secondary);
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  &.active {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    color: var(--color-primary);
+  }
 }
 
 .form-group {
@@ -355,6 +561,87 @@ const submitText = computed(() => mode.value === 'login' ? t('auth.login', 'Logi
     cursor: not-allowed;
     box-shadow: none;
   }
+}
+
+.or-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--color-border);
+  }
+}
+
+.ghost-btn {
+  padding: 12px;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  &:hover:not(:disabled) {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}
+
+.otp-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.otp-btn {
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-primary);
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}
+
+.otp-tip {
+  margin: 6px 2px 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
 }
 
 .modal-footer {

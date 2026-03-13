@@ -12,6 +12,7 @@
     "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
+    "@cloudbase/js-sdk": "^2.26.2",
     "@iconify/vue": "^5.0.0",
     "@supabase/supabase-js": "^2.98.0",
     "@types/three": "^0.183.1",

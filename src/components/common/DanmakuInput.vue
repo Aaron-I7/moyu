@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRealtimeDanmaku } from '@/composables/useRealtimeDanmaku'
+import { useAuth } from '@/composables/useAuth'
 
 const emit = defineEmits<{
   close: []
 }>()
 const { t, locale } = useI18n({ useScope: 'global' })
+const { nickname } = useAuth()
 
 const {
   isConnected,
@@ -89,7 +91,7 @@ function handleKeydown(e: KeyboardEvent) {
   }
 }
 
-function formatTime(timestamp: number) {
+function formatTime(timestamp: number | string) {
   const date = new Date(timestamp)
   return date.toLocaleString(locale.value === 'en' ? 'en-US' : 'zh-CN', {
     month: 'numeric',
@@ -106,7 +108,24 @@ function handleClearHistory() {
 }
 
 onMounted(() => {
+  tempUserName.value = nickname.value || ''
+  setSessionDanmakuProfile({
+    userName: tempUserName.value || undefined,
+    textColor: useCustomStyle.value ? tempTextColor.value : null,
+    backgroundColor: useCustomStyle.value ? tempBackgroundColor.value : null
+  })
   loadHistory()
+})
+
+watch(nickname, (newName) => {
+  if (newName) {
+    tempUserName.value = newName
+    setSessionDanmakuProfile({
+      userName: newName,
+      textColor: useCustomStyle.value ? tempTextColor.value : null,
+      backgroundColor: useCustomStyle.value ? tempBackgroundColor.value : null
+    })
+  }
 })
 </script>
 
@@ -158,8 +177,8 @@ onMounted(() => {
           >
             <div class="history-item-header">
               <span v-if="item.emoji" class="history-emoji">{{ item.emoji }}</span>
-              <span class="history-user">{{ item.userName }}</span>
-              <span class="history-time">{{ formatTime(item.timestamp) }}</span>
+              <span class="history-user">{{ item.user_name }}</span>
+              <span class="history-time">{{ formatTime(item.created_at) }}</span>
             </div>
             <p class="history-content">{{ item.content }}</p>
           </div>

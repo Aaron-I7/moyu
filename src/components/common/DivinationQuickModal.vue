@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import { supabase } from '@/core/supabase/client'
+import { functionAdapter } from '@/core/adapter'
 import CoinToss from '@/modules/tools/divination/components/CoinToss.vue'
 import { YAO_MAP, HEXAGRAMS, type LineVal } from '@/modules/tools/divination/data'
 import { useTracking } from '@/composables/useTracking'
@@ -66,7 +66,7 @@ const rollCoins = (): { val: LineVal, coins: boolean[] } => {
 }
 
 const askWind = async () => {
-  if (!supabase) throw new Error('Supabase client not initialized')
+  if (!functionAdapter) throw new Error('Function adapter not initialized')
   const hexKey = lines.value.map(l => (YAO_MAP[l].yin ? '0' : '1')).join('')
   const hexName = HEXAGRAMS[hexKey] || '未知之卦'
   const movingList = lines.value
@@ -77,13 +77,12 @@ const askWind = async () => {
   const systemPrompt = `角色设定：你是《剑来》世界观里的算卦亭老掌柜，说话带着江湖气却藏着文气，善用譬喻、语气温和有力量，懂周易解卦更懂人间行路的道理。任务要求：以《剑来》的语言风格解读，输出内容包含3个部分，请务必以纯 JSON 格式返回结果（不要使用 markdown 代码块），包含以下字段：1. "hexagram_name": (String) 卦象名称。2. "original_text": (String) 仅提供本卦的卦辞与大象辞原文。若有变爻，仅补充变爻的爻辞。请直接返回一段纯文本。3. "interpretation": (String) 结合用户提问与卦象，给出温暖、诗意、富有哲理的指引，要求指引不能含糊其词，要有相对明确的回答。字数控制在80-150字。`
   const userPrompt = `我求得一卦：${hexName}。${movingList ? `变爻情况：${movingList}。` : ''}我的困惑/问题是：“${question.value}”请为我解卦，并严格按照 JSON 格式返回。`
 
-  const { data, error } = await supabase.functions.invoke('ai-divination', {
-    body: {
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ]
-    },
+  const { data, error } = await functionAdapter.invoke('ai-divination', {
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ]
+  }, {
     headers: {
       Authorization: `Bearer ${supabaseAnonKey}`
     }

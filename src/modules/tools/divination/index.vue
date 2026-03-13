@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { supabase } from '@/core/supabase/client'
+import { functionAdapter } from '@/core/adapter'
 import { useI18n } from 'vue-i18n'
 import { YAO_MAP, HEXAGRAMS, type LineVal } from './data'
 import CoinToss from './components/CoinToss.vue'
@@ -114,38 +114,37 @@ const askWind = async () => {
     .join("、")
     
   try {
-    if (!supabase) {
-      throw new Error('Supabase client not initialized')
+    if (!functionAdapter) {
+      throw new Error('Function adapter not initialized')
     }
 
     const systemPrompt = `角色设定：你是《剑来》世界观里的算卦亭老掌柜，说话带着江湖气却藏着文气，善用譬喻、语气温和有力量，懂周易解卦更懂人间行路的道理。。
-任务要求：以《剑来》的语言风格解读，输出内容包含3个部分，请务必以纯 JSON 格式返回结果（不要使用 markdown 代码块），包含以下字段：
-1. "hexagram_name": (String) 卦象名称（例如“乾为天”）。
-2. "original_text": (String) 仅提供本卦的卦辞与大象辞原文。若有变爻，仅补充变爻的爻辞。**请直接返回一段纯文本，严禁使用 JSON 对象或键值对结构**。"
-3. "interpretation": (String) 解卦正文。结合用户提问与卦象，给出温暖、诗意、富有哲理的指引，要求指引不能含糊其词，要有相对明确的回答。字数控制在80 - 150字以内。
-风格要求：
-- 避免生硬的周易术语，全部转化为江湖语言
-- 每段文字有画面感，读起来像听陈平安讲道理
-- 语气不绝对，留有余地，符合「算卦不问必死，只说进退」的江湖规矩`
+    任务要求：以《剑来》的语言风格解读，输出内容包含3个部分，请务必以纯 JSON 格式返回结果（不要使用 markdown 代码块），包含以下字段：
+    1. "hexagram_name": (String) 卦象名称（例如“乾为天”）。
+    2. "original_text": (String) 仅提供本卦的卦辞与大象辞原文。若有变爻，仅补充变爻的爻辞。**请直接返回一段纯文本，严禁使用 JSON 对象或键值对结构**。"
+    3. "interpretation": (String) 解卦正文。结合用户提问与卦象，给出温暖、诗意、富有哲理的指引，要求指引不能含糊其词，要有相对明确的回答。字数控制在80 - 150字以内。
+    风格要求：
+    - 避免生硬的周易术语，全部转化为江湖语言
+    - 每段文字有画面感，读起来像听陈平安讲道理
+    - 语气不绝对，留有余地，符合「算卦不问必死，只说进退」的江湖规矩`
 
     const userPrompt = `我求得一卦：${hexName.value}。
 ${movingList ? `变爻情况：${movingList}。` : ''}
 我的困惑/问题是：“${question.value}”
 请为我解卦，并严格按照 JSON 格式返回。`
 
-    const { data, error } = await supabase.functions.invoke('ai-divination', {
-      body: {
+    const { data, error } = await functionAdapter.invoke('ai-divination', {
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ]
       },
-      // Explicitly set headers to avoid Supabase client from trying to refresh session
-      // This fixes the "Lock broken by another request" error when user is not logged in or session is unstable
-      headers: {
-        Authorization: `Bearer ${supabaseAnonKey}`
+      {
+        headers: {
+          Authorization: `Bearer ${supabaseAnonKey}`
+        }
       }
-    })
+    )
 
     if (error) throw error
     

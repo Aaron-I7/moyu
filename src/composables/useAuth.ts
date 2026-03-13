@@ -1,77 +1,69 @@
-import { ref, computed } from 'vue'
-import { supabase } from '@/core/supabase/client'
+import { ref, computed, watch } from 'vue'
+import { authAdapter, dbAdapter, provider as dbProvider } from '@/core/adapter'
 import { useCloudSync } from './useCloudSync'
-import type { User } from '@supabase/supabase-js'
 
-const user = ref<User | null>(null)
+const user = authAdapter.user
 const profile = ref<{ nickname: string } | null>(null)
 const loading = ref(false)
-const error = ref(null)
+const error = ref<string | null>(null)
+
+const resolveErrorMessage = (e: any) => {
+  if (!e) return '未知错误'
+  if (typeof e === 'string') return e
+  if (e instanceof Error) return e.message
+  if (typeof e?.message === 'string') return e.message
+  if (typeof e?.error?.message === 'string') return e.error.message
+  if (typeof e?.error_description === 'string') return e.error_description
+  return JSON.stringify(e)
+}
 
 export function useAuth() {
-  const { pullData } = useCloudSync()
+  const { pullData, clearLocalData } = useCloudSync()
 
   const isAuthenticated = computed(() => !!user.value)
-  const nickname = computed(() => profile.value?.nickname || user.value?.email?.split('@')[0])
+  const nickname = computed(() => profile.value?.nickname || (user.value ? `User_${user.value.id.slice(0, 4)}` : 'Guest'))
 
   // Initialize session
   const initAuth = async () => {
-    if (!supabase) return
-
-    const { data: { session } } = await supabase.auth.getSession()
-    if (session?.user) {
-      user.value = session.user
-      await fetchProfile()
-      await pullData() // Sync data on load
-    }
-
-    supabase.auth.onAuthStateChange(async (_event, session) => {
-      user.value = session?.user || null
-      if (session?.user) {
+    // Watch user changes to fetch profile and sync data
+    watch(user, async (newUser) => {
+      if (newUser) {
         await fetchProfile()
         await pullData()
       } else {
         profile.value = null
+        // Do NOT clear local data automatically on logout unless explicit?
+        // Actually original code cleared it on logout.
+        // But here, if user becomes null (e.g. init failure), maybe we shouldn't wipe data immediately?
+        // Let's keep logic consistent with original: clear on logout action, or if session expires?
+        // The original code had explicit clearLocalData() in logout().
+        // And `onAuthStateChange` set profile to null.
       }
-    })
+    }, { immediate: true })
   }
 
   const fetchProfile = async () => {
-    if (!user.value || !supabase) return
+    if (!user.value) return
     
     try {
-      const { data, error: err } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.value.id)
-        .single()
+      const { data, error: _err } = await dbAdapter.getProfile(user.value.id)
       
-      if (err) {
-        // If profile not found (PGRST116), try to create it
-        if (err.code === 'PGRST116') {
-          console.log('Profile not found, attempting to create one...')
-          const nickname = user.value.user_metadata?.nickname || user.value.email?.split('@')[0] || 'User'
+      if (!data) {
+        console.log('Profile not found, attempting to create one...')
+        const defaultName = `User_${user.value.id.slice(0, 4)}`
+        
+        const { data: newProfile, error: createError } = await dbAdapter.updateProfile(user.value.id, {
+          nickname: defaultName,
+          settings: {}
+        })
           
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
-            .insert([{
-              id: user.value.id,
-              nickname: nickname,
-              settings: {}
-            }])
-            .select()
-            .single()
-            
-          if (createError) {
-            // If creation fails (e.g. nickname taken), just log it
-            console.error('Failed to create profile:', createError)
-            return
-          }
-          
-          profile.value = newProfile
+        if (createError) {
+          console.error('Failed to create profile:', createError)
           return
         }
-        throw err
+        
+        profile.value = newProfile
+        return
       }
       profile.value = data
     } catch (e: any) {
@@ -79,61 +71,98 @@ export function useAuth() {
     }
   }
 
-  const register = async (email: string, password: string) => {
-    if (!supabase) throw new Error('Supabase not configured')
-    
+  const register = async (email?: string, password?: string, username?: string) => {
     loading.value = true
     error.value = null
     
     try {
-      const nicknameInput = email.split('@')[0]
-
-      // 1. Sign up
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            nickname: nicknameInput
-          }
-        }
-      })
+      const { user: newUser, error: authError } = await authAdapter.register(email, password, username)
       
       if (authError) throw authError
       
-      // If email confirmation is enabled, user might be null or have a fake session
-      // But typically we just return here and let UI show "Check email"
-      
-      return { user: authData.user, session: authData.session }
+      return { user: newUser }
     } catch (e: any) {
-      error.value = e.message
+      error.value = resolveErrorMessage(e)
       throw e
     } finally {
       loading.value = false
     }
   }
 
-  const login = async (email: string, password: string) => {
-    if (!supabase) throw new Error('Supabase not configured')
-    
+  const sendRegisterOtp = async (email: string, password: string, username?: string) => {
+    loading.value = true
+    error.value = null
+    try {
+      const { error: otpError } = await authAdapter.sendRegisterOtp(email, password, username)
+      if (otpError) throw otpError
+      return true
+    } catch (e: any) {
+      error.value = resolveErrorMessage(e)
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const registerWithOtp = async (email: string, code: string) => {
+    loading.value = true
+    error.value = null
+    try {
+      const { user: newUser, error: otpError } = await authAdapter.registerWithOtp(email, code)
+      if (otpError) throw otpError
+      return { user: newUser }
+    } catch (e: any) {
+      error.value = resolveErrorMessage(e)
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const sendLoginOtp = async (email: string) => {
+    loading.value = true
+    error.value = null
+    try {
+      const { error: otpError } = await authAdapter.sendLoginOtp(email)
+      if (otpError) throw otpError
+      return true
+    } catch (e: any) {
+      error.value = resolveErrorMessage(e)
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const loginWithOtp = async (email: string, code: string) => {
+    loading.value = true
+    error.value = null
+    try {
+      const { user: loggedUser, error: otpError } = await authAdapter.loginWithOtp(email, code)
+      if (otpError) throw otpError
+      return { user: loggedUser }
+    } catch (e: any) {
+      error.value = resolveErrorMessage(e)
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const login = async (email?: string, password?: string) => {
     loading.value = true
     error.value = null
     
     try {
-      const { data, error: err } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      })
+      const { user: loggedUser, error: err } = await authAdapter.login(email, password)
       
       if (err) throw err
       
-      user.value = data.user
-      await fetchProfile()
-      await pullData() // Sync data on login
+      // Profile fetch triggered by watch(user)
       
-      return { user: data.user }
+      return { user: loggedUser }
     } catch (e: any) {
-      error.value = e.message
+      error.value = resolveErrorMessage(e)
       throw e
     } finally {
       loading.value = false
@@ -141,20 +170,68 @@ export function useAuth() {
   }
 
   const logout = async () => {
-    if (!supabase) return
-    
-    const { clearLocalData } = useCloudSync()
-    
     loading.value = true
     try {
-      await supabase.auth.signOut()
-      user.value = null
-      profile.value = null
-      
-      // Clear local storage data on logout
-      clearLocalData()
+      await authAdapter.logout()
     } catch (e: any) {
-      error.value = e.message
+      console.error('Logout error:', e)
+      error.value = resolveErrorMessage(e)
+    } finally {
+      // Ensure local state is cleared regardless of adapter error
+      profile.value = null
+      clearLocalData()
+      loading.value = false
+    }
+  }
+
+  const updateNickname = async (newNickname: string) => {
+    if (!user.value) return false
+    loading.value = true
+    error.value = null
+    try {
+      const trimmed = newNickname.trim()
+      if (!trimmed) throw new Error('昵称不能为空')
+      const { error: dbError } = await dbAdapter.updateProfile(user.value.id, { nickname: trimmed })
+      if (dbError) throw dbError
+      const { error: authError } = await authAdapter.updateNickname(trimmed)
+      if (authError) throw authError
+      profile.value = { ...(profile.value || { nickname: trimmed }), nickname: trimmed }
+      return true
+    } catch (e: any) {
+      error.value = resolveErrorMessage(e)
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const startPasswordReset = async () => {
+    if (!user.value?.email) return false
+    loading.value = true
+    error.value = null
+    try {
+      const { error: resetError } = await authAdapter.startPasswordReset(user.value.email)
+      if (resetError) throw resetError
+      return true
+    } catch (e: any) {
+      error.value = resolveErrorMessage(e)
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const confirmPasswordReset = async (code: string, newPassword: string) => {
+    if (!user.value?.email) return false
+    loading.value = true
+    error.value = null
+    try {
+      const { error: confirmError } = await authAdapter.confirmPasswordReset(user.value.email, code, newPassword)
+      if (confirmError) throw confirmError
+      return true
+    } catch (e: any) {
+      error.value = resolveErrorMessage(e)
+      return false
     } finally {
       loading.value = false
     }
@@ -169,7 +246,16 @@ export function useAuth() {
     error,
     initAuth,
     register,
+    sendRegisterOtp,
+    registerWithOtp,
     login,
-    logout
+    sendLoginOtp,
+    loginWithOtp,
+    logout,
+    updateNickname,
+    startPasswordReset,
+    confirmPasswordReset,
+    capabilities: authAdapter.capabilities,
+    provider: dbProvider
   }
 }

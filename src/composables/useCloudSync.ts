@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { supabase } from '@/core/supabase/client'
+import { authAdapter, dbAdapter } from '@/core/adapter'
 
 const isSyncing = ref(false)
 const lastSyncTime = ref<number | null>(null)
@@ -47,28 +47,20 @@ export function useCloudSync() {
 
   
   const pullData = async () => {
-    if (!supabase) return
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.user) return
+    const user = authAdapter.user.value
+    if (!user) return
 
     isSyncing.value = true
     try {
       // 1. Pull Game Data
-      const { data: gameData, error: gameError } = await supabase
-        .from('user_game_data')
-        .select('module_key, data')
-        .eq('user_id', session.user.id)
+      const { data: gameData, error: gameError } = await dbAdapter.getAllGameData(user.id)
 
       if (gameError) throw gameError
 
       // 2. Pull Profile Settings
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('settings')
-        .eq('id', session.user.id)
-        .single()
+      const { data: profileData, error: profileError } = await dbAdapter.getProfile(user.id)
       
-      if (profileError && profileError.code !== 'PGRST116') throw profileError
+      if (profileError) throw profileError
 
       const settings = profileData?.settings || {}
 
@@ -130,9 +122,8 @@ export function useCloudSync() {
   }
 
   const pushData = async (moduleKey: string, data: any) => {
-    if (!supabase) return
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.user) return
+    const user = authAdapter.user.value
+    if (!user) return
 
     // Debounce
     if (debounceTimers[moduleKey]) {
@@ -141,20 +132,11 @@ export function useCloudSync() {
 
     const timerId = window.setTimeout(async () => {
       try {
-        if (!supabase) return 
-        
         // Check if this key belongs to Profile Settings
         const profileKeys = ['theme', 'locale', 'boss-key', 'calendar-region', 'danmaku-enabled']
         
         if (profileKeys.includes(moduleKey)) {
           // Update Profile Settings (Merge)
-          // First, we need to know the current structure or just update the specific field using JSONB update
-          // But Supabase simple update overwrites the column. 
-          // Better to fetch current settings or use a stored procedure, 
-          // OR, since we are client-side, we assume we want to patch the JSON.
-          
-          // A simple approach: 
-          // 1. Map moduleKey to settings property name
           const propMap: Record<string, string> = {
             'theme': 'theme',
             'locale': 'locale',
@@ -166,32 +148,20 @@ export function useCloudSync() {
 
           if (propName) {
             // 2. Smart update
-            const { data: currentProfile } = await supabase
-              .from('profiles')
-              .select('settings')
-              .eq('id', session.user.id)
-              .single()
+            const { data: currentProfile } = await dbAdapter.getProfile(user.id)
               
             const currentSettings = currentProfile?.settings || {}
-            // Explicitly cast currentSettings to any or defined type to avoid TS issues with index signature
             const newSettings = { ...currentSettings, [propName]: data }
             
-            await supabase
-              .from('profiles')
-              .update({ settings: newSettings, updated_at: new Date().toISOString() })
-              .eq('id', session.user.id)
+            await dbAdapter.updateProfile(user.id, {
+              settings: newSettings,
+              updated_at: new Date().toISOString()
+            })
           }
 
         } else {
           // It's Game Data
-          await supabase
-            .from('user_game_data')
-            .upsert({
-              user_id: session.user.id,
-              module_key: moduleKey,
-              data: data,
-              synced_at: new Date().toISOString()
-            }, { onConflict: 'user_id, module_key' })
+          await dbAdapter.syncGameData(user.id, moduleKey, data)
         }
 
         lastSyncTime.value = Date.now()
@@ -206,23 +176,8 @@ export function useCloudSync() {
   }
 
   const clearLocalData = () => {
-    // List of keys managed by CloudSync
-    const managedKeys = [
-      'pixel-fishing-data',
-      'moyu-virtual-pet-v3',
-      'moyu-theme-id',
-      'moyu-locale',
-      'moyu-boss-key-settings',
-      'moyu-calendar-region',
-      'moyu-danmaku-enabled',
-      'moyu-pomodoro-settings',
-      'moyu-pomodoro-stats',
-      'moyu-pomodoro-mixes',
-      'selectedSound',
-      'favoriteSounds'
-    ]
-    
-    managedKeys.forEach(key => localStorage.removeItem(key))
+    // Clear all local storage to ensure auth tokens (CloudBase/Supabase) are also removed
+    localStorage.clear()
     window.dispatchEvent(new Event('storage'))
     
     // A page reload is the cleanest way to reset app state after logout.

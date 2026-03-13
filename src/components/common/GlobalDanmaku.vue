@@ -180,7 +180,7 @@ function processPendingMessages() {
     if (message) {
       addDanmaku(message.content, {
         emoji: message.emoji,
-        userName: message.userName,
+        userName: message.user_name,
         isUser: true,
         textColor: message.textColor,
         backgroundColor: message.backgroundColor

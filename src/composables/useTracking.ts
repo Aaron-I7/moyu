@@ -1,5 +1,5 @@
 import { onMounted, onUnmounted } from 'vue'
-import { supabase } from '@/core/supabase/client'
+import { dbAdapter, authAdapter } from '@/core/adapter'
 
 export function useTracking() {
   const getSessionId = () => {
@@ -17,24 +17,15 @@ export function useTracking() {
       console.log('📊 [Tracking]', event, properties)
     }
 
-    // If Supabase is configured, send to analytics_events table
-    if (supabase) {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        
-        const { error } = await supabase.from('analytics_events').insert({
-          event_name: event,
-          properties: properties || {},
-          url: window.location.pathname,
-          session_id: getSessionId(),
-          user_id: user?.id || null
-        })
-        if (error) {
-          if (import.meta.env.DEV) console.warn('Supabase analytics error:', error)
-        }
-      } catch (e) {
-        if (import.meta.env.DEV) console.error('Failed to send tracking data:', e)
-      }
+    try {
+      const user = authAdapter.user.value
+      await dbAdapter.logEvent(event, properties || {}, {
+        url: window.location.pathname,
+        sessionId: getSessionId(),
+        userId: user?.id || null
+      })
+    } catch (e) {
+      if (import.meta.env.DEV) console.error('Failed to send tracking data:', e)
     }
   }
 

@@ -6,6 +6,7 @@ import { Icon } from '@iconify/vue'
 import BossKeySettings from '@/components/common/BossKeySettings.vue'
 import SharePanel from '@/components/common/SharePanel.vue'
 import AuthModal from '@/components/auth/AuthModal.vue'
+import UserProfileModal from '@/components/auth/UserProfileModal.vue'
 import { useBossKeyStore } from '@/stores/bossKey'
 import { availableLocales, localeMetaMap, setLocale, type AppLocale } from '@/core/i18n'
 import { useAuth } from '@/composables/useAuth'
@@ -27,6 +28,7 @@ const showLocaleMenu = ref(false)
 const showShareMenu = ref(false)
 const showAuthModal = ref(false)
 const showUserMenu = ref(false)
+const showProfileModal = ref(false)
 const isMobileMenuOpen = ref(false)
 const localePrefixRegex = /^\/(en|zh)(?=\/|$)/
 
@@ -170,6 +172,11 @@ const handleLogout = async () => {
   await logout()
 }
 
+const openProfileModal = () => {
+  showUserMenu.value = false
+  showProfileModal.value = true
+}
+
 // Stop propagation for dropdown toggles
 const toggleLocale = (e: Event) => {
   e.stopPropagation()
@@ -306,10 +313,13 @@ onUnmounted(() => {
                   <span class="status">Online</span>
                 </div>
               </div>
-              <div class="menu-divider" />
+              <div class="menu-item profile-item" @click="openProfileModal">
+                <Icon icon="mdi:account-cog-outline" width="16" />
+                <span>{{ t('profile.title') }}</span>
+              </div>
               <div class="menu-item" @click="handleLogout">
                 <Icon icon="mdi:logout" width="16" />
-                <span>Logout</span>
+                <span>{{ t('header.logout') }}</span>
               </div>
             </div>
           </Transition>
@@ -351,6 +361,7 @@ onUnmounted(() => {
     />
     
     <AuthModal :show="showAuthModal" @close="showAuthModal = false" />
+    <UserProfileModal :show="showProfileModal" @close="showProfileModal = false" />
   </header>
 </template>
 
@@ -634,6 +645,10 @@ onUnmounted(() => {
         background: var(--color-background);
         color: var(--color-error);
       }
+    }
+
+    .menu-item.profile-item:hover {
+      color: var(--color-primary);
     }
   }
 
