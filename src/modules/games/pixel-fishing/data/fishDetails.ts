@@ -1,7 +1,7 @@
 import type { Fish } from '../types'
 
 function getImageUrl(fishId: string): string {
-  return `/fish-images/${fishId}.png`
+  return `/fish-images/${fishId}.webp`
 }
 
 export const FISH_DETAILS: Record<string, Partial<Fish>> = {

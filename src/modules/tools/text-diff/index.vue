@@ -168,6 +168,11 @@ function downloadResult() {
 
       <div class="panel result-area">
         <div class="status">{{ notice || t(`tools.textDiff.state.${state}`) }}</div>
+        <div v-if="rows.length > 0" class="summary-row">
+          <div class="summary-pill add">+ {{ summary.add }}</div>
+          <div class="summary-pill remove">- {{ summary.remove }}</div>
+          <div class="summary-pill same">= {{ summary.same }}</div>
+        </div>
         <div v-if="rows.length > 0" class="diff-list">
           <div v-for="(row, idx) in rows" :key="`${idx}-${row.type}`" class="diff-row" :data-type="row.type">
             <div class="line">{{ row.left }}</div>
@@ -183,6 +188,35 @@ function downloadResult() {
 .page {
   min-height: 100%;
   padding-top: 56px;
+  position: relative;
+  overflow: hidden;
+}
+
+.page::before,
+.page::after {
+  content: '';
+  position: fixed;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 50%;
+  filter: blur(48px);
+  opacity: 0.32;
+}
+
+.page::before {
+  width: 320px;
+  height: 320px;
+  top: 80px;
+  right: -80px;
+  background: #14b8a6;
+}
+
+.page::after {
+  width: 280px;
+  height: 280px;
+  bottom: -80px;
+  left: -70px;
+  background: #f97316;
 }
 
 .page-inner {
@@ -191,6 +225,8 @@ function downloadResult() {
   padding: 20px 12px 28px;
   display: grid;
   gap: 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .panel {
@@ -199,11 +235,24 @@ function downloadResult() {
   background: color-mix(in srgb, var(--color-surface) 92%, transparent);
   box-shadow: var(--shadow);
   padding: 14px;
+  backdrop-filter: blur(8px);
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+}
+
+.header {
+  padding: 18px;
+  border-color: color-mix(in srgb, var(--color-primary) 42%, var(--color-border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-primary) 22%, var(--color-surface)),
+    color-mix(in srgb, var(--color-surface) 92%, transparent)
+  );
 }
 
 .header h1 {
   margin: 0 0 6px;
-  font-size: 28px;
+  font-size: 30px;
+  letter-spacing: 0.2px;
   color: var(--color-text);
 }
 
@@ -237,6 +286,13 @@ function downloadResult() {
   color: var(--color-text);
   padding: 10px 12px;
   resize: vertical;
+  transition: var(--transition);
+}
+
+.editor textarea:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--color-primary) 55%, var(--color-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
 }
 
 .action-row {
@@ -244,6 +300,8 @@ function downloadResult() {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--color-border);
 }
 
 .btn {
@@ -251,12 +309,19 @@ function downloadResult() {
   background: var(--color-surface);
   color: var(--color-text);
   border-radius: 10px;
-  height: 34px;
+  height: 38px;
   padding: 0 12px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  transition: var(--transition);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--color-primary) 22%, transparent);
 }
 
 .btn.primary {
@@ -270,10 +335,41 @@ function downloadResult() {
   margin-bottom: 8px;
 }
 
+.summary-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.summary-pill {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.summary-pill.add {
+  border-color: color-mix(in srgb, #16a34a 45%, var(--color-border));
+  color: #16a34a;
+}
+
+.summary-pill.remove {
+  border-color: color-mix(in srgb, #dc2626 45%, var(--color-border));
+  color: #dc2626;
+}
+
+.summary-pill.same {
+  color: var(--color-text-secondary);
+}
+
 .diff-list {
   border: 1px solid var(--color-border);
   border-radius: 10px;
   overflow: hidden;
+  max-height: 460px;
+  overflow: auto;
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
 }
 
 .diff-row {

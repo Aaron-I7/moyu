@@ -120,11 +120,11 @@ function downloadResult() {
 
       <div class="panel option-area">
         <div class="option-grid">
-          <label><input v-model="options.trimLine" type="checkbox"> {{ t('tools.textFormatter.options.trimLine') }}</label>
-          <label><input v-model="options.collapseBlankLines" type="checkbox"> {{ t('tools.textFormatter.options.blankLine') }}</label>
-          <label><input v-model="options.normalizePunctuation" type="checkbox"> {{ t('tools.textFormatter.options.punctuation') }}</label>
-          <label><input v-model="options.toUppercase" type="checkbox"> {{ t('tools.textFormatter.options.uppercase') }}</label>
-          <label><input v-model="options.toLowercase" type="checkbox"> {{ t('tools.textFormatter.options.lowercase') }}</label>
+          <label class="option-item"><input v-model="options.trimLine" type="checkbox"> {{ t('tools.textFormatter.options.trimLine') }}</label>
+          <label class="option-item"><input v-model="options.collapseBlankLines" type="checkbox"> {{ t('tools.textFormatter.options.blankLine') }}</label>
+          <label class="option-item"><input v-model="options.normalizePunctuation" type="checkbox"> {{ t('tools.textFormatter.options.punctuation') }}</label>
+          <label class="option-item"><input v-model="options.toUppercase" type="checkbox"> {{ t('tools.textFormatter.options.uppercase') }}</label>
+          <label class="option-item"><input v-model="options.toLowercase" type="checkbox"> {{ t('tools.textFormatter.options.lowercase') }}</label>
         </div>
         <div class="action-row">
           <button class="btn primary" @click="formatText">
@@ -160,6 +160,35 @@ function downloadResult() {
 .page {
   min-height: 100%;
   padding-top: 56px;
+  position: relative;
+  overflow: hidden;
+}
+
+.page::before,
+.page::after {
+  content: '';
+  position: fixed;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 50%;
+  filter: blur(56px);
+  opacity: 0.3;
+}
+
+.page::before {
+  width: 320px;
+  height: 320px;
+  top: 88px;
+  left: -90px;
+  background: #14b8a6;
+}
+
+.page::after {
+  width: 290px;
+  height: 290px;
+  bottom: -70px;
+  right: -90px;
+  background: #f59e0b;
 }
 
 .page-inner {
@@ -168,6 +197,8 @@ function downloadResult() {
   padding: 20px 12px 28px;
   display: grid;
   gap: 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .panel {
@@ -176,11 +207,23 @@ function downloadResult() {
   background: color-mix(in srgb, var(--color-surface) 92%, transparent);
   box-shadow: var(--shadow);
   padding: 14px;
+  backdrop-filter: blur(8px);
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+}
+
+.header {
+  padding: 18px;
+  border-color: color-mix(in srgb, var(--color-primary) 42%, var(--color-border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-primary) 20%, var(--color-surface)),
+    color-mix(in srgb, var(--color-surface) 92%, transparent)
+  );
 }
 
 .header h1 {
   margin: 0 0 6px;
-  font-size: 28px;
+  font-size: 30px;
   color: var(--color-text);
 }
 
@@ -203,11 +246,26 @@ function downloadResult() {
   gap: 6px;
 }
 
+.option-item {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+  transition: var(--transition);
+}
+
+.option-item:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+  transform: translateY(-1px);
+}
+
 .action-row {
   margin-top: 10px;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--color-border);
 }
 
 .btn {
@@ -215,12 +273,19 @@ function downloadResult() {
   background: var(--color-surface);
   color: var(--color-text);
   border-radius: 10px;
-  height: 34px;
+  height: 38px;
   padding: 0 12px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  transition: var(--transition);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--color-primary) 22%, transparent);
 }
 
 .btn.primary {
@@ -253,6 +318,13 @@ function downloadResult() {
   color: var(--color-text);
   padding: 10px 12px;
   resize: vertical;
+  transition: var(--transition);
+}
+
+.editor textarea:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--color-primary) 55%, var(--color-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
 }
 
 .foot {
@@ -261,12 +333,15 @@ function downloadResult() {
   gap: 12px;
   color: var(--color-text-secondary);
   font-size: 13px;
+  border-top: 1px dashed var(--color-border);
+  padding-top: 10px;
 }
 
 [data-theme='pixel'] {
   .panel,
   .editor textarea,
-  .btn {
+  .btn,
+  .option-item {
     border-radius: 0;
     border-width: 2px;
   }

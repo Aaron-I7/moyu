@@ -167,8 +167,8 @@ export const usePetStore = defineStore('virtual-pet', {
   },
 
   actions: {
-    _timer: null as ReturnType<typeof setInterval> | null,
-    _moyuTimer: null as ReturnType<typeof setInterval> | null,
+    _timer: null as number | null,
+    _moyuTimer: null as number | null,
 
     addInteraction(action: string, detail?: string) {
       this.interactions.push({
