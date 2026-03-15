@@ -12,7 +12,8 @@ export default defineConfig(() => {
   const normalizedPagesBase = pagesBase.endsWith('/') ? pagesBase : `${pagesBase}/`
 
   const isGitHubActions = process.env.GITHUB_ACTIONS === 'true'
-  const base = isGitHubActions ? normalizedPagesBase : '/'
+  const isCloudflarePages = process.env.CF_PAGES === '1'
+  const base = isCloudflarePages ? '/' : (isGitHubActions ? normalizedPagesBase : '/')
 
   return {
     base,
