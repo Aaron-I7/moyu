@@ -27,8 +27,6 @@ const { t, locale } = useI18n({ useScope: 'global' })
 const isEn = () => locale.value === 'en'
 
 const {
-  isConnected,
-  onlineCount,
   receivedMessages,
   danmakuEnabled,
   loadDanmakuEnabled
@@ -271,14 +269,13 @@ onUnmounted(() => {
       </TransitionGroup>
 
       <div class="danmaku-controls">
-        <button
-          v-if="isConnected"
-          class="control-btn control-btn--online"
-          :title="t('danmakuPanel.online', { count: onlineCount })"
-        >
-          <span class="online-dot" />
-          <span>{{ onlineCount }}</span>
-        </button>
+          <button
+            class="control-btn close-btn"
+            :title="isEn() ? 'Close Danmaku' : '关闭弹幕'"
+            @click="danmakuEnabled = false"
+          >
+            <span>✕</span>
+          </button>
         
         <button
           class="control-btn"
@@ -481,54 +478,30 @@ onUnmounted(() => {
 }
 
 .control-btn {
-  width: 32px;
-  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--color-text-secondary);
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s ease;
-  backdrop-filter: blur(10px);
   
   &:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.3);
-    transform: scale(1.1);
+    background: var(--color-background);
+    border-color: var(--color-border);
+    color: var(--color-text);
   }
   
-  &:active {
-    transform: scale(0.95);
-  }
-  
-  &--close:hover {
-    background: rgba(255, 77, 77, 0.3);
+  &.close-btn:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
     border-color: rgba(255, 77, 77, 0.5);
   }
-  
-  &--online {
-    font-size: 12px;
-    gap: 4px;
-    width: auto;
-    padding: 0 12px;
-  }
-}
-
-.online-dot {
-  width: 8px;
-  height: 8px;
-  background: #10B981;
-  border-radius: 50%;
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(0.9); }
 }
 
 .danmaku-fade-enter-active,

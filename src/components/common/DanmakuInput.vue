@@ -13,7 +13,6 @@ const { nickname } = useAuth()
 const {
   isConnected,
   isConnecting,
-  onlineCount,
   danmakuHistory,
   connect,
   sendDanmaku,
@@ -36,12 +35,6 @@ const emojis = ['💬', '😄', '🎉', '💡', '🐟', '☕', '🎮', '📚', '
 
 const canSend = computed(() => {
   return isConnected.value && inputText.value.trim().length > 0
-})
-
-const connectionStatus = computed(() => {
-  if (isConnecting.value) return { text: t('danmakuPanel.connecting'), color: '#FFA500' }
-  if (isConnected.value) return { text: t('danmakuPanel.online', { count: onlineCount.value }), color: '#10B981' }
-  return { text: t('danmakuPanel.offline'), color: '#EF4444' }
 })
 
 const sortedHistory = computed(() => {
@@ -186,11 +179,6 @@ watch(nickname, (newName) => {
       </div>
 
       <div v-else class="input-section">
-        <div class="connection-status">
-          <div class="status-dot" :style="{ background: connectionStatus.color }" />
-          <span class="status-text">{{ connectionStatus.text }}</span>
-        </div>
-
         <div v-if="!isConnected && !isConnecting" class="connect-section">
           <button class="connect-btn" @click="handleConnect">
             <span>🔗</span>
@@ -537,32 +525,6 @@ watch(nickname, (newName) => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.connection-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 8px;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.status-text {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.75);
 }
 
 .connect-section {

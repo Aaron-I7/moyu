@@ -594,7 +594,6 @@ export class CloudBaseRealtimeAdapter implements RealtimeAdapter {
   onlineCount = ref(0)
   private timer: any = null
   private danmakuCallback: ((msg: DanmakuMessage) => void) | null = null
-  private lastFetchTime: string = new Date().toISOString()
 
   async connect() {
     if (this.timer) return
@@ -604,30 +603,24 @@ export class CloudBaseRealtimeAdapter implements RealtimeAdapter {
     this.timer = setInterval(async () => {
       await this.pollNewMessages()
     }, 3000)
-    
-    this.onlineCount.value = 1 
   }
 
   async pollNewMessages() {
     if (!this.danmakuCallback) return
     try {
+      // 每次获取最新的 30 条弹幕，依赖前端 useRealtimeDanmaku 内部的根据 id 和内容去重机制
+      // 这样可以避免各客户端本地时间不一致导致的 created_at 游标失效问题
       // @ts-ignore
       const { data } = await app.models.danmaku_messages.list({
-        filter: {
-          where: {
-            created_at: { $gt: this.lastFetchTime }
-          }
-        },
-        orderBy: [{ created_at: 'asc' }],
-        pageSize: 100
+        filter: { where: {} },
+        orderBy: [{ created_at: 'desc' }],
+        pageSize: 30
       })
 
       if (data && data.records && data.records.length > 0) {
-        // Update last fetch time to the last message's time
-        const lastMsg = data.records[data.records.length - 1]
-        this.lastFetchTime = lastMsg.created_at
-
-        data.records.forEach((row: any) => {
+        // 倒序恢复为时间正序
+        const records = [...data.records].reverse()
+        records.forEach((row: any) => {
            const msg = this.mapRowToMessage(row)
            if (this.danmakuCallback) {
              this.danmakuCallback(msg)

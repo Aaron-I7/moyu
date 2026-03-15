@@ -123,13 +123,11 @@ function pushReceivedMessage(message: DanmakuMessage, persistHistory = true) {
   if (receivedMessages.value.some(item => item.id === message.id)) return
   
   // Dedup logic based on content/time/user
-  // message.timestamp might be string in DB adapter return?
-  // Types says string. I should convert to number for comparison.
   const msgTime = normalizeTimestamp(message.created_at)
   
   if (receivedMessages.value.some(item => 
     item.content === message.content && 
-    Math.abs(normalizeTimestamp(item.created_at) - msgTime) < 500 &&
+    Math.abs(normalizeTimestamp(item.created_at) - msgTime) < 10000 &&
     item.user_id === message.user_id
   )) return
 
