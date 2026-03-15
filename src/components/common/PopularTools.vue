@@ -24,12 +24,12 @@ const tools = computed(() => [
     path: '/tools/pomodoro'
   },
   {
-    id: 'memo',
-    name: t('tools.memo.title'),
-    desc: t('tools.memo.desc'),
-    icon: 'mdi:calendar-edit',
+    id: 'text-workbench',
+    name: t('tools.textWorkbench.title'),
+    desc: t('tools.textWorkbench.desc'),
+    icon: 'mdi:text-box-multiple-outline',
     color: '#4ECDC4',
-    path: '/tools/memo'
+    path: '/tools/text-workbench'
   },
   {
     id: 'noise',

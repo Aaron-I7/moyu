@@ -25,6 +25,14 @@ const games = computed(() => [
     icon: 'mdi:numeric-24-box-outline',
     color: '#F59E0B',
     path: '/games/math-24'
+  },
+  {
+    id: 'focus-100',
+    name: t('modules.focus100.name'),
+    desc: t('modules.focus100.description'),
+    icon: 'mdi:numeric-10-box-multiple-outline',
+    color: '#10B981',
+    path: '/games/focus-100'
   }
 ])
 
