@@ -41,10 +41,11 @@ if (provider === 'cloudbase') {
 }
 
 // Initialize auth immediately
-authAdapter.init()
+const authReady = authAdapter.init()
 
 export {
   authAdapter,
+  authReady,
   dbAdapter,
   realtimeAdapter,
   functionAdapter,

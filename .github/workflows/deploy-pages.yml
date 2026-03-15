@@ -46,6 +46,12 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_SUPABASE_DANMAKU_TABLE: ${{ secrets.VITE_SUPABASE_DANMAKU_TABLE }}
+          VITE_DB_PROVIDER: ${{ secrets.VITE_DB_PROVIDER }}
+          VITE_DASHBOARD_ADMIN_EMAIL: ${{ secrets.VITE_DASHBOARD_ADMIN_EMAIL }}
+          VITE_DASHBOARD_ADMIN_ID: ${{ secrets.VITE_DASHBOARD_ADMIN_ID }}
+          VITE_CLOUDBASE_ENV_ID: ${{ secrets.VITE_CLOUDBASE_ENV_ID }}
+          VITE_CLOUDBASE_REGION: ${{ secrets.VITE_CLOUDBASE_REGION }}
+          VITE_CLOUDBASE_ACCESS_KEY: ${{ secrets.VITE_CLOUDBASE_ACCESS_KEY }}
 
       - name: SPA fallback
         run: cp dist/index.html dist/404.html
