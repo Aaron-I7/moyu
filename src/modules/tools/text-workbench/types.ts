@@ -1,4 +1,12 @@
-export type TabKey = 'diff' | 'formatter' | 'dedupe' | 'replace'
+export type TabKey =
+  | 'diff'
+  | 'formatter'
+  | 'dedupe'
+  | 'replace'
+  | 'structured'
+  | 'base64'
+  | 'urlCodec'
+  | 'unicodeEscape'
 
 export type ProcessState = 'idle' | 'processing' | 'success' | 'empty' | 'error'
 

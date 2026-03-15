@@ -3,31 +3,47 @@ import { applyRouteSeo } from '@/core/seo'
 import { i18n, setLocale, defaultLocale, type AppLocale } from '@/core/i18n'
 import { useTracking } from '@/composables/useTracking'
 import { supabase } from '@/core/supabase/client'
+import { authAdapter, provider } from '@/core/adapter'
 
 const localeRegex = /^\/(en|zh)(?=\/|$)/
+const dashboardAdminEmail = String(import.meta.env.VITE_DASHBOARD_ADMIN_EMAIL || 'admin@moyu.com').toLowerCase()
+const dashboardAdminId = String(import.meta.env.VITE_DASHBOARD_ADMIN_ID || '')
 
 export function setupRouterGuards(router: Router): void {
   const { track } = useTracking()
 
   router.beforeEach(async to => {
-    // 检查管理员权限
     if (to.meta.requiresAdmin) {
-      if (!supabase) return { path: '/' }
-      
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
+      let userId = authAdapter.user.value?.id || ''
+      let userEmail = String(authAdapter.user.value?.email || '').toLowerCase()
+      if (!userId && provider === 'supabase' && supabase) {
+        const {
+          data: { session }
+        } = await supabase.auth.getSession()
+        userId = session?.user?.id || ''
+        userEmail = String(session?.user?.email || '').toLowerCase()
+      }
+
+      if (!userId) {
         return { path: '/', query: { login: 'true', redirect: to.fullPath } }
       }
-      
+
+      const isMatchedAdmin = dashboardAdminId ? userId === dashboardAdminId : userEmail === dashboardAdminEmail
+      if (!isMatchedAdmin) {
+        return { path: '/' }
+      }
+
+      if (provider !== 'supabase' || !supabase) {
+        return
+      }
+
       const { data: profile } = await supabase
         .from('profiles')
         .select('role')
-        .eq('id', session.user.id)
+        .eq('id', userId)
         .single()
-        
+
       if (profile?.role !== 'admin') {
-        // Logged in but not admin
-        // Ideally show an error message, but for now redirect home
         return { path: '/' }
       }
     }

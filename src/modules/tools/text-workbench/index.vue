@@ -6,6 +6,10 @@ import TextDiffPanel from './components/TextDiffPanel.vue'
 import TextFormatterPanel from './components/TextFormatterPanel.vue'
 import TextDedupePanel from './components/TextDedupePanel.vue'
 import TextBatchReplacePanel from './components/TextBatchReplacePanel.vue'
+import TextStructuredPanel from './components/TextStructuredPanel.vue'
+import TextBase64Panel from './components/TextBase64Panel.vue'
+import TextUrlCodecPanel from './components/TextUrlCodecPanel.vue'
+import TextUnicodeEscapePanel from './components/TextUnicodeEscapePanel.vue'
 import type { TabKey } from './types'
 
 const { t } = useI18n({ useScope: 'global' })
@@ -15,7 +19,11 @@ const tabs = computed(() => [
   { key: 'diff' as const, label: t('tools.textWorkbench.tabs.diff'), icon: 'mdi:file-compare' },
   { key: 'formatter' as const, label: t('tools.textWorkbench.tabs.formatter'), icon: 'mdi:text-box-edit-outline' },
   { key: 'dedupe' as const, label: t('tools.textWorkbench.tabs.dedupe'), icon: 'mdi:filter-variant-remove' },
-  { key: 'replace' as const, label: t('tools.textWorkbench.tabs.replace'), icon: 'mdi:find-replace' }
+  { key: 'replace' as const, label: t('tools.textWorkbench.tabs.replace'), icon: 'mdi:find-replace' },
+  { key: 'structured' as const, label: t('tools.textWorkbench.tabs.structured'), icon: 'mdi:file-tree-outline' },
+  { key: 'base64' as const, label: t('tools.textWorkbench.tabs.base64'), icon: 'mdi:shield-key-outline' },
+  { key: 'urlCodec' as const, label: t('tools.textWorkbench.tabs.urlCodec'), icon: 'mdi:link-variant' },
+  { key: 'unicodeEscape' as const, label: t('tools.textWorkbench.tabs.unicodeEscape'), icon: 'mdi:code-braces' }
 ])
 </script>
 
@@ -36,7 +44,11 @@ const tabs = computed(() => [
       <TextDiffPanel v-if="activeTab === 'diff'" />
       <TextFormatterPanel v-else-if="activeTab === 'formatter'" />
       <TextDedupePanel v-else-if="activeTab === 'dedupe'" />
-      <TextBatchReplacePanel v-else />
+      <TextBatchReplacePanel v-else-if="activeTab === 'replace'" />
+      <TextStructuredPanel v-else-if="activeTab === 'structured'" />
+      <TextBase64Panel v-else-if="activeTab === 'base64'" />
+      <TextUrlCodecPanel v-else-if="activeTab === 'urlCodec'" />
+      <TextUnicodeEscapePanel v-else />
     </div>
   </div>
 </template>

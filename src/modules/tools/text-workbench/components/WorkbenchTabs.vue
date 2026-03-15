@@ -38,6 +38,7 @@ const emit = defineEmits<{
 
 .tab-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 

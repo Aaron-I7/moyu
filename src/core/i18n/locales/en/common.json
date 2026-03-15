@@ -91,7 +91,137 @@
         "diff": "Text Diff",
         "formatter": "Text Formatter",
         "dedupe": "Text Dedupe",
-        "replace": "Batch Replace"
+        "replace": "Batch Replace",
+        "structured": "Structured Transform",
+        "base64": "Base64 Codec",
+        "urlCodec": "URL Codec",
+        "unicodeEscape": "Unicode & Escape"
+      }
+    },
+    "textStructured": {
+      "title": "Structured Text Transform",
+      "run": "Run Transform",
+      "reset": "Reset",
+      "copy": "Copy Result",
+      "download": "Download Result",
+      "source": "Input Text",
+      "result": "Output Text",
+      "sourcePlaceholder": "Paste JSON / YAML / TOML text...",
+      "resultPlaceholder": "Result appears here after transform...",
+      "modeLabel": "Mode",
+      "indentLabel": "JSON Indent",
+      "empty": "Please enter text first.",
+      "done": "Done with {chars} output characters.",
+      "error": "Process failed. Please check input format.",
+      "copied": "Result copied.",
+      "copyFailed": "Copy failed. Please copy manually.",
+      "stats": "Input {sourceChars} chars / Output {resultChars} chars",
+      "modes": {
+        "jsonFormat": "Format JSON",
+        "jsonMinify": "Minify JSON",
+        "jsonToYaml": "JSON to YAML",
+        "yamlToJson": "YAML to JSON",
+        "jsonToToml": "JSON to TOML",
+        "tomlToJson": "TOML to JSON"
+      },
+      "state": {
+        "idle": "Ready",
+        "processing": "Processing...",
+        "success": "Completed",
+        "empty": "No content to process",
+        "error": "Process failed"
+      }
+    },
+    "textBase64": {
+      "title": "Base64 Codec",
+      "run": "Run",
+      "reset": "Reset",
+      "copy": "Copy Result",
+      "download": "Download Result",
+      "source": "Input Text",
+      "result": "Output Text",
+      "sourcePlaceholder": "Paste plain text or Base64 content...",
+      "resultPlaceholder": "Result appears here after processing...",
+      "modeLabel": "Mode",
+      "empty": "Please enter text first.",
+      "done": "Done with {chars} output characters.",
+      "error": "Process failed. Please check Base64 content.",
+      "copied": "Result copied.",
+      "copyFailed": "Copy failed. Please copy manually.",
+      "modes": {
+        "encode": "Text to Base64",
+        "decode": "Base64 to Text"
+      },
+      "options": {
+        "urlSafe": "Use URL-safe Base64",
+        "stripPadding": "Remove trailing padding ="
+      },
+      "state": {
+        "idle": "Ready",
+        "processing": "Processing...",
+        "success": "Completed",
+        "empty": "No content to process",
+        "error": "Process failed"
+      }
+    },
+    "textUrlCodec": {
+      "title": "URL Codec",
+      "run": "Run",
+      "reset": "Reset",
+      "copy": "Copy Result",
+      "download": "Download Result",
+      "source": "Input Text",
+      "result": "Output Text",
+      "sourcePlaceholder": "Paste URL, query, or path fragment...",
+      "resultPlaceholder": "Result appears here after processing...",
+      "modeLabel": "Mode",
+      "empty": "Please enter text first.",
+      "done": "Done with {chars} output characters.",
+      "error": "Process failed. Please check encoded URL content.",
+      "copied": "Result copied.",
+      "copyFailed": "Copy failed. Please copy manually.",
+      "modes": {
+        "encodeUri": "encodeURI",
+        "encodeUriComponent": "encodeURIComponent",
+        "decodeUri": "decodeURI",
+        "decodeUriComponent": "decodeURIComponent"
+      },
+      "state": {
+        "idle": "Ready",
+        "processing": "Processing...",
+        "success": "Completed",
+        "empty": "No content to process",
+        "error": "Process failed"
+      }
+    },
+    "textUnicodeEscape": {
+      "title": "Unicode & Escape Transform",
+      "run": "Run",
+      "reset": "Reset",
+      "copy": "Copy Result",
+      "download": "Download Result",
+      "source": "Input Text",
+      "result": "Output Text",
+      "sourcePlaceholder": "Paste plain text or escaped text...",
+      "resultPlaceholder": "Result appears here after processing...",
+      "modeLabel": "Mode",
+      "empty": "Please enter text first.",
+      "done": "Done with {chars} output characters.",
+      "error": "Process failed. Please check escape format.",
+      "copied": "Result copied.",
+      "copyFailed": "Copy failed. Please copy manually.",
+      "modes": {
+        "unicodeEscape": "Text to Unicode",
+        "unicodeUnescape": "Unicode to Text",
+        "jsonEscape": "Text to JSON Escape",
+        "jsonUnescape": "JSON Escape to Text"
+      },
+      "state": {
+        "idle": "Ready",
+        "processing": "Processing...",
+        "success": "Completed",
+        "empty": "No content to process",
+        "error": "Process failed"
       }
     },
     "textDedupe": {
