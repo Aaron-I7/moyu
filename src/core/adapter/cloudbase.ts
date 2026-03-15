@@ -11,25 +11,36 @@ import type {
   VentPost
 } from './types'
 
+const provider = import.meta.env.VITE_DB_PROVIDER || 'supabase'
 const envId = import.meta.env.VITE_CLOUDBASE_ENV_ID
 const region = import.meta.env.VITE_CLOUDBASE_REGION || 'ap-shanghai'
 const accessKey = import.meta.env.VITE_CLOUDBASE_ACCESS_KEY
 
-if (!envId) {
-  console.warn('VITE_CLOUDBASE_ENV_ID is not set')
+let app: any = null
+let auth: any = null
+
+function ensureCloudbaseClient() {
+  if (app && auth) return
+  const initOptions: any = {
+    region,
+    timeout: 60000,
+    auth: {
+      detectSessionInUrl: true
+    }
+  }
+  if (envId) {
+    initOptions.env = envId
+  }
+  if (accessKey) {
+    initOptions.accessKey = accessKey
+  }
+  app = cloudbase.init(initOptions)
+  auth = app.auth({ persistence: 'local' })
 }
 
-const app = cloudbase.init({
-  env: envId,
-  region,
-  accessKey,
-  timeout: 60000, // 全局请求超时设置为 60s
-  auth: {
-    detectSessionInUrl: true
-  }
-})
-
-const auth = app.auth({ persistence: 'local' })
+if (provider === 'cloudbase' && !envId) {
+  console.warn('VITE_CLOUDBASE_ENV_ID is not set')
+}
 
 // --- Auth Adapter ---
 export class CloudBaseAuthAdapter implements AuthAdapter {
@@ -39,6 +50,10 @@ export class CloudBaseAuthAdapter implements AuthAdapter {
   private otpVerifierMap = new Map<string, (params: { token: string; messageId?: string }) => Promise<any>>()
   private registerOtpVerifierMap = new Map<string, (params: { token: string; messageId?: string }) => Promise<any>>()
   private resetPasswordUpdaterMap = new Map<string, (params: { nonce: string; password: string }) => Promise<any>>()
+
+  constructor() {
+    ensureCloudbaseClient()
+  }
 
   async init() {
     const loginState = await auth.getLoginState()
@@ -328,6 +343,10 @@ export class CloudBaseAuthAdapter implements AuthAdapter {
 
 // --- Database Adapter ---
 export class CloudBaseDatabaseAdapter implements DatabaseAdapter {
+  constructor() {
+    ensureCloudbaseClient()
+  }
+
   async getProfile(userId: string) {
     try {
       // @ts-ignore
@@ -595,6 +614,10 @@ export class CloudBaseRealtimeAdapter implements RealtimeAdapter {
   private timer: any = null
   private danmakuCallback: ((msg: DanmakuMessage) => void) | null = null
 
+  constructor() {
+    ensureCloudbaseClient()
+  }
+
   async connect() {
     if (this.timer) return
     this.isConnected.value = true
@@ -676,6 +699,10 @@ export class CloudBaseRealtimeAdapter implements RealtimeAdapter {
 
 // --- Function Adapter ---
 export class CloudBaseFunctionAdapter implements FunctionAdapter {
+  constructor() {
+    ensureCloudbaseClient()
+  }
+
   async invoke<T = any>(functionName: string, payload?: any, _options?: any) {
     try {
       const state = await auth.getLoginState()
