@@ -119,17 +119,24 @@ function normalizeTimestamp(createdAt?: string | null, fallback = Date.now()) {
   return Number.isNaN(parsed) ? fallback : parsed
 }
 
-function pushReceivedMessage(message: DanmakuMessage, persistHistory = true) {
-  if (receivedMessages.value.some(item => item.id === message.id)) return
-  
-  // Dedup logic based on content/time/user
+function isVentMessage(message: DanmakuMessage) {
+  return message.emoji === 'vent'
+}
+
+function isDuplicateMessageInList(list: DanmakuMessage[], message: DanmakuMessage) {
+  if (list.some(item => item.id === message.id)) return true
   const msgTime = normalizeTimestamp(message.created_at)
-  
-  if (receivedMessages.value.some(item => 
-    item.content === message.content && 
+  return list.some(item =>
+    item.content === message.content &&
     Math.abs(normalizeTimestamp(item.created_at) - msgTime) < 10000 &&
     item.user_id === message.user_id
-  )) return
+  )
+}
+
+function pushReceivedMessage(message: DanmakuMessage, persistHistory = true) {
+  if (isVentMessage(message)) return
+  if (isDuplicateMessageInList(receivedMessages.value, message)) return
+  if (isDuplicateMessageInList(danmakuHistory.value, message)) return
 
   receivedMessages.value.push(message)
   if (persistHistory) addToHistory(message)
@@ -145,7 +152,9 @@ async function loadRecentMessages() {
     return
   }
 
-  receivedMessages.value = data
+  data.forEach((message) => {
+    pushReceivedMessage(message, false)
+  })
 }
 
 function updateOnlineCount() {

@@ -274,6 +274,7 @@ export class SupabaseDatabaseAdapter implements DatabaseAdapter {
       .from('danmaku_messages')
       .select('id, content, emoji, user_id, user_name, created_at')
       .gte('created_at', today.toISOString())
+      .or('emoji.is.null,emoji.neq.vent')
       .order('created_at', { ascending: false })
       .limit(50)
 
@@ -307,11 +308,13 @@ export class SupabaseRealtimeAdapter implements RealtimeAdapter {
     this.channel
       .on('broadcast', { event: 'danmaku' }, (payload: any) => {
         if (this.danmakuCallback && payload.payload) {
+          if (payload.payload.emoji === 'vent') return
           this.danmakuCallback(payload.payload)
         }
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'danmaku_messages' }, (payload: any) => {
         if (this.danmakuCallback && payload.new) {
+          if (payload.new.emoji === 'vent') return
           // Adapt DB row to message
           const msg = this.mapRowToMessage(payload.new)
           this.danmakuCallback(msg)

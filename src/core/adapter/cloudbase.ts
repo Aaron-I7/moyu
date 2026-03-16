@@ -589,7 +589,10 @@ export class CloudBaseDatabaseAdapter implements DatabaseAdapter {
         pageSize: 50
       })
 
-      const messages = (data?.records || []).reverse().map((row: any) => ({
+      const messages = (data?.records || [])
+        .filter((row: any) => row.emoji !== 'vent')
+        .reverse()
+        .map((row: any) => ({
         id: row.id || row._id,
         content: row.content,
         emoji: row.emoji,
@@ -642,7 +645,7 @@ export class CloudBaseRealtimeAdapter implements RealtimeAdapter {
 
       if (data && data.records && data.records.length > 0) {
         // 倒序恢复为时间正序
-        const records = [...data.records].reverse()
+        const records = [...data.records].reverse().filter((row: any) => row.emoji !== 'vent')
         records.forEach((row: any) => {
            const msg = this.mapRowToMessage(row)
            if (this.danmakuCallback) {
