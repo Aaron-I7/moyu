@@ -265,22 +265,29 @@ export class SupabaseDatabaseAdapter implements DatabaseAdapter {
     return { data: vents, error: null }
   }
 
-  async getRecentDanmaku() {
+  async getRecentDanmaku(sinceId?: number) {
     if (!supabase) return { data: [], error: 'Supabase not initialized' }
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    
-    const { data, error } = await supabase
+
+    let query = supabase
       .from('danmaku_messages')
       .select('id, content, emoji, user_id, user_name, created_at')
-      .gte('created_at', today.toISOString())
       .or('emoji.is.null,emoji.neq.vent')
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: true })
       .limit(50)
+
+    if (sinceId !== undefined && sinceId > 0) {
+      query = query.gt('id', sinceId)
+    } else {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      query = query.gte('created_at', today.toISOString())
+    }
+
+    const { data, error } = await query
 
     if (error || !data) return { data: [], error }
 
-    const messages = data.reverse().map((row: any) => ({
+    const messages = data.map((row: any) => ({
       id: String(row.id),
       content: row.content,
       emoji: row.emoji,
@@ -288,8 +295,10 @@ export class SupabaseDatabaseAdapter implements DatabaseAdapter {
       user_name: row.user_name,
       created_at: row.created_at
     }))
-    
-    return { data: messages, error: null }
+
+    const maxId = data.length > 0 ? Math.max(...data.map((r: any) => r.id)) : sinceId
+
+    return { data: messages, maxId, error: null }
   }
 }
 

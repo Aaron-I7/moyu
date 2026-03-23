@@ -10,6 +10,7 @@ export type { DanmakuMessage }
 const STORAGE_KEY = 'moyu-danmaku-user'
 const HISTORY_KEY = 'moyu-danmaku-history'
 const ENABLED_KEY = 'moyu-danmaku-enabled'
+const LAST_ROWID_KEY = 'moyu-danmaku-last-rowid'
 const MAX_HISTORY = 100
 const MAX_RECEIVED = 100
 
@@ -20,7 +21,8 @@ const userName = ref('')
 const userId = ref('')
 const receivedMessages = ref<DanmakuMessage[]>([])
 const danmakuHistory = ref<DanmakuMessage[]>([])
-const danmakuEnabled = ref(true)
+const danmakuEnabled = ref(false)
+const lastRowId = ref<number>(0)
 const sessionTextColor = ref<string | null>(null)
 const sessionBackgroundColor = ref<string | null>(null)
 
@@ -42,6 +44,20 @@ function loadDanmakuEnabled() {
   const stored = localStorage.getItem(ENABLED_KEY)
   if (stored !== null) {
     danmakuEnabled.value = stored === 'true'
+  }
+}
+
+function loadLastRowId() {
+  const stored = localStorage.getItem(LAST_ROWID_KEY)
+  if (stored) {
+    lastRowId.value = parseInt(stored, 10) || 0
+  }
+}
+
+function saveLastRowId(id: number) {
+  if (id > lastRowId.value) {
+    lastRowId.value = id
+    localStorage.setItem(LAST_ROWID_KEY, String(id))
   }
 }
 
@@ -139,6 +155,12 @@ function pushReceivedMessage(message: DanmakuMessage, persistHistory = true) {
   if (isDuplicateMessageInList(danmakuHistory.value, message)) return
 
   receivedMessages.value.push(message)
+
+  const msgId = Number(message.id)
+  if (!isNaN(msgId) && msgId > 0) {
+    saveLastRowId(msgId)
+  }
+
   if (persistHistory) addToHistory(message)
   if (receivedMessages.value.length > MAX_RECEIVED) {
     receivedMessages.value = receivedMessages.value.slice(-50)
@@ -146,7 +168,7 @@ function pushReceivedMessage(message: DanmakuMessage, persistHistory = true) {
 }
 
 async function loadRecentMessages() {
-  const { data, error } = await dbAdapter.getRecentDanmaku()
+  const { data, maxId, error } = await dbAdapter.getRecentDanmaku(lastRowId.value)
 
   if (error || !data) {
     return
@@ -155,6 +177,10 @@ async function loadRecentMessages() {
   data.forEach((message) => {
     pushReceivedMessage(message, false)
   })
+
+  if (maxId !== undefined && maxId > lastRowId.value) {
+    saveLastRowId(maxId)
+  }
 }
 
 function updateOnlineCount() {
@@ -324,12 +350,13 @@ function useLifecycle() {
     if (lifecycleRefCount !== 1) return
 
     loadDanmakuEnabled()
+    loadLastRowId()
     loadHistory()
 
     const onStorage = (event: StorageEvent) => {
       if (event.key === ENABLED_KEY) {
         if (event.newValue === null) {
-          danmakuEnabled.value = true
+          danmakuEnabled.value = false
         } else {
           danmakuEnabled.value = event.newValue === 'true'
         }

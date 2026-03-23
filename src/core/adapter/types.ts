@@ -53,7 +53,7 @@ export interface DatabaseAdapter {
   listVents(limit?: number): Promise<{ data: VentPost[]; error: any }>
   
   // Danmaku History
-  getRecentDanmaku(): Promise<{ data: DanmakuMessage[]; error: any }>
+  getRecentDanmaku(sinceId?: number): Promise<{ data: DanmakuMessage[]; maxId?: number; error: any }>
 }
 
 export interface DanmakuMessage {

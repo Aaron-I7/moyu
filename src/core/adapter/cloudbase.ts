@@ -549,63 +549,47 @@ export class CloudBaseDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
-  async getRecentDanmaku() {
-    // Danmaku on NoSQL for Realtime compatibility
-    // BUT user asked for Relational.
-    // CloudBase Data Model creates a table in MySQL, but we can access it via app.models
-    // Realtime Watch on Data Model is NOT supported in JS SDK yet (only TCB DB).
-    // So we MUST use NoSQL collection for realtime.
-    // However, the user said "弹幕还是存储到了文档型数据库".
-    // This implies they WANT it in Relational (MySQL) via Data Model.
-    // If we switch to Data Model for storage, we lose realtime watch on client side easily.
-    // But we can poll or just accept NoSQL for now?
-    // User complaint: "弹幕还是存储到了文档型数据库" -> They checked console/db and saw it in MongoDB (Doc).
-    // They want it in MySQL (Data Model).
-    
-    // To support Data Model AND Realtime:
-    // 1. Write to Data Model (MySQL).
-    // 2. Read from Data Model (MySQL).
-    // 3. For Realtime: TCB Data Model does not support client-side watch.
-    // We would need to poll or use a different mechanism.
-    // OR, we can double-write? No, that's bad.
-    // OR, we can just use Data Model and sacrifice realtime? No, realtime is key feature.
-    
-    // Compromise: Write to Data Model (as requested).
-    // For Realtime Watch: Since we can't watch Data Model, we might need to rely on
-    // polling or just keep using NoSQL for this specific feature and explain to user?
-    // User specifically listed it as an issue "2、弹幕还是存储到了文档型数据库".
-    // So I MUST switch storage to Data Model.
-    
+  async getRecentDanmaku(sinceId?: number) {
     try {
+      const filter: any = {}
+
+      if (sinceId !== undefined && sinceId > 0) {
+        filter.where = {
+          id: { $gt: sinceId }
+        }
+      } else {
+        filter.where = {
+          created_at: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() }
+        }
+      }
+
       // @ts-ignore
       const { data } = await app.models.danmaku_messages.list({
-        filter: {
-          where: {
-            // Get recent
-            created_at: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() }
-          }
-        },
-        orderBy: [{ created_at: 'desc' }],
+        filter,
+        orderBy: [{ created_at: 'asc' }],
         pageSize: 50
       })
 
       const messages = (data?.records || [])
         .filter((row: any) => row.emoji !== 'vent')
-        .reverse()
         .map((row: any) => ({
-        id: row.id || row._id,
-        content: row.content,
-        emoji: row.emoji,
-        user_id: row.user_id,
-        user_name: row.user_name,
-        created_at: row.created_at,
-        textColor: row.textColor,
-        backgroundColor: row.backgroundColor
-      }))
+          id: row.id || row._id,
+          content: row.content,
+          emoji: row.emoji,
+          user_id: row.user_id,
+          user_name: row.user_name,
+          created_at: row.created_at,
+          textColor: row.textColor,
+          backgroundColor: row.backgroundColor
+        }))
 
-      return { data: messages, error: null }
+      const maxId = messages.length > 0
+        ? Math.max(...messages.map((m: DanmakuMessage) => Number(m.id)))
+        : sinceId
+
+      return { data: messages, maxId, error: null }
     } catch (error) {
-      return { data: [], error }
+      return { data: [], maxId: sinceId, error }
     }
   }
 }
