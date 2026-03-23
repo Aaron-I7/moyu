@@ -551,15 +551,19 @@ export class CloudBaseDatabaseAdapter implements DatabaseAdapter {
 
   async getRecentDanmaku(sinceId?: number) {
     try {
-      const filter: any = {}
+      let filter: any = {}
 
       if (sinceId !== undefined && sinceId > 0) {
-        filter.where = {
-          id: { $gt: sinceId }
+        filter = {
+          where: {
+            id: { $gt: sinceId }
+          }
         }
       } else {
-        filter.where = {
-          created_at: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() }
+        filter = {
+          where: {
+            created_at: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() }
+          }
         }
       }
 
@@ -609,10 +613,10 @@ export class CloudBaseRealtimeAdapter implements RealtimeAdapter {
     if (this.timer) return
     this.isConnected.value = true
     
-    // Polling interval 3s
+    // Polling interval 30s
     this.timer = setInterval(async () => {
       await this.pollNewMessages()
-    }, 3000)
+    }, 30000)
   }
 
   async pollNewMessages() {
