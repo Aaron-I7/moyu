@@ -198,29 +198,6 @@ export class SupabaseDatabaseAdapter implements DatabaseAdapter {
     return { data: res, error }
   }
 
-  async logEvent(event: string, properties: any, meta: any = {}) {
-    if (!supabase) return
-    // Log to analytics_events
-    await supabase.from('analytics_events').insert({
-      event_name: event,
-      properties,
-      user_id: meta.userId,
-      session_id: meta.sessionId,
-      url: meta.url,
-      created_at: new Date().toISOString()
-    })
-  }
-
-  async getAnalyticsEvents(limit = 2000) {
-    if (!supabase) return { data: [], error: 'Supabase not initialized' }
-    const { data, error } = await supabase
-      .from('analytics_events')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(limit)
-    return { data: data || [], error }
-  }
-
   async sendFeedback(userId: string | null, content: string, contact?: string) {
     if (!supabase) return false
     const { error } = await supabase.from('feedbacks').insert({
@@ -299,6 +276,28 @@ export class SupabaseDatabaseAdapter implements DatabaseAdapter {
     const maxId = data.length > 0 ? Math.max(...data.map((r: any) => r.id)) : sinceId
 
     return { data: messages, maxId, error: null }
+  }
+
+  async logEvent(eventName: string, properties: Record<string, any> = {}, context: Record<string, any> = {}) {
+    if (!supabase) return { error: 'Supabase not initialized' }
+    const { error } = await supabase.from('analytics_events').insert({
+      event_name: eventName,
+      properties,
+      url: context.url || '',
+      session_id: context.sessionId || '',
+      user_id: context.userId || null
+    })
+    return { error }
+  }
+
+  async getAnalyticsEvents(limit = 200) {
+    if (!supabase) return { data: [], error: 'Supabase not initialized' }
+    const { data, error } = await supabase
+      .from('analytics_events')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit)
+    return { data: data || [], error }
   }
 }
 

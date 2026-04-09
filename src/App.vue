@@ -15,27 +15,34 @@ import { adsConfig } from '@/core/ads/config'
 import AmbienceModal from '@/modules/tools/pomodoro/components/AmbienceModal.vue'
 import { useSoundEngine } from '@/modules/tools/pomodoro/composables/useSoundEngine'
 import { useVersionCheck } from '@/composables/useVersionCheck'
-import { useHeartbeat } from '@/composables/useTracking'
 
 const router = useRouter()
 const route = useRoute()
 const { locale } = useI18n({ useScope: 'global' })
 const appMainRef = ref<HTMLElement | null>(null)
 const isBlankLayout = computed(() => route.meta.layout === 'blank')
-const showAds = computed(() => adsConfig.enabled && !isBlankLayout.value && route.name !== 'NotFound' && route.name !== 'LegacyPath')
+const isPortalLayout = computed(() => route.meta.layout === 'portal')
+const hideChrome = computed(() => isBlankLayout.value || isPortalLayout.value)
+const showAds = computed(() => adsConfig.enabled && !hideChrome.value && route.name !== 'NotFound' && route.name !== 'LegacyPath')
 const soundEngine = useSoundEngine()
 const { hasNewVersion, startChecking, refresh } = useVersionCheck()
 
-// Initialize heartbeat tracking
-useHeartbeat()
-
 let cleanupGesture: (() => void) | null = null
+
+const refreshGestureBinding = () => {
+  cleanupGesture?.()
+  cleanupGesture = null
+
+  if (!appMainRef.value || hideChrome.value) {
+    return
+  }
+
+  cleanupGesture = bindGestureNavigation(appMainRef.value, router)
+}
 
 onMounted(() => {
   startChecking()
-  if (appMainRef.value) {
-    cleanupGesture = bindGestureNavigation(appMainRef.value, router)
-  }
+  refreshGestureBinding()
 })
 
 onUnmounted(() => {
@@ -48,29 +55,42 @@ watch(
     applyRouteSeo(router.currentRoute.value)
   }
 )
+
+watch(
+  () => hideChrome.value,
+  () => {
+    refreshGestureBinding()
+  }
+)
 </script>
 
 <template>
   <div class="app-container">
-    <GlobalDanmaku v-if="!isBlankLayout" />
-    <AppHeader v-if="!isBlankLayout" />
-    <main ref="appMainRef" class="app-main">
+    <GlobalDanmaku v-if="!hideChrome" />
+    <AppHeader v-if="!hideChrome" />
+    <main
+      ref="appMainRef"
+      class="app-main"
+      :class="{
+        'app-main--portal': isPortalLayout
+      }"
+    >
       <AdSlot v-if="showAds" slot-id="top-banner" format="leaderboard" />
       <router-view />
       <AdSlot v-if="showAds" slot-id="in-feed" format="auto" />
     </main>
     <AdSlot v-if="showAds" slot-id="sticky-bottom" format="sticky" />
-    <GlobalToolMenu v-if="!isBlankLayout" />
-    <GlobalBossKey />
-    <DanmakuFab v-if="!isBlankLayout" />
+    <GlobalToolMenu v-if="!hideChrome" />
+    <GlobalBossKey v-if="!hideChrome" />
+    <DanmakuFab v-if="!hideChrome" />
     <AmbienceModal
-      v-if="!isBlankLayout"
+      v-if="!hideChrome"
       :show="soundEngine.isGlobalMixerOpen.value"
       @close="soundEngine.isGlobalMixerOpen.value = false"
     />
     <!-- PrivacyConsentBanner 已移除 -->
-    <UsageReminder v-if="!isBlankLayout" />
-    <div v-if="hasNewVersion" class="update-toast">
+    <UsageReminder v-if="!hideChrome" />
+    <div v-if="hasNewVersion && !hideChrome" class="update-toast">
       <div class="update-content">
         <span class="update-title">{{ $t('notification.updateTitle') }}</span>
         <span class="update-desc">{{ $t('notification.updateDesc') }}</span>
@@ -155,5 +175,9 @@ watch(
   padding-inline: clamp(16px, 3vw, 36px);
   padding-top: 12px;
   padding-bottom: 30px;
+}
+
+.app-main--portal {
+  padding: 0;
 }
 </style>

@@ -451,44 +451,6 @@ export class CloudBaseDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
-  async logEvent(event: string, properties: any, meta: any = {}) {
-    try {
-      // @ts-ignore
-      await app.models.analytics_events.create({
-        data: {
-          event_name: event,
-          properties: JSON.stringify(properties),
-          user_id: meta.userId,
-          session_id: meta.sessionId,
-          url: meta.url,
-          _openid: meta.userId // Assuming userId is available
-        }
-      })
-    } catch (e) {
-      console.error('Failed to log event to CloudBase', e)
-    }
-  }
-
-  async getAnalyticsEvents(limit = 2000) {
-    try {
-      // @ts-ignore
-      const { data } = await app.models.analytics_events.list({
-        filter: { where: {} },
-        orderBy: [{ created_at: 'desc' }],
-        pageSize: limit
-      })
-      
-      const events = (data?.records || []).map((r: any) => ({
-        ...r,
-        properties: r.properties ? JSON.parse(r.properties) : {}
-      }))
-      
-      return { data: events, error: null }
-    } catch (error) {
-      return { data: [], error }
-    }
-  }
-
   async sendFeedback(userId: string | null, content: string, contact?: string) {
     try {
       // @ts-ignore
@@ -594,6 +556,46 @@ export class CloudBaseDatabaseAdapter implements DatabaseAdapter {
       return { data: messages, maxId, error: null }
     } catch (error) {
       return { data: [], maxId: sinceId, error }
+    }
+  }
+
+  async logEvent(eventName: string, properties: Record<string, any> = {}, context: Record<string, any> = {}) {
+    try {
+      const model = app.models.analytics_events
+      if (!model) {
+        return { error: null }
+      }
+
+      await model.create({
+        data: {
+          event_name: eventName,
+          properties,
+          url: context.url || '',
+          session_id: context.sessionId || '',
+          user_id: context.userId || null,
+          created_at: new Date().toISOString()
+        }
+      })
+      return { error: null }
+    } catch (error) {
+      return { error }
+    }
+  }
+
+  async getAnalyticsEvents(limit = 200) {
+    try {
+      const model = app.models.analytics_events
+      if (!model) {
+        return { data: [], error: null }
+      }
+
+      const { data } = await model.list({
+        orderBy: [{ created_at: 'desc' }],
+        pageSize: limit
+      })
+      return { data: data?.records || [], error: null }
+    } catch (error) {
+      return { data: [], error }
     }
   }
 }

@@ -2,7 +2,6 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { i18n } from '@/core/i18n'
 import { dbAdapter, realtimeAdapter } from '@/core/adapter'
 import { useCloudSync } from './useCloudSync'
-import { useTracking } from './useTracking'
 import type { DanmakuMessage } from '@/core/adapter/types'
 
 export type { DanmakuMessage }
@@ -253,8 +252,6 @@ watch(() => realtimeAdapter.onlineCount.value, (val) => {
 })
 
 async function sendDanmaku(content: string, emoji?: string): Promise<boolean> {
-  const { track } = useTracking()
-  
   if (!isConnected.value) {
     return false
   }
@@ -277,17 +274,6 @@ async function sendDanmaku(content: string, emoji?: string): Promise<boolean> {
     const success = await realtimeAdapter.sendDanmaku(message)
 
     if (success) {
-      // Track danmaku event
-      track('danmaku_sent', {
-        has_emoji: !!emoji,
-        length: safeContent.length
-      })
-
-      // We don't need to push manually if we are subscribed to changes?
-      // Supabase adapter doesn't broadcast anymore, relying on DB change.
-      // CloudBase adapter relies on watch.
-      // So pushing manually gives instant feedback.
-      
       const localMsg: DanmakuMessage = {
         ...message,
         id: 'local-' + Date.now(),

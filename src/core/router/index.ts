@@ -3,6 +3,61 @@ import moduleRegistry from '../module/registry'
 import { defaultLocale } from '@/core/i18n'
 
 const localePath = '/:locale(en|zh)'
+const childPortalRoutes: RouteRecordRaw[] = [
+  {
+    path: '/child',
+    redirect: '/child/home'
+  },
+  {
+    path: '/child/portal/:token',
+    name: 'ChildPortalResolve',
+    component: () => import('@/views/child-portal/ChildPortalResolveView.vue'),
+    meta: {
+      title: '儿童入口',
+      layout: 'portal'
+    }
+  },
+  {
+    path: '/child/home',
+    name: 'ChildPortalHome',
+    component: () => import('@/views/child-portal/ChildPortalView.vue'),
+    meta: {
+      title: '儿童首页',
+      layout: 'portal',
+      portalSection: 'home'
+    }
+  },
+  {
+    path: '/child/tasks',
+    name: 'ChildPortalTasks',
+    component: () => import('@/views/child-portal/ChildPortalView.vue'),
+    meta: {
+      title: '我的任务',
+      layout: 'portal',
+      portalSection: 'tasks'
+    }
+  },
+  {
+    path: '/child/rewards',
+    name: 'ChildPortalRewards',
+    component: () => import('@/views/child-portal/ChildPortalView.vue'),
+    meta: {
+      title: '我的奖励',
+      layout: 'portal',
+      portalSection: 'rewards'
+    }
+  },
+  {
+    path: '/child/points',
+    name: 'ChildPortalPoints',
+    component: () => import('@/views/child-portal/ChildPortalView.vue'),
+    meta: {
+      title: '我的积分',
+      layout: 'portal',
+      portalSection: 'points'
+    }
+  }
+]
 
 function generateModuleRoutes(): RouteRecordRaw[] {
   const routes: RouteRecordRaw[] = []
@@ -97,7 +152,7 @@ const baseRoutes: RouteRecordRaw[] = [
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes: [...generateModuleRoutes(), ...baseRoutes]
+  routes: [...childPortalRoutes, ...generateModuleRoutes(), ...baseRoutes]
 })
 
 export default router

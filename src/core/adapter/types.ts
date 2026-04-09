@@ -43,14 +43,12 @@ export interface DatabaseAdapter {
   getAllGameData(userId: string): Promise<{ data: any[]; error: any }>
   syncGameData(userId: string, moduleKey: string, data: any): Promise<{ data: any; error: any }>
   
-  // Analytics
-  logEvent(event: string, properties: any, meta?: { userId?: string | null; sessionId?: string; url?: string }): Promise<void>
-  getAnalyticsEvents(limit?: number): Promise<{ data: any[]; error: any }>
-  
   // Feedback
   sendFeedback(userId: string | null, content: string, contact?: string): Promise<boolean>
   createVent(userId: string | null, userName: string, content: string): Promise<{ ok: boolean; reason?: string }>
   listVents(limit?: number): Promise<{ data: VentPost[]; error: any }>
+  logEvent(eventName: string, properties?: Record<string, any>, context?: Record<string, any>): Promise<{ error: any }>
+  getAnalyticsEvents(limit?: number): Promise<{ data: any[]; error: any }>
   
   // Danmaku History
   getRecentDanmaku(sinceId?: number): Promise<{ data: DanmakuMessage[]; maxId?: number; error: any }>
