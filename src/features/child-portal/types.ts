@@ -1,3 +1,5 @@
+export type PortalSection = 'home' | 'tasks' | 'rewards' | 'points'
+
 export interface ChildProfile {
   child_id: string
   name?: string
@@ -33,6 +35,44 @@ export interface ChildPortalStoredSession {
   lastPortalToken: string
   loginState: string
   webSessionToken: string
+}
+
+export interface ChildPortalNavItem {
+  key: PortalSection
+  label: string
+  shortLabel: string
+  to: string
+  icon: string
+  accent: string
+}
+
+export interface ChildLevelProgress {
+  label: string
+  title: string
+  min: number
+  max: number
+  badge: string
+  points: number
+  percent: number
+  pointsToNext: number
+}
+
+export interface ChildPortalOverview {
+  activeCount: number
+  pendingCount: number
+  completedCount: number
+  pendingRewardCount: number
+}
+
+export interface ChildPortalTimelineItem {
+  id: string
+  icon: string
+  title: string
+  subtitle: string
+  tone: 'amber' | 'sky' | 'mint' | 'rose'
+  time: number
+  timeText: string
+  amountText?: string
 }
 
 export interface ChildTaskItem {
