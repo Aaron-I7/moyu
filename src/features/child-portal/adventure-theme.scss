@@ -1,0 +1,132 @@
+$portal-ink: #213b56;
+$portal-soft-ink: #5f7591;
+$portal-border: rgba(255, 255, 255, 0.88);
+$portal-panel-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 251, 255, 0.92) 100%);
+
+@mixin page-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  animation: portalAdventureRise 0.45s ease;
+}
+
+@mixin sign-shell($gradient, $ink, $shadowColor) {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px 32px;
+  border-radius: 30px;
+  background: $gradient;
+  border: 4px solid $portal-border;
+  box-shadow: 0 14px 0 rgba($shadowColor, 0.45), 0 24px 38px rgba(39, 64, 91, 0.12);
+  color: $ink;
+  overflow: hidden;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    border-radius: 999px;
+    opacity: 0.22;
+  }
+
+  &::before {
+    width: 180px;
+    height: 180px;
+    inset: -48px auto auto -36px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 72%);
+  }
+
+  &::after {
+    width: 220px;
+    height: 220px;
+    inset: auto -52px -74px auto;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0) 74%);
+  }
+}
+
+@mixin surface-card($padding: 24px, $radius: 28px) {
+  position: relative;
+  padding: $padding;
+  border-radius: $radius;
+  background: $portal-panel-bg;
+  border: 3px solid $portal-border;
+  box-shadow: 0 18px 28px rgba(56, 86, 123, 0.08);
+}
+
+@mixin title-pill($gradient, $ink) {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: $gradient;
+  color: $ink;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34);
+  font-weight: 900;
+}
+
+@mixin empty-state($minHeight: 200px) {
+  min-height: $minHeight;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  color: $portal-soft-ink;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(246, 249, 255, 0.92) 100%);
+  border: 2px dashed rgba(142, 170, 202, 0.42);
+  border-radius: 24px;
+
+  svg {
+    font-size: 42px;
+    opacity: 0.7;
+  }
+
+  p {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 800;
+  }
+}
+
+@mixin stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
+}
+
+@keyframes portalAdventureRise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes portalOrbPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+}

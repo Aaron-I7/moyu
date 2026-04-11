@@ -27,6 +27,7 @@ import type {
   ChildPointsResponse,
   ChildProfile,
   ChildRewardsResponse,
+  ChildTaskItem,
   ChildTasksResponse,
   PortalSection
 } from '@/features/child-portal/types'
@@ -132,6 +133,87 @@ function resetMessages(): void {
   successMessage.value = ''
 }
 
+function cloneTaskItem(task: ChildTaskItem): ChildTaskItem {
+  return { ...task }
+}
+
+function cloneHomeResponse(data: ChildHomeResponse | null): ChildHomeResponse | null {
+  if (!data) {
+    return null
+  }
+
+  return {
+    ...data,
+    today_tasks: data.today_tasks.map(cloneTaskItem)
+  }
+}
+
+function cloneTasksResponse(data: ChildTasksResponse | null): ChildTasksResponse | null {
+  if (!data) {
+    return null
+  }
+
+  return {
+    ...data,
+    active_tasks: data.active_tasks.map(cloneTaskItem),
+    pending_tasks: data.pending_tasks.map(cloneTaskItem),
+    completed_tasks: data.completed_tasks.map(cloneTaskItem)
+  }
+}
+
+function applyOptimisticTaskPending(taskId: string, submittedAt: number): boolean {
+  let changed = false
+
+  if (homeData.value) {
+    const nextTasks = homeData.value.today_tasks.map((task) => {
+      if (task.task_id !== taskId || task.type !== 'active') {
+        return task
+      }
+
+      changed = true
+      const nextTask: ChildTaskItem = {
+        ...task,
+        type: 'pending',
+        submitted_at: submittedAt
+      }
+
+      return nextTask
+    })
+
+    if (changed) {
+      homeData.value = {
+        ...homeData.value,
+        today_tasks: nextTasks,
+        today_active_count: Math.max(0, homeData.value.today_active_count - 1),
+        today_pending_count: homeData.value.today_pending_count + 1
+      }
+    }
+  }
+
+  if (tasksData.value) {
+    const taskIndex = tasksData.value.active_tasks.findIndex((task) => task.task_id === taskId)
+    if (taskIndex > -1) {
+      const task = tasksData.value.active_tasks[taskIndex]
+      if (task) {
+        const nextPendingTask: ChildTaskItem = {
+          ...task,
+          type: 'pending',
+          submitted_at: submittedAt
+        }
+
+        tasksData.value = {
+          ...tasksData.value,
+          active_tasks: tasksData.value.active_tasks.filter((item) => item.task_id !== taskId),
+          pending_tasks: [...tasksData.value.pending_tasks, nextPendingTask]
+        }
+        changed = true
+      }
+    }
+  }
+
+  return changed
+}
+
 function syncChildProfile(profile: ChildProfile): void {
   updateChildPortalProfile(profile)
 }
@@ -191,6 +273,10 @@ async function handleCompleteTask(taskId: string): Promise<void> {
 
   actionBusy.value = true
   resetMessages()
+  const previousHome = cloneHomeResponse(homeData.value)
+  const previousTasks = cloneTasksResponse(tasksData.value)
+  const submittedAt = Date.now()
+  const appliedOptimisticUpdate = applyOptimisticTaskPending(taskId, submittedAt)
 
   try {
     const session = await ensureChildPortalSession()
@@ -207,6 +293,10 @@ async function handleCompleteTask(taskId: string): Promise<void> {
     setSuccess('任务已提交，等家长确认一下就会更新。')
     await loadCurrentSection(false) // 局部刷新
   } catch (error) {
+    if (appliedOptimisticUpdate) {
+      homeData.value = previousHome
+      tasksData.value = previousTasks
+    }
     errorMessage.value = String((error as { message?: string })?.message || '提交任务失败')
   } finally {
     actionBusy.value = false

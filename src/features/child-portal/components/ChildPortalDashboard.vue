@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useElementSize, useWindowSize } from '@vueuse/core'
+import { computed, onMounted, ref } from 'vue'
+import { useElementBounding, useElementSize, useWindowSize } from '@vueuse/core'
 import { Icon } from '@iconify/vue'
 import {
   buildAdventureEdges,
@@ -42,18 +42,30 @@ const allTasksCompleted = computed(() => {
 })
 
 const mapPathRef = ref<HTMLElement | null>(null)
+const portalDockRef = ref<HTMLElement | null>(null)
+const layoutRefreshTick = ref(0)
 const { width: windowWidth, height: windowHeight } = useWindowSize()
 const { width: measuredMapWidth } = useElementSize(mapPathRef)
+const { top: mapTop } = useElementBounding(mapPathRef)
+const { top: dockTop } = useElementBounding(portalDockRef)
+
+onMounted(() => {
+  portalDockRef.value = document.querySelector('.portal-dock') as HTMLElement | null
+})
 
 const mapHeightPx = computed(() => {
   const isMobile = windowWidth.value <= 768
-  const preferredHeight = isMobile
+  const dockGap = isMobile ? 28 : 48
+  const fallbackHeight = isMobile
     ? windowHeight.value - 240
     : windowHeight.value - 280
+  const dockLimitedHeight = dockTop.value > 0 && mapTop.value > 0
+    ? Math.round(dockTop.value - mapTop.value - dockGap)
+    : fallbackHeight
   const min = isMobile ? 460 : 520
-  const max = isMobile ? 680 : 760
+  const max = isMobile ? 920 : 1040
 
-  return Math.min(max, Math.max(min, preferredHeight))
+  return Math.min(max, Math.max(min, dockLimitedHeight))
 })
 
 const adventureViewport = computed(() => ({
@@ -70,10 +82,13 @@ const adventureViewport = computed(() => ({
   height: mapHeightPx.value
 }))
 
+const layoutSeedKey = computed(() =>
+  `${props.homeData?.record_date || ''}::layout-${layoutRefreshTick.value}`
+)
 const mapNodes = computed(() =>
   buildAdventureNodes(
     props.homeData?.today_tasks || [],
-    props.homeData?.record_date || ''
+    layoutSeedKey.value
   )
 )
 const adventureRoute = computed(() => buildAdventureRoute(mapNodes.value))
@@ -111,48 +126,34 @@ function seededUnit(seed: number, salt: string) {
   return createPrng(hashString(`${seed}:${salt}`))()
 }
 
-const avatarPosition = computed(() => {
+const currentTaskNodeId = computed(() => {
+  const routeTaskNodes = adventureRoute.value.taskNodeIds
+    .map((nodeId) => mapNodes.value.find((node) => node.id === nodeId))
+    .filter((node): node is NonNullable<typeof node> => Boolean(node))
+
+  const firstActiveNode = routeTaskNodes.find((node) => node.originalTask?.type === 'active')
+  if (firstActiveNode) {
+    return firstActiveNode.id
+  }
+
+  const firstPendingNode = routeTaskNodes.find((node) => node.originalTask?.type === 'pending')
+  if (firstPendingNode) {
+    return firstPendingNode.id
+  }
+
+  return allTasksCompleted.value ? 'end' : routeTaskNodes[0]?.id || 'start'
+})
+
+const currentTaskMarker = computed(() => {
   const positions = nodePositions.value
-  const taskCount = props.homeData?.today_tasks?.length || 0
+  const markerTarget = positions[currentTaskNodeId.value] || positions.start
+  const verticalOffset = adventureLayout.value.compact ? 96 : 108
 
-  if (!taskCount) {
-    return positions.start || { x: 0, y: 0 }
+  return {
+    id: currentTaskNodeId.value,
+    x: markerTarget?.x || 0,
+    y: (markerTarget?.y || 0) - verticalOffset
   }
-
-  if (allTasksCompleted.value) {
-    return positions.end || positions.start || { x: 0, y: 0 }
-  }
-
-  if (adventureRoute.value.mode === 'progressed' && adventureRoute.value.taskNodeIds.length > 0) {
-    const currentId = adventureRoute.value.taskNodeIds[adventureRoute.value.taskNodeIds.length - 1]
-    if (!currentId) {
-      return positions.start || { x: 0, y: 0 }
-    }
-    const current = positions[currentId]
-    const next = positions.end
-
-    if (current && next) {
-      return {
-        x: current.x + (next.x - current.x) * 0.42,
-        y: current.y + (next.y - current.y) * 0.42
-      }
-    }
-
-    return current || positions.start || { x: 0, y: 0 }
-  }
-
-  const firstRouteTaskId = adventureRoute.value.taskNodeIds[0]
-  const start = positions.start
-  const next = firstRouteTaskId ? positions[firstRouteTaskId] : positions.start
-
-  if (start && next) {
-    return {
-      x: start.x + (next.x - start.x) * 0.42,
-      y: start.y + (next.y - start.y) * 0.42
-    }
-  }
-
-  return start || { x: 0, y: 0 }
 })
 
 const touchTimers = new Map<string, number>()
@@ -194,6 +195,11 @@ const handlePointerUp = (node: (typeof mapNodes.value)[number]) => {
 
 const handlePointerLeave = (nodeId: string) => {
   touchTimers.delete(nodeId)
+}
+
+const rerollLayout = () => {
+  layoutRefreshTick.value += 1
+  activeNodeId.value = null
 }
 
 const completeTask = (taskId: string) => {
@@ -304,6 +310,11 @@ function getNodeActionPlacement(nodeId: string) {
     </transition>
 
     <div ref="mapPathRef" class="map-path" :class="mapPathClass" :style="{ height: containerHeight }" @click.stop>
+      <button type="button" class="map-reroll-btn" @click.stop="rerollLayout">
+        <Icon icon="ph:shuffle-angular-fill" />
+        <span>重新排版</span>
+      </button>
+
       <svg
         class="map-svg-lines"
         preserveAspectRatio="none"
@@ -311,7 +322,7 @@ function getNodeActionPlacement(nodeId: string) {
       >
         <path
           v-for="edge in adventureEdges"
-          :key="edge.id"
+          :key="`${edge.id}:${edge.path}`"
           :d="edge.path"
           class="map-svg-lines__path"
           :class="{ 'map-svg-lines__path--challenge': edge.routeKind === 'challenge' }"
@@ -334,8 +345,7 @@ function getNodeActionPlacement(nodeId: string) {
             :class="[
               `map-node--${node.tone}`,
               { 'map-node--completed': node.originalTask?.type === 'completed' },
-              { 'map-node--compact': adventureLayout.compact },
-              { 'map-node--unlinked': node.kind === 'task' && node.originalTask?.type === 'active' && adventureRoute.mode === 'progressed' }
+              { 'map-node--compact': adventureLayout.compact }
             ]"
             @pointerdown.stop="handlePointerDown(node.id)"
             @pointerup.stop="handlePointerUp(node)"
@@ -348,7 +358,6 @@ function getNodeActionPlacement(nodeId: string) {
             </div>
             <div class="map-node__label">
               <span class="map-node__title">{{ node.title }}</span>
-              <span v-if="node.pointsText" class="map-node__points">{{ node.pointsText }}</span>
             </div>
           </button>
 
@@ -389,12 +398,13 @@ function getNodeActionPlacement(nodeId: string) {
       </div>
 
       <transition name="bounce-walk">
-        <div class="avatar-walker" :style="{ left: `${avatarPosition.x}px`, top: `${avatarPosition.y}px` }">
-          <div class="avatar-walker__inner">
-            <img v-if="props.homeData?.child_profile?.avatar_url" :src="props.homeData.child_profile.avatar_url" alt="avatar" />
-            <Icon v-else icon="ph:user-circle-fill" />
-          </div>
-          <div class="avatar-walker__shadow"></div>
+        <div
+          :key="`marker-${currentTaskMarker.id}`"
+          class="current-task-marker"
+          :style="{ left: `${currentTaskMarker.x}px`, top: `${currentTaskMarker.y}px` }"
+          aria-hidden="true"
+        >
+          <img src="/images/定位.svg" alt="" class="current-task-marker__icon" />
         </div>
       </transition>
     </div>
@@ -511,6 +521,41 @@ function getNodeActionPlacement(nodeId: string) {
   overflow: visible;
 }
 
+.map-reroll-btn {
+  position: absolute;
+  top: 10px;
+  right: 8px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 3px solid rgba(255, 255, 255, 0.92);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #28527d;
+  font-size: 14px;
+  font-weight: 900;
+  box-shadow: 0 12px 24px rgba(61, 123, 196, 0.16);
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+
+  svg {
+    font-size: 18px;
+    color: #3a7bc4;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 28px rgba(61, 123, 196, 0.2);
+    background: white;
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
 .map-path--compact {
   .map-node {
     gap: 10px;
@@ -529,10 +574,6 @@ function getNodeActionPlacement(nodeId: string) {
 
   .map-node__title {
     font-size: 14px;
-  }
-
-  .map-node__points {
-    font-size: 12px;
   }
 
   .complete-btn,
@@ -559,6 +600,7 @@ function getNodeActionPlacement(nodeId: string) {
   stroke-linejoin: round;
   stroke-dasharray: 18 16;
   filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.42));
+  animation: pathRedraw 0.55s ease-out;
 }
 
 .map-svg-lines__path--challenge {
@@ -570,6 +612,10 @@ function getNodeActionPlacement(nodeId: string) {
   position: absolute;
   transform: translate(-50%, -50%);
   z-index: 2;
+  transition:
+    left 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+    top 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: left, top;
 }
 
 .node-container {
@@ -606,12 +652,6 @@ function getNodeActionPlacement(nodeId: string) {
 .map-node--completed {
   opacity: 0.82;
   filter: grayscale(14%);
-}
-
-.map-node--unlinked {
-  .map-node__label {
-    background: rgba(255, 255, 255, 0.82);
-  }
 }
 
 .map-node__orb {
@@ -680,12 +720,6 @@ function getNodeActionPlacement(nodeId: string) {
   -webkit-line-clamp: 2;
 }
 
-.map-node__points {
-  font-size: 14px;
-  font-weight: 800;
-  color: #ff9100;
-}
-
 .node-action {
   position: absolute;
   z-index: 10;
@@ -741,51 +775,33 @@ function getNodeActionPlacement(nodeId: string) {
   border: 3px solid #eef7ff;
 }
 
-.avatar-walker {
+.current-task-marker {
   position: absolute;
   transform: translate(-50%, -50%);
   z-index: 3;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   pointer-events: none;
-  animation: walkFloat 2s ease-in-out infinite;
   transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.avatar-walker__inner {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: #fff;
-  border: 4px solid #42baff;
-  box-shadow: 0 4px 12px rgba(66, 186, 255, 0.4);
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  font-size: 32px;
-  color: #42baff;
-
-  img { width: 100%; height: 100%; object-fit: cover; }
+.current-task-marker__icon {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  filter:
+    drop-shadow(0 0 0 rgba(255, 255, 255, 0.96))
+    drop-shadow(0 3px 10px rgba(49, 170, 255, 0.28));
+  animation: markerFloat 1.9s ease-in-out infinite;
 }
 
-.avatar-walker__shadow {
-  width: 30px;
-  height: 8px;
-  background: rgba(0,0,0,0.1);
-  border-radius: 50%;
-  margin-top: 8px;
-  animation: shadowPulse 2s ease-in-out infinite;
-}
-
-@keyframes walkFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-
-@keyframes shadowPulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(0.6); opacity: 0.4; }
+@keyframes markerFloat {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.82;
+  }
+  50% {
+    transform: translateY(-8px) scale(1.05);
+    opacity: 1;
+  }
 }
 
 .obstacle-sticker {
@@ -795,6 +811,9 @@ function getNodeActionPlacement(nodeId: string) {
   opacity: 0.16;
   pointer-events: none;
   animation: float 4s ease-in-out infinite alternate;
+  transition:
+    left 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+    top 0.38s cubic-bezier(0.22, 1, 0.36, 1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1034,6 +1053,18 @@ function getNodeActionPlacement(nodeId: string) {
   to { transform: scale(0) translateY(40px); opacity: 0; }
 }
 
+@keyframes pathRedraw {
+  from {
+    opacity: 0;
+    stroke-dashoffset: 64;
+  }
+
+  to {
+    opacity: 1;
+    stroke-dashoffset: 0;
+  }
+}
+
 .fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
@@ -1048,11 +1079,16 @@ function getNodeActionPlacement(nodeId: string) {
     border-radius: 28px;
   }
 
+  .map-reroll-btn {
+    top: 0;
+    right: 0;
+    padding: 9px 13px;
+    font-size: 13px;
+  }
+
   .map-node__orb { width: 72px; height: 72px; font-size: 34px; border-radius: 24px; }
   .map-node__label { max-width: min(144px, 48vw); padding: 7px 12px; }
   .map-node__title { font-size: 13px; }
-  .map-node__points { font-size: 11px; }
-
   .node-action {
     left: 50%;
     right: auto;
@@ -1067,10 +1103,9 @@ function getNodeActionPlacement(nodeId: string) {
     font-size: 14px;
   }
 
-  .avatar-walker__inner {
-    width: 48px;
-    height: 48px;
-    font-size: 26px;
+  .current-task-marker__icon {
+    width: 36px;
+    height: 36px;
   }
 }
 </style>

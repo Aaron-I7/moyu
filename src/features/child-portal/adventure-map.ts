@@ -12,6 +12,8 @@ export interface AdventureViewport {
   height: number
 }
 
+export type AdventureAnchorColumn = 'left' | 'center' | 'right'
+
 export interface AdventureNode {
   id: string
   kind: 'start' | 'task' | 'end'
@@ -46,6 +48,23 @@ export interface AdventureLayoutPoint {
   candidateIndex: number
 }
 
+export interface AdventureAnchorZone {
+  id: string
+  kind: 'start' | 'end'
+  column: AdventureAnchorColumn
+  minX: number
+  maxX: number
+  minY: number
+  maxY: number
+}
+
+export interface AdventureAnchorSelection {
+  zoneId: string
+  column: AdventureAnchorColumn
+  xPercent: number
+  yPercent: number
+}
+
 export interface AdventureLayoutResult {
   compact: boolean
   width: number
@@ -53,6 +72,10 @@ export interface AdventureLayoutResult {
   seed: number
   minDistancePx: number
   positions: Record<string, AdventureLayoutPoint>
+  anchors: {
+    startZone: AdventureAnchorSelection
+    endZone: AdventureAnchorSelection
+  }
   safeArea: {
     minX: number
     maxX: number
@@ -75,8 +98,16 @@ type SlotCandidate = AdventureLayoutPoint & {
   key: string
 }
 
-const START_ANCHOR = { xPercent: 50, yPercent: 12 }
-const END_ANCHOR = { xPercent: 50, yPercent: 86 }
+const START_ANCHOR_ZONES: AdventureAnchorZone[] = [
+  { id: 'start-left', kind: 'start', column: 'left', minX: 18, maxX: 32, minY: 9, maxY: 15 },
+  { id: 'start-center', kind: 'start', column: 'center', minX: 42, maxX: 58, minY: 9, maxY: 15 },
+  { id: 'start-right', kind: 'start', column: 'right', minX: 68, maxX: 82, minY: 9, maxY: 15 }
+]
+const END_ANCHOR_ZONES: AdventureAnchorZone[] = [
+  { id: 'end-left', kind: 'end', column: 'left', minX: 18, maxX: 32, minY: 88, maxY: 94 },
+  { id: 'end-center', kind: 'end', column: 'center', minX: 42, maxX: 58, minY: 88, maxY: 94 },
+  { id: 'end-right', kind: 'end', column: 'right', minX: 68, maxX: 82, minY: 88, maxY: 94 }
+]
 const SAFE_AREA = { minX: 14, maxX: 86, minY: 18, maxY: 82 }
 
 function clamp(value: number, min: number, max: number) {
@@ -163,6 +194,30 @@ function createAnchorPoint(
     band: -1,
     slot: -1,
     candidateIndex: -1
+  }
+}
+
+function selectAnchor(
+  seed: number,
+  salt: string,
+  zones: AdventureAnchorZone[],
+  blockedColumn?: AdventureAnchorColumn
+): AdventureAnchorSelection {
+  const eligibleZones = zones.filter((zone) => zone.column !== blockedColumn)
+  const pool = eligibleZones.length ? eligibleZones : zones
+  const zoneIndex = Math.min(
+    pool.length - 1,
+    Math.floor(seededUnit(seed, `${salt}:zone`) * pool.length)
+  )
+  const zone = pool[zoneIndex]!
+  const xPercent = zone.minX + seededUnit(seed, `${salt}:x`) * (zone.maxX - zone.minX)
+  const yPercent = zone.minY + seededUnit(seed, `${salt}:y`) * (zone.maxY - zone.minY)
+
+  return {
+    zoneId: zone.id,
+    column: zone.column,
+    xPercent,
+    yPercent
   }
 }
 
@@ -402,6 +457,10 @@ export function buildAdventureRoute(nodes: AdventureNode[]): AdventureRoute {
   const taskNodes = nodes.filter((node) => node.kind === 'task')
   const recordDate = taskNodes[0]?.recordDate || nodes[0]?.recordDate || ''
   const seed = hashString(getSeedInput(taskNodes.map((node) => node.originalTask!).filter(Boolean), recordDate))
+  const challengeTaskIds = seededShuffle(
+    taskNodes.map((node) => node.id),
+    hashString(`${seed}:challenge-route`)
+  )
   const progressedNodes = [...taskNodes]
     .filter((node) => node.status === 'completed' || node.status === 'pending')
     .sort((left, right) => {
@@ -416,28 +475,25 @@ export function buildAdventureRoute(nodes: AdventureNode[]): AdventureRoute {
 
       return left.id.localeCompare(right.id)
     })
-  const idleNodes = taskNodes.filter((node) => node.status === 'active')
+  const progressedNodeIds = progressedNodes.map((node) => node.id)
+  const progressedNodeIdSet = new Set(progressedNodeIds)
+  const idleNodeIds = challengeTaskIds.filter((nodeId) => !progressedNodeIdSet.has(nodeId))
 
-  if (progressedNodes.length > 0) {
-    const taskNodeIds = progressedNodes.map((node) => node.id)
+  if (progressedNodeIds.length > 0) {
+    const taskNodeIds = [...progressedNodeIds, ...idleNodeIds]
     return {
       mode: 'progressed',
       nodeIds: ['start', ...taskNodeIds, 'end'],
       taskNodeIds,
-      progressedNodeIds: taskNodeIds,
-      idleNodeIds: idleNodes.map((node) => node.id)
+      progressedNodeIds,
+      idleNodeIds
     }
   }
 
-  const shuffledTaskIds = seededShuffle(
-    taskNodes.map((node) => node.id),
-    hashString(`${seed}:challenge-route`)
-  )
-
   return {
     mode: 'challenge',
-    nodeIds: ['start', ...shuffledTaskIds, 'end'],
-    taskNodeIds: shuffledTaskIds,
+    nodeIds: ['start', ...challengeTaskIds, 'end'],
+    taskNodeIds: challengeTaskIds,
     progressedNodeIds: [],
     idleNodeIds: []
   }
@@ -462,8 +518,10 @@ export function buildAdventureLayout(
   const routeCandidates = getRouteCandidates(candidates, compact, seed)
   const routeIndexes = getSpacedIndexes(routeCandidates.length, route.taskNodeIds.length)
   const usedKeys = new Set<string>()
-  const startPoint = createAnchorPoint('start', START_ANCHOR.xPercent, START_ANCHOR.yPercent, width, height)
-  const endPoint = createAnchorPoint('end', END_ANCHOR.xPercent, END_ANCHOR.yPercent, width, height)
+  const startAnchor = selectAnchor(seed, 'anchor:start', START_ANCHOR_ZONES)
+  const endAnchor = selectAnchor(seed, 'anchor:end', END_ANCHOR_ZONES, startAnchor.column)
+  const startPoint = createAnchorPoint('start', startAnchor.xPercent, startAnchor.yPercent, width, height)
+  const endPoint = createAnchorPoint('end', endAnchor.xPercent, endAnchor.yPercent, width, height)
   const positions: Record<string, AdventureLayoutPoint> = {
     start: startPoint,
     end: endPoint
@@ -507,7 +565,7 @@ export function buildAdventureLayout(
 
   const remainingCandidates = candidates.filter((candidate) => !usedKeys.has(candidate.key))
   const idleCandidatePool = getIdleCandidates(remainingCandidates, compact, seed)
-  const idleNodeIds = route.mode === 'progressed'
+  const idleNodeIds = route.mode === 'progressed' && route.taskNodeIds.length < taskNodes.length
     ? seededShuffle(route.idleNodeIds, hashString(`${seed}:idle-nodes`))
     : []
   const idleIndexes = getSpacedIndexes(idleCandidatePool.length, idleNodeIds.length)
@@ -547,6 +605,10 @@ export function buildAdventureLayout(
     seed,
     minDistancePx,
     positions,
+    anchors: {
+      startZone: startAnchor,
+      endZone: endAnchor
+    },
     safeArea: { ...SAFE_AREA }
   }
 }

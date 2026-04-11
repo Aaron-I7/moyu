@@ -2,13 +2,12 @@
 import { computed, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import {
-  getLedgerAmountText,
   getLedgerIcon,
   getLedgerSummary,
   getLedgerTitle,
   getLedgerTone
 } from '@/features/child-portal/helpers'
-import type { ChildPointsResponse } from '@/features/child-portal/types'
+import type { ChildPointsLedgerEntry, ChildPointsResponse } from '@/features/child-portal/types'
 import { formatPoints } from '@/features/child-portal/format'
 
 const props = defineProps<{
@@ -26,9 +25,6 @@ const jarFill = computed(() => {
   return `${Math.round((current / total) * 100)}%`
 })
 
-// --- 仪式感时间轴交互逻辑 ---
-const isDarkMode = ref(false)
-const isRtl = ref(false)
 const viewportRef = ref<HTMLElement | null>(null)
 
 const DEFAULT_LIMIT = 5
@@ -42,21 +38,52 @@ const sortedItems = computed(() => {
   return [...items].sort((a, b) => {
     const timeA = new Date(a.record_date || a.created_at || 0).getTime()
     const timeB = new Date(b.record_date || b.created_at || 0).getTime()
-    return timeB - timeA // 最新事件置顶
+    return timeB - timeA
   })
 })
 
-const visibleItems = computed(() => {
-  return sortedItems.value.slice(0, displayLimit.value)
-})
-
+const visibleItems = computed(() => sortedItems.value.slice(0, displayLimit.value))
 const hasMore = computed(() => displayLimit.value < sortedItems.value.length)
 const hiddenCount = computed(() => sortedItems.value.length - displayLimit.value)
 
+const archiveStats = computed(() => [
+  {
+    key: 'earned',
+    label: '旅途中获得',
+    value: formatPoints(props.pointsData?.total_points_earned || 0),
+    icon: 'ph:star-four-fill',
+    tone: 'amber'
+  },
+  {
+    key: 'spent',
+    label: '已经兑换掉',
+    value: formatPoints(props.pointsData?.total_points_spent || 0),
+    icon: 'ph:shooting-star-fill',
+    tone: 'rose'
+  },
+  {
+    key: 'records',
+    label: '留下的回响',
+    value: `${sortedItems.value.length}`,
+    icon: 'ph:scroll-fill',
+    tone: 'sky'
+  }
+])
+
+const latestEntry = computed(() => sortedItems.value[0] || null)
+const timelineDateFormatter = new Intl.DateTimeFormat('zh-CN', {
+  month: 'numeric',
+  day: 'numeric'
+})
+const timelineTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false
+})
+
 const loadMore = async () => {
   loading.value = true
-  // 模拟加载延迟，增强仪式感
-  await new Promise(resolve => setTimeout(resolve, 600))
+  await new Promise((resolve) => setTimeout(resolve, 450))
   loading.value = false
   displayLimit.value += BATCH_SIZE
 }
@@ -68,148 +95,206 @@ const collapse = () => {
   }
 }
 
-const expandedItems = ref<string[]>([])
-const toggleItem = (id?: string) => {
-  if (!id) return
-  const idx = expandedItems.value.indexOf(id)
-  if (idx > -1) {
-    expandedItems.value.splice(idx, 1)
-  } else {
-    expandedItems.value.push(id)
+function getEntryEyebrow(entry: ChildPointsLedgerEntry) {
+  if (entry.biz_type === 'reward_redeem') {
+    return '奖励记录'
   }
+  if (entry.biz_type === 'manual_adjust') {
+    return '调整记录'
+  }
+  return '积分记录'
+}
+
+function getEntryTaskCategory(entry: ChildPointsLedgerEntry) {
+  const extendedEntry = entry as ChildPointsLedgerEntry & {
+    task_category?: string
+    category?: string
+    task_type?: string
+  }
+
+  const rawCategory = [
+    extendedEntry.task_category,
+    extendedEntry.category,
+    extendedEntry.task_type
+  ].find((value) => typeof value === 'string' && value.trim())
+
+  return rawCategory?.trim() || ''
+}
+
+function getEntryDetail(entry: ChildPointsLedgerEntry) {
+  if (entry.biz_type === 'reward_redeem') {
+    return '这是一条来自藏宝驿站的兑换记录。'
+  }
+  if (entry.biz_type === 'manual_adjust') {
+    return '这是一条家长帮你整理星星背包的记录。'
+  }
+
+  return ''
+}
+
+function getEntryTimelineDate(entry: ChildPointsLedgerEntry) {
+  const rawValue = entry.record_date || entry.created_at
+  if (!rawValue) {
+    return '待记录'
+  }
+
+  const date = new Date(rawValue)
+  if (Number.isNaN(date.getTime())) {
+    return '待记录'
+  }
+
+  return timelineDateFormatter.format(date)
+}
+
+function getEntryTimelineTime(entry: ChildPointsLedgerEntry) {
+  if (entry.created_at) {
+    const time = new Date(entry.created_at)
+    if (!Number.isNaN(time.getTime())) {
+      return timelineTimeFormatter.format(time)
+    }
+  }
+
+  return entry.record_date ? '冒险日' : '待定'
+}
+
+function getEntryTotalText(entry: ChildPointsLedgerEntry) {
+  if (entry.balance_after !== undefined) {
+    return formatPoints(entry.balance_after)
+  }
+
+  return `${entry.change_type === 'decrease' ? '-' : '+'}${Number(entry.amount) || 0}`
+}
+
+function getEntryScoreLabel(entry: ChildPointsLedgerEntry) {
+  return entry.balance_after !== undefined ? '当前总分' : '本次变化'
 }
 </script>
 
 <template>
-  <section class="points-board">
-    <header class="points-board__sign">
-      <Icon icon="ph:book-bookmark-fill" class="points-board__sign-icon" />
-      <h2>星空魔法书</h2>
+  <section class="star-archive">
+    <header class="star-archive__sign">
+      <div class="star-archive__hero">
+        <span class="star-archive__eyebrow">冒险世界 · 星轨档案</span>
+        <h2>每一颗星星，都在旅途里留下回响</h2>
+        <p>这里会记录你一路得到的奖励、花掉的星星，还有每一次完成挑战之后留下的足迹。</p>
+      </div>
+
+      <div class="star-archive__latest" v-if="latestEntry">
+        <span>最新回响</span>
+        <strong>{{ getLedgerTitle(latestEntry) }}</strong>
+        <p>{{ getLedgerSummary(latestEntry) }}</p>
+      </div>
     </header>
 
-    <div class="points-board__layout">
-      <!-- 星星罐与统计徽章区 -->
-      <article class="star-jar-section">
-        <div class="star-jar">
-          <div class="star-jar__glass">
-            <div class="star-jar__fill" :style="{ height: jarFill }" />
-            <span class="star-jar__spark star-jar__spark--one" />
-            <span class="star-jar__spark star-jar__spark--two" />
-            <span class="star-jar__spark star-jar__spark--three" />
+    <div class="star-archive__layout">
+      <aside class="star-archive__aside">
+        <article class="jar-card">
+          <div class="jar-card__glow" />
+          <div class="jar-card__glass">
+            <div class="jar-card__fill" :style="{ height: jarFill }" />
+            <span class="jar-card__spark jar-card__spark--one" />
+            <span class="jar-card__spark jar-card__spark--two" />
+            <span class="jar-card__spark jar-card__spark--three" />
           </div>
-          <div class="star-jar__value">
-            <span>当前可用</span>
+          <div class="jar-card__value">
+            <span>当前背包里的星星</span>
             <strong>{{ formatPoints(pointsData?.current_points || 0) }}</strong>
           </div>
-        </div>
+        </article>
 
-        <div class="points-badges">
-          <div class="points-badge points-badge--amber">
-            <div class="points-badge__icon">
-              <Icon icon="ph:star-four-fill" />
+        <div class="archive-stats">
+          <article v-for="item in archiveStats" :key="item.key" class="archive-stat" :class="`archive-stat--${item.tone}`">
+            <div class="archive-stat__icon">
+              <Icon :icon="item.icon" />
             </div>
-            <div class="points-badge__info">
-              <span>累计获得</span>
-              <strong>{{ formatPoints(pointsData?.total_points_earned || 0) }}</strong>
+            <div class="archive-stat__content">
+              <span>{{ item.label }}</span>
+              <strong>{{ item.value }}</strong>
             </div>
-          </div>
-          
-          <div class="points-badge points-badge--rose">
-            <div class="points-badge__icon">
-              <Icon icon="ph:shooting-star-fill" />
-            </div>
-            <div class="points-badge__info">
-              <span>累计消耗</span>
-              <strong>{{ formatPoints(pointsData?.total_points_spent || 0) }}</strong>
-            </div>
-          </div>
+          </article>
         </div>
-      </article>
+      </aside>
 
-      <!-- 轨迹列表 (交互式纵向时间轴) -->
-      <article class="magic-log" :class="{ 'magic-log--dark': isDarkMode }" :dir="isRtl ? 'rtl' : 'ltr'">
-        <div class="section-title">
-          <Icon icon="ph:magic-wand-fill" />
-          <h3>魔法轨迹</h3>
-          
-          <!-- 附加工具栏：深色/RTL开关 -->
-          <div class="magic-log__tools">
-            <button type="button" @click="isDarkMode = !isDarkMode" class="tool-btn" title="切换深色模式">
-              <Icon :icon="isDarkMode ? 'ph:moon-fill' : 'ph:sun-fill'" />
-            </button>
-            <button type="button" @click="isRtl = !isRtl" class="tool-btn" title="切换排版方向">
-              <Icon :icon="isRtl ? 'ph:text-align-right' : 'ph:text-align-left'" />
-            </button>
+      <article class="journey-log">
+        <div class="journey-log__title">
+          <Icon icon="ph:scroll-fill" />
+          <div>
+            <h3>冒险日志</h3>
+            <p>最新的回响排在最前面，左边看时间，中间看记录内容，右边看现在拥有的总分。</p>
           </div>
         </div>
 
-        <div class="magic-log__viewport" ref="viewportRef">
-          <div class="magic-log__container">
-            <div class="magic-log__timeline-line"></div>
+        <div class="journey-log__viewport" ref="viewportRef">
+          <div class="journey-log__container">
+            <div class="journey-log__line" />
 
-            <TransitionGroup name="magic-list" tag="ol" class="magic-log__list" appear>
+            <TransitionGroup name="journal-list" tag="ol" class="journey-log__list" appear>
               <li
                 v-for="(item, index) in visibleItems"
                 :key="item.ledger_id || `log-${index}`"
-                class="magic-log__item"
+                class="journey-log__item"
                 :style="{ '--stagger-idx': index % BATCH_SIZE }"
               >
-                <div class="magic-log__node">
-                  <div class="magic-log__node-inner" :class="`magic-log__node--${getLedgerTone(item)}`"></div>
+                <div class="journey-log__stamp">
+                  <span>{{ getEntryTimelineDate(item) }}</span>
+                  <strong>{{ getEntryTimelineTime(item) }}</strong>
                 </div>
-                
-                <div class="magic-log__card" @click="toggleItem(item.ledger_id)">
-                  <div class="magic-log__card-main">
-                    <div class="magic-log__icon" :class="`magic-log__icon--${getLedgerTone(item)}`">
+
+                <div class="journey-log__node">
+                  <div class="journey-log__node-inner" :class="`journey-log__node-inner--${getLedgerTone(item)}`" />
+                </div>
+
+                <article class="journey-card">
+                  <div class="journey-card__top">
+                    <div class="journey-card__icon" :class="`journey-card__icon--${getLedgerTone(item)}`">
                       <Icon :icon="getLedgerIcon(item)" />
                     </div>
-                    
-                    <div class="magic-log__content">
+
+                    <div class="journey-card__content">
+                      <div class="journey-card__meta">
+                        <span class="journey-card__eyebrow">{{ getEntryEyebrow(item) }}</span>
+                        <span v-if="getEntryTaskCategory(item)" class="journey-card__chip">{{ getEntryTaskCategory(item) }}</span>
+                      </div>
                       <strong>{{ getLedgerTitle(item) }}</strong>
-                      <p>{{ getLedgerSummary(item) }}</p>
+                      <p v-if="getEntryDetail(item)">{{ getEntryDetail(item) }}</p>
                     </div>
 
-                    <div class="magic-log__amount" :class="`magic-log__amount--${getLedgerTone(item)}`">
-                      {{ getLedgerAmountText(item) }}
+                    <div class="journey-card__score" :class="`journey-card__score--${getLedgerTone(item)}`">
+                      <span>{{ getEntryScoreLabel(item) }}</span>
+                      <strong>{{ getEntryTotalText(item) }}</strong>
                     </div>
                   </div>
-                  
-                  <div class="magic-log__details" :class="{ 'magic-log__details--open': expandedItems.includes(item.ledger_id || '') }">
-                    <div class="magic-log__details-inner">
-                      <p><strong>流水号：</strong>{{ item.ledger_id || '暂无' }}</p>
-                      <p v-if="item.remark"><strong>备注：</strong>{{ item.remark }}</p>
-                    </div>
-                  </div>
-                </div>
+                </article>
               </li>
 
-              <!-- 骨架屏占位 -->
-              <li v-if="loading" key="skeleton" class="magic-log__item magic-log__skeleton">
-                <div class="magic-log__node"><div class="magic-log__node-inner"></div></div>
-                <div class="magic-log__card skeleton-card">
-                  <div class="skeleton-icon"></div>
-                  <div class="skeleton-content">
-                    <div class="skeleton-line skeleton-line--short"></div>
-                    <div class="skeleton-line skeleton-line--long"></div>
+              <li v-if="loading" key="journal-skeleton" class="journey-log__item journey-log__item--skeleton">
+                <div class="journey-log__stamp journey-log__stamp--skeleton">
+                  <span class="skeleton-line skeleton-line--stamp-short" />
+                  <span class="skeleton-line skeleton-line--stamp-long" />
+                </div>
+                <div class="journey-log__node"><div class="journey-log__node-inner" /></div>
+                <div class="journey-card journey-card--skeleton">
+                  <div class="journey-card__icon skeleton-block" />
+                  <div class="journey-card__skeleton-lines">
+                    <span class="skeleton-line skeleton-line--short" />
+                    <span class="skeleton-line skeleton-line--long" />
                   </div>
                 </div>
               </li>
             </TransitionGroup>
 
-            <div class="magic-log__actions" v-if="sortedItems.length > DEFAULT_LIMIT">
-              <button v-if="hasMore && !loading" type="button" class="expand-btn" @click="loadMore">
-                <span>展开 {{ hiddenCount }} 条往事</span>
-                <Icon icon="ph:arrows-down-up-bold" class="expand-icon" />
+            <div class="journey-log__actions" v-if="sortedItems.length > DEFAULT_LIMIT">
+              <button v-if="hasMore && !loading" type="button" class="journey-log__btn" @click="loadMore">
+                继续翻看 {{ hiddenCount }} 条回响
               </button>
-              <button v-else-if="!hasMore && !loading" type="button" class="expand-btn expand-btn--collapse" @click="collapse">
-                <span>收起</span>
-                <Icon icon="ph:caret-up-bold" class="expand-icon" />
+              <button v-else-if="!hasMore && !loading" type="button" class="journey-log__btn journey-log__btn--ghost" @click="collapse">
+                收起回响
               </button>
             </div>
-            
-            <div v-if="!sortedItems.length" class="empty-state">
+
+            <div v-if="!sortedItems.length" class="star-archive__empty">
               <Icon icon="ph:shooting-star-light" />
-              <p>还没有星星记录哦</p>
+              <p>星轨档案里还没有新的回响记录。</p>
             </div>
           </div>
         </div>
@@ -219,304 +304,279 @@ const toggleItem = (id?: string) => {
 </template>
 
 <style scoped lang="scss">
-.points-board {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  animation: boardRise 0.4s ease;
-  max-width: 1200px;
-  margin: 0 auto;
-  width: 100%;
+@use '../adventure-theme.scss' as theme;
+
+.star-archive {
+  @include theme.page-shell;
 }
 
-.points-board__sign {
+.star-archive__sign {
+  @include theme.sign-shell(linear-gradient(135deg, #a8d8ff 0%, #8fd6ff 42%, #d8e7ff 100%), #18496c, #76acd9);
+}
+
+.star-archive__hero,
+.star-archive__latest {
+  position: relative;
+  z-index: 1;
+}
+
+.star-archive__hero {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 24px;
-  background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
-  border-radius: 24px;
-  border: 4px solid #fff;
-  box-shadow: 0 12px 0 rgba(161, 196, 253, 0.4), 0 16px 24px rgba(0,0,0,0.1);
-  color: #1f4f81;
-  
-  .points-board__sign-icon {
-    font-size: 40px;
-  }
-  
+  flex-direction: column;
+  gap: 10px;
+  max-width: 620px;
+
   h2 {
     margin: 0;
-    font-size: 32px;
+    font-size: clamp(28px, 4vw, 38px);
+    line-height: 1.08;
     font-weight: 900;
-    letter-spacing: 0.05em;
+  }
+
+  p {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.7;
+    color: rgba(24, 73, 108, 0.82);
+    max-width: 540px;
   }
 }
 
-.points-board__layout {
-  display: grid;
-  grid-template-columns: minmax(300px, 0.8fr) minmax(0, 1.2fr);
-  gap: 32px;
-  align-items: start;
+.star-archive__eyebrow {
+  display: inline-flex;
+  width: fit-content;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.58);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
 }
 
-.star-jar-section {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.star-jar {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 40px 20px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 252, 255, 0.84) 100%);
-  border-radius: 36px;
-  border: 4px solid #fff;
-  box-shadow: 0 12px 24px rgba(69, 100, 134, 0.08);
-}
-
-.star-jar__glass {
-  position: relative;
-  width: 190px;
-  height: 220px;
-  overflow: hidden;
-  border-radius: 54px 54px 42px 42px;
-  border: 10px solid rgba(130, 203, 255, 0.38);
-  background: rgba(247, 250, 255, 0.92);
-  box-shadow: inset 0 -14px 30px rgba(88, 187, 255, 0.12);
-}
-
-.star-jar__fill {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 12px;
-  border-radius: 34px;
-  background: linear-gradient(180deg, rgba(255, 214, 114, 0.82) 0%, rgba(99, 197, 111, 0.92) 100%);
-  transition: height 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.star-jar__spark {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.74);
-}
-
-.star-jar__spark--one { top: 36px; left: 42px; width: 14px; height: 14px; }
-.star-jar__spark--two { top: 78px; right: 44px; width: 18px; height: 18px; }
-.star-jar__spark--three { top: 126px; left: 74px; width: 10px; height: 10px; }
-
-.star-jar__value {
-  margin-top: 24px;
-  text-align: center;
+.star-archive__latest {
+  @include theme.surface-card(18px 20px, 24px);
+  min-width: 240px;
 
   span {
     display: block;
-    font-size: 16px;
-    letter-spacing: 0.14em;
-    color: #5d7592;
-    font-weight: 800;
+    font-size: 13px;
+    font-weight: 900;
+    color: #5c82a3;
   }
 
   strong {
     display: block;
     margin-top: 8px;
-    font-size: 48px;
-    line-height: 1;
-    color: #236db4;
-    text-shadow: 0 4px 12px rgba(35, 109, 180, 0.2);
+    font-size: 24px;
+    line-height: 1.15;
+    color: #1f4f81;
+  }
+
+  p {
+    margin: 8px 0 0;
+    font-size: 13px;
+    line-height: 1.65;
+    color: #5f7591;
   }
 }
 
-.points-badges {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.star-archive__layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.74fr) minmax(0, 1.26fr);
+  gap: 24px;
+  align-items: start;
 }
 
-.points-badge {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 20px;
-  border-radius: 24px;
-  border: 4px solid #fff;
-  box-shadow: 0 8px 16px rgba(0,0,0,0.06);
-  
-  &__icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 18px;
-    display: grid;
-    place-items: center;
-    font-size: 32px;
-    background: rgba(255,255,255,0.6);
-  }
-  
-  &__info {
-    display: flex;
-    flex-direction: column;
-    
-    span {
-      font-size: 14px;
-      font-weight: 800;
-      opacity: 0.8;
-    }
-    
-    strong {
-      font-size: 28px;
-      line-height: 1.2;
-    }
-  }
-}
-
-.points-badge--amber {
-  background: linear-gradient(135deg, #ffe082 0%, #ffbd39 100%);
-  color: #7a4b00;
-  
-  .points-badge__icon { color: #d97706; }
-}
-
-.points-badge--rose {
-  background: linear-gradient(135deg, #ffbaba 0%, #ff7b89 100%);
-  color: #8c2a3e;
-  
-  .points-badge__icon { color: #e11d48; }
-}
-
-.magic-log {
-  /* 基础变量 */
-  --ml-bg: rgba(255, 255, 255, 0.8);
-  --ml-card-bg: #ffffff;
-  --ml-text-main: #2c3e50;
-  --ml-text-sub: #8aa0b9;
-  --ml-shadow: 0 12px 24px rgba(69, 100, 134, 0.08);
-  --ml-card-shadow: 0 4px 12px rgba(0,0,0,0.04);
-  --ml-card-hover: 0 8px 24px rgba(0,0,0,0.08);
-  --ml-line-bg: linear-gradient(180deg, #63c56f, #42baff, #ff7b89);
-  --ml-node-border: #e2e8f0;
-  --ml-skeleton-bg: #f1f5f9;
-  
+.star-archive__aside {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  background: var(--ml-bg);
-  border-radius: 36px;
-  padding: 32px;
-  border: 4px solid var(--ml-card-bg);
-  box-shadow: var(--ml-shadow);
-  transition: all 0.4s ease;
-  
-  /* 深色模式 */
-  &--dark {
-    --ml-bg: rgba(30, 41, 59, 0.9);
-    --ml-card-bg: #0f172a;
-    --ml-text-main: #f8fafc;
-    --ml-text-sub: #94a3b8;
-    --ml-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
-    --ml-card-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    --ml-card-hover: 0 8px 24px rgba(0,0,0,0.4);
-    --ml-node-border: #334155;
-    --ml-skeleton-bg: #1e293b;
-    border-color: #334155;
+}
+
+.jar-card {
+  @include theme.surface-card(28px 24px, 34px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  overflow: hidden;
+}
+
+.jar-card__glow {
+  position: absolute;
+  inset: auto auto -80px -40px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(144, 216, 255, 0.34) 0%, rgba(144, 216, 255, 0) 74%);
+  animation: portalOrbPulse 3.5s ease-in-out infinite;
+}
+
+.jar-card__glass {
+  position: relative;
+  width: 192px;
+  height: 228px;
+  overflow: hidden;
+  border-radius: 58px 58px 42px 42px;
+  border: 10px solid rgba(134, 206, 255, 0.38);
+  background: rgba(247, 252, 255, 0.94);
+  box-shadow: inset 0 -14px 30px rgba(88, 187, 255, 0.12);
+}
+
+.jar-card__fill {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  border-radius: 34px;
+  background: linear-gradient(180deg, rgba(255, 216, 116, 0.86) 0%, rgba(99, 197, 111, 0.92) 100%);
+  transition: height 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.jar-card__spark {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.jar-card__spark--one { top: 36px; left: 42px; width: 14px; height: 14px; }
+.jar-card__spark--two { top: 78px; right: 44px; width: 18px; height: 18px; }
+.jar-card__spark--three { top: 126px; left: 74px; width: 10px; height: 10px; }
+
+.jar-card__value {
+  position: relative;
+  z-index: 1;
+  margin-top: 24px;
+
+  span {
+    display: block;
+    font-size: 14px;
+    font-weight: 900;
+    color: #597493;
+    letter-spacing: 0.08em;
+  }
+
+  strong {
+    display: block;
+    margin-top: 8px;
+    font-size: 46px;
+    line-height: 1;
+    color: #236db4;
   }
 }
 
-.section-title {
+.archive-stats {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--ml-text-main);
-  
-  svg { font-size: 32px; color: #42baff; }
-  h3 { margin: 0; font-size: 24px; font-weight: 900; flex: 1; }
+  flex-direction: column;
+  gap: 14px;
 }
 
-.magic-log__tools {
+.archive-stat {
+  @include theme.surface-card(18px 20px, 24px);
   display: flex;
-  gap: 8px;
-  
-  .tool-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 12px;
+  align-items: center;
+  gap: 14px;
+
+  &__icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 20px;
     display: grid;
     place-items: center;
-    background: var(--ml-card-bg);
-    border: 1px solid var(--ml-node-border);
-    color: var(--ml-text-sub);
-    cursor: pointer;
-    transition: all 0.2s;
-    
-    &:hover {
-      color: #42baff;
-      border-color: #42baff;
+    font-size: 30px;
+    color: white;
+  }
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    span {
+      font-size: 13px;
+      font-weight: 800;
+      color: #6a819c;
+    }
+
+    strong {
+      font-size: 26px;
+      line-height: 1.15;
+      color: #22384f;
     }
   }
 }
 
-.magic-log__viewport {
-  max-height: 500px;
+.archive-stat--amber .archive-stat__icon { background: linear-gradient(135deg, #ffe082 0%, #ffba34 100%); }
+.archive-stat--rose .archive-stat__icon { background: linear-gradient(135deg, #ffbaba 0%, #ff7b89 100%); }
+.archive-stat--sky .archive-stat__icon { background: linear-gradient(135deg, #9ae4ff 0%, #67a8ff 100%); }
+
+.journey-log {
+  @include theme.surface-card(28px, 34px);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.journey-log__title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  svg {
+    font-size: 34px;
+    color: #3c87d2;
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 24px;
+    color: #22384f;
+  }
+
+  p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #6a819c;
+  }
+}
+
+.journey-log__viewport {
+  max-height: 560px;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: 16px;
-  margin-right: -16px;
-  
-  /* 滚动条美化 */
+  padding-right: 12px;
+  margin-right: -12px;
+
   &::-webkit-scrollbar { width: 6px; }
   &::-webkit-scrollbar-track { background: transparent; }
-  &::-webkit-scrollbar-thumb { 
-    background: rgba(138, 160, 185, 0.3); 
-    border-radius: 6px; 
+  &::-webkit-scrollbar-thumb {
+    background: rgba(138, 160, 185, 0.3);
+    border-radius: 999px;
   }
 }
 
-.magic-log__container {
+.journey-log__container {
   position: relative;
-  padding: 12px 0;
+  padding: 6px 0;
+  --journey-stamp-width: 64px;
+  --journey-node-width: 40px;
+  --journey-gap: 14px;
 }
 
-.magic-log__timeline-line {
+.journey-log__line {
   position: absolute;
-  left: 25px;
-  top: 16px;
+  left: calc(var(--journey-stamp-width) + (var(--journey-node-width) / 2));
+  top: 14px;
   bottom: 0;
-  width: 2px;
-  background: var(--ml-line-bg);
-  background-size: 100% 200%;
-  border-radius: 2px;
-  z-index: 0;
-  animation: magicPulse 3s ease-in-out infinite alternate;
+  width: 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #63c56f 0%, #42baff 48%, #ff8fa2 100%);
+  opacity: 0.86;
+  transform: translateX(-50%);
 }
 
-@keyframes magicPulse {
-  0% { background-position: 0% 0%; opacity: 0.5; box-shadow: 0 0 4px rgba(66, 186, 255, 0.2); }
-  100% { background-position: 0% 100%; opacity: 1; box-shadow: 0 0 12px rgba(66, 186, 255, 0.6); }
-}
-
-/* RTL适配 */
-.magic-log[dir="rtl"] {
-  .magic-log__viewport {
-    padding-right: 0;
-    padding-left: 16px;
-    margin-right: 0;
-    margin-left: -16px;
-  }
-  .magic-log__timeline-line {
-    left: auto;
-    right: 25px;
-  }
-  .magic-log__card {
-    text-align: right;
-  }
-  .section-title {
-    flex-direction: row-reverse;
-  }
-}
-
-.magic-log__list {
+.journey-log__list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -527,82 +587,92 @@ const toggleItem = (id?: string) => {
   z-index: 1;
 }
 
-.magic-log__item {
-  display: flex;
-  gap: 20px;
-  /* 虚拟滚动原生优化：跳过屏幕外渲染 */
+.journey-log__item {
+  display: grid;
+  grid-template-columns: var(--journey-stamp-width) var(--journey-node-width) minmax(0, 1fr);
+  column-gap: var(--journey-gap);
   content-visibility: auto;
-  contain-intrinsic-size: 100px;
+  contain-intrinsic-size: 108px;
 }
 
-/* Vue 渐进披露动画 */
-.magic-list-enter-active {
-  transition: all 0.6s cubic-bezier(0.215, 0.61, 0.355, 1);
-  transition-delay: calc(var(--stagger-idx) * 80ms);
-}
-.magic-list-enter-from {
-  opacity: 0;
-  transform: translateY(30px);
-}
-.magic-list-leave-active {
-  transition: all 0.3s ease-in;
-}
-.magic-list-leave-to {
-  opacity: 0;
-  transform: scale(0.9);
+.journal-list-enter-active {
+  transition: all 0.55s cubic-bezier(0.215, 0.61, 0.355, 1);
+  transition-delay: calc(var(--stagger-idx) * 70ms);
 }
 
-.magic-log__node {
-  width: 52px;
+.journal-list-enter-from {
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+.journey-log__stamp {
+  padding-top: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+
+  span {
+    font-size: 11px;
+    font-weight: 800;
+    color: #8ca2b9;
+    letter-spacing: 0.04em;
+  }
+
+  strong {
+    font-size: 14px;
+    line-height: 1.05;
+    font-weight: 800;
+    color: #46627d;
+  }
+}
+
+.journey-log__stamp--skeleton {
+  justify-content: center;
+}
+
+.journey-log__node {
+  width: var(--journey-node-width);
   display: flex;
   justify-content: center;
   padding-top: 22px;
   flex-shrink: 0;
-  position: relative;
-  z-index: 2;
 }
 
-.magic-log__node-inner {
-  width: 12px;
-  height: 12px;
+.journey-log__node-inner {
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: var(--ml-card-bg);
-  border: 3px solid var(--ml-node-border);
-  transition: all 0.3s;
+  background: white;
+  border: 3px solid #dce8f5;
+  transition: transform 0.2s ease;
 }
 
-.magic-log__item:hover .magic-log__node-inner {
-  transform: scale(1.4);
-}
-.magic-log__node--mint { border-color: #63c56f; }
-.magic-log__node--rose { border-color: #ff7b89; }
+.journey-log__node-inner--mint { border-color: #63c56f; }
+.journey-log__node-inner--rose { border-color: #ff7b89; }
 
-.magic-log__card {
+.journey-card {
   flex: 1;
   min-width: 0;
-  background: var(--ml-card-bg);
-  border-radius: 24px;
-  padding: 16px 20px;
-  box-shadow: var(--ml-card-shadow);
-  transition: transform 0.2s, box-shadow 0.2s;
-  cursor: pointer;
-  border: 1px solid var(--ml-node-border);
-  
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--ml-card-hover);
-  }
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 251, 255, 0.94) 100%);
+  border-radius: 26px;
+  padding: 18px 18px 18px 20px;
+  border: 1px solid rgba(140, 165, 194, 0.2);
+  box-shadow: 0 12px 18px rgba(62, 93, 128, 0.06);
+  text-align: left;
 }
 
-.magic-log__card-main {
-  display: flex;
+.journey-card__top {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) minmax(118px, auto);
   align-items: center;
-  gap: 16px;
+  gap: 14px;
 }
 
-.magic-log__icon {
-  width: 52px;
-  height: 52px;
+.journey-card__icon {
+  width: 54px;
+  height: 54px;
   border-radius: 18px;
   display: grid;
   place-items: center;
@@ -611,194 +681,229 @@ const toggleItem = (id?: string) => {
   flex-shrink: 0;
 }
 
-.magic-log__icon--mint { background: linear-gradient(135deg, #a4ecae 0%, #63c56f 100%); }
-.magic-log__icon--rose { background: linear-gradient(135deg, #ffbaba 0%, #ff7b89 100%); }
+.journey-card__icon--mint { background: linear-gradient(135deg, #a4ecae 0%, #63c56f 100%); }
+.journey-card__icon--rose { background: linear-gradient(135deg, #ffbaba 0%, #ff7b89 100%); }
 
-.magic-log__content {
+.journey-card__content {
   flex: 1;
   min-width: 0;
-  
+
   strong {
     display: block;
+    margin-top: 6px;
     font-size: 18px;
-    color: var(--ml-text-main);
+    color: #22384f;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  
+
   p {
-    margin: 4px 0 0;
-    font-size: 14px;
-    color: var(--ml-text-sub);
+    margin: 6px 0 0;
+    font-size: 13px;
+    line-height: 1.65;
+    color: #6a819c;
   }
 }
 
-.magic-log__amount {
-  font-size: 24px;
+.journey-card__eyebrow {
+  display: inline-flex;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(127, 149, 174, 0.12);
+  color: #69839c;
+  font-size: 11px;
   font-weight: 900;
-  white-space: nowrap;
 }
 
-.magic-log__amount--mint { color: #2e7c43; }
-.magic-log__amount--rose { color: #e11d48; }
-
-/* 展开抽屉 */
-.magic-log__details {
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.215, 0.61, 0.355, 1);
+.journey-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.magic-log__details--open {
-  max-height: 100px;
-  opacity: 1;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px dashed var(--ml-node-border);
+.journey-card__chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(123, 146, 171, 0.1);
+  color: #57708c;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
 }
 
-.magic-log__details-inner {
-  font-size: 13px;
-  color: var(--ml-text-sub);
-  p { margin: 0 0 6px; }
-  strong { color: var(--ml-text-main); }
+.journey-card__score {
+  min-width: 118px;
+  padding: 12px 14px;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  text-align: right;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+
+  span {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: #6d839a;
+  }
+
+  strong {
+    font-size: 24px;
+    line-height: 1;
+    font-weight: 900;
+  }
 }
 
-/* 骨架屏 */
-.skeleton-card {
+.journey-card__score--mint {
+  background: linear-gradient(145deg, rgba(165, 236, 174, 0.22) 0%, rgba(228, 250, 231, 0.84) 100%);
+  border: 1px solid rgba(99, 197, 111, 0.16);
+
+  strong {
+    color: #2e7c43;
+  }
+}
+
+.journey-card__score--rose {
+  background: linear-gradient(145deg, rgba(255, 186, 186, 0.22) 0%, rgba(255, 239, 241, 0.88) 100%);
+  border: 1px solid rgba(255, 123, 137, 0.16);
+
+  strong {
+    color: #d9485c;
+  }
+}
+
+.journey-card--skeleton {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   pointer-events: none;
 }
-.skeleton-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 18px;
-  background: var(--ml-skeleton-bg);
-  animation: pulse 1.5s infinite;
-}
-.skeleton-content {
+
+.journey-card__skeleton-lines {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
+
+.skeleton-block,
+.skeleton-line {
+  background: rgba(214, 226, 239, 0.7);
+  animation: journalPulse 1.3s ease-in-out infinite;
+}
+
+.skeleton-block {
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  flex-shrink: 0;
+}
+
 .skeleton-line {
   height: 16px;
-  background: var(--ml-skeleton-bg);
-  border-radius: 8px;
-  animation: pulse 1.5s infinite;
-}
-.skeleton-line--short { width: 40%; }
-.skeleton-line--long { width: 70%; }
-
-@keyframes pulse {
-  0% { opacity: 0.6; }
-  50% { opacity: 1; }
-  100% { opacity: 0.6; }
-}
-
-/* 展开按钮 */
-.magic-log__actions {
-  margin-top: 24px;
-  display: flex;
-  justify-content: center;
-  position: relative;
-  z-index: 2;
-}
-
-.expand-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
   border-radius: 999px;
-  background: var(--ml-card-bg);
-  border: 1px solid var(--ml-node-border);
-  color: var(--ml-text-main);
-  font-size: 14px;
-  font-weight: 800;
-  cursor: pointer;
-  box-shadow: var(--ml-card-shadow);
-  transition: all 0.3s;
-  
-  &:hover {
-    color: #42baff;
-    border-color: #42baff;
-    transform: translateY(-2px);
-  }
 }
 
-.expand-icon {
-  font-size: 16px;
+.skeleton-line--stamp-short { width: 52px; height: 12px; }
+.skeleton-line--stamp-long { width: 64px; height: 18px; }
+.skeleton-line--short { width: 42%; }
+.skeleton-line--long { width: 72%; }
+
+@keyframes journalPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
 
-/* 适配移动端 */
-@media (max-width: 600px) {
-  .magic-log__item { gap: 12px; }
-  .magic-log__timeline-line { left: 17px; }
-  .magic-log[dir="rtl"] .magic-log__timeline-line { right: 17px; }
-  .magic-log__node { width: 36px; }
-  .magic-log__card { padding: 12px 16px; }
-  .magic-log__icon { width: 40px; height: 40px; font-size: 20px; }
-  .magic-log__amount { font-size: 18px; }
-}
-
-.empty-state {
+.journey-log__actions {
+  margin-top: 22px;
   display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
-  padding: 60px 20px;
-  color: #8aa0b9;
-  text-align: center;
-  background: #fff;
-  border-radius: 24px;
-  
-  svg { font-size: 64px; margin-bottom: 16px; opacity: 0.5; }
-  p { font-size: 18px; font-weight: 800; margin: 0; }
 }
 
-@keyframes boardRise {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+.journey-log__btn {
+  padding: 12px 22px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, #95dfff 0%, #66a9ff 100%);
+  color: white;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 10px 18px rgba(101, 168, 255, 0.24);
 }
 
-@media (max-width: 980px) {
-  .points-board__layout {
+.journey-log__btn--ghost {
+  background: rgba(105, 184, 255, 0.12);
+  color: #2e5a8d;
+  box-shadow: none;
+}
+
+.star-archive__empty {
+  @include theme.empty-state(220px);
+}
+
+@media (max-width: 1024px) {
+  .star-archive__sign {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .star-archive__layout {
     grid-template-columns: 1fr;
   }
-  
-  .points-badges {
-    flex-direction: row;
-    
-    .points-badge {
-      flex: 1;
-      padding: 16px;
-      
-      &__icon {
-        width: 48px;
-        height: 48px;
-        font-size: 24px;
-      }
-      
-      &__info strong {
-        font-size: 24px;
-      }
-    }
-  }
 }
 
-@media (max-width: 600px) {
-  .points-badges {
-    flex-direction: column;
+@media (max-width: 720px) {
+  .star-archive {
+    gap: 20px;
   }
-  
-  .magic-log__item {
-    padding: 16px;
+
+  .star-archive__sign,
+  .journey-log,
+  .jar-card {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .journey-log__item {
+    column-gap: 12px;
+  }
+
+  .journey-log__container {
+    --journey-stamp-width: 56px;
+    --journey-node-width: 36px;
+    --journey-gap: 12px;
+  }
+
+  .journey-log__stamp {
+    padding-top: 16px;
+
+    span {
+      font-size: 11px;
+    }
+
+    strong {
+      font-size: 15px;
+    }
+  }
+
+  .journey-card__top {
+    grid-template-columns: 54px minmax(0, 1fr);
+    align-items: flex-start;
+  }
+
+  .journey-card__score {
+    grid-column: 1 / -1;
+    margin-left: 68px;
+    min-width: 0;
+    align-items: flex-start;
+    text-align: left;
   }
 }
 </style>

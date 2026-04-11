@@ -24,6 +24,10 @@ function getTaskPoints(layout: ReturnType<typeof buildAdventureLayout>) {
   return Object.values(layout.positions).filter((point) => point.id !== 'start' && point.id !== 'end')
 }
 
+function isWithin(percent: number, min: number, max: number) {
+  return percent >= min && percent <= max
+}
+
 describe('adventure map layout', () => {
   it('keeps positions stable for the same record date and task ids', () => {
     const tasks = [createTask('a'), createTask('b'), createTask('c')]
@@ -35,14 +39,35 @@ describe('adventure map layout', () => {
     expect(left.seed).toBe(right.seed)
   })
 
-  it('pins start and end anchors to the fixed coordinates', () => {
+  it('keeps start and end anchors inside the configured top and bottom zones', () => {
     const nodes = buildAdventureNodes([createTask('a')], '2026-04-10')
     const layout = buildAdventureLayout(nodes, { width: 900, height: 620 })
 
-    expect(layout.positions.start.xPercent).toBe(50)
-    expect(layout.positions.start.yPercent).toBe(12)
-    expect(layout.positions.end.xPercent).toBe(50)
-    expect(layout.positions.end.yPercent).toBe(86)
+    expect(['left', 'center', 'right']).toContain(layout.anchors.startZone.column)
+    expect(['left', 'center', 'right']).toContain(layout.anchors.endZone.column)
+    expect(isWithin(layout.positions.start.xPercent, 18, 82)).toBe(true)
+    expect(isWithin(layout.positions.start.yPercent, 9, 15)).toBe(true)
+    expect(isWithin(layout.positions.end.xPercent, 18, 82)).toBe(true)
+    expect(isWithin(layout.positions.end.yPercent, 88, 94)).toBe(true)
+  })
+
+  it('keeps start and end anchors in different columns', () => {
+    const nodes = buildAdventureNodes([createTask('a'), createTask('b')], '2026-04-10')
+    const layout = buildAdventureLayout(nodes, { width: 900, height: 620 })
+
+    expect(layout.anchors.startZone.column).not.toBe(layout.anchors.endZone.column)
+  })
+
+  it('changes anchor zones or task positions when the reroll seed changes', () => {
+    const tasks = [createTask('a'), createTask('b'), createTask('c')]
+    const first = buildAdventureLayout(buildAdventureNodes(tasks, '2026-04-10::layout-0'), { width: 900, height: 620 })
+    const second = buildAdventureLayout(buildAdventureNodes(tasks, '2026-04-10::layout-1'), { width: 900, height: 620 })
+    const anchorChanged =
+      first.anchors.startZone.zoneId !== second.anchors.startZone.zoneId ||
+      first.anchors.endZone.zoneId !== second.anchors.endZone.zoneId
+    const positionsChanged = JSON.stringify(first.positions) !== JSON.stringify(second.positions)
+
+    expect(anchorChanged || positionsChanged).toBe(true)
   })
 
   it('places every task node inside the safe area', () => {
@@ -93,7 +118,7 @@ describe('adventure map layout', () => {
     ])
   })
 
-  it('connects only completed and pending tasks in progress-time order once progress exists', () => {
+  it('moves progressed tasks to the front and keeps remaining tasks connected in challenge order', () => {
     const tasks = [
       createTask('active-1'),
       createTask('pending-1', { type: 'pending', submitted_at: 3000 }),
@@ -103,10 +128,21 @@ describe('adventure map layout', () => {
     ]
     const nodes = buildAdventureNodes(tasks, '2026-04-10')
     const route = buildAdventureRoute(nodes)
+    const challengeRoute = buildAdventureRoute(buildAdventureNodes([
+      createTask('active-1'),
+      createTask('pending-1'),
+      createTask('completed-1'),
+      createTask('pending-2'),
+      createTask('active-2')
+    ], '2026-04-10'))
+    const remainingChallengeOrder = challengeRoute.taskNodeIds.filter((nodeId) =>
+      !['completed-1', 'pending-2', 'pending-1'].includes(nodeId)
+    )
 
     expect(route.mode).toBe('progressed')
-    expect(route.taskNodeIds).toEqual(['completed-1', 'pending-2', 'pending-1'])
-    expect(route.idleNodeIds).toEqual(['active-1', 'active-2'])
+    expect(route.progressedNodeIds).toEqual(['completed-1', 'pending-2', 'pending-1'])
+    expect(route.idleNodeIds).toEqual(remainingChallengeOrder)
+    expect(route.taskNodeIds).toEqual(['completed-1', 'pending-2', 'pending-1', ...remainingChallengeOrder])
   })
 
   it('uses submitted_at to order pending tasks on the main route', () => {
@@ -117,6 +153,23 @@ describe('adventure map layout', () => {
     const route = buildAdventureRoute(nodes)
 
     expect(route.taskNodeIds).toEqual(['soon', 'later'])
+  })
+
+  it('keeps the unfinished tasks on the path after a middle task is completed later', () => {
+    const nodes = buildAdventureNodes([
+      createTask('task-1', { type: 'completed', completed_at: 1000 }),
+      createTask('task-2'),
+      createTask('task-3'),
+      createTask('task-4', { type: 'completed', completed_at: 4000 }),
+      createTask('task-5')
+    ], '2026-04-10')
+    const route = buildAdventureRoute(nodes)
+
+    expect(route.progressedNodeIds).toEqual(['task-1', 'task-4'])
+    expect(route.taskNodeIds.slice(0, 2)).toEqual(['task-1', 'task-4'])
+    expect(route.nodeIds[0]).toBe('start')
+    expect(route.nodeIds.at(-1)).toBe('end')
+    expect(route.taskNodeIds).toHaveLength(5)
   })
 
   it('switches to compact mode for many tasks without increasing the supplied viewport height', () => {
