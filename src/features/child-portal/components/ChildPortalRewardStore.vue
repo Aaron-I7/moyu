@@ -342,7 +342,7 @@ function getRewardTagline(item: ChildRewardItem) {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  min-width: 240px;
+  min-width: min(240px, 100%);
 }
 
 .treasure-station__points {
@@ -796,7 +796,7 @@ function getRewardTagline(item: ChildRewardItem) {
   min-height: 140px;
 }
 
-@media (max-width: 1024px) {
+@include theme.respond-max(tablet) {
   .treasure-station__sign {
     flex-direction: column;
     align-items: stretch;
@@ -807,18 +807,157 @@ function getRewardTagline(item: ChildRewardItem) {
   }
 }
 
-@media (max-width: 720px) {
-  .treasure-station {
-    gap: 20px;
+@include theme.respond-max(phone) {
+  .treasure-station__meta {
+    width: 100%;
   }
 
-  .treasure-station__sign {
-    padding: 24px 20px;
+  .treasure-station__points {
+    padding: 16px 18px;
+    gap: 12px;
+
+    svg {
+      font-size: 28px;
+    }
+
+    strong {
+      font-size: 28px;
+    }
+  }
+
+  .station-panel {
+    padding: 20px;
+    border-radius: 28px;
+  }
+
+  .station-panel__title h3 {
+    font-size: 18px;
+  }
+
+  .treasure-card {
+    padding: 16px;
+    gap: 14px;
+    border-radius: 24px;
+  }
+
+  .treasure-card__crest {
+    width: 76px;
+    height: 76px;
+    border-radius: 24px;
+    font-size: 36px;
+  }
+
+  .treasure-card__body h4 {
+    font-size: 18px;
+  }
+
+  .treasure-card__cost strong {
+    font-size: 20px;
   }
 
   .wish-form__presets,
   .treasure-grid {
     grid-template-columns: 1fr;
+  }
+
+  .wish-chip {
+    padding: 11px;
+    gap: 9px;
+
+    svg {
+      font-size: 20px;
+    }
+  }
+
+  .wish-form__submit {
+    padding: 14px;
+    font-size: 16px;
+  }
+}
+
+@include theme.respond-max(narrow) {
+  .treasure-station__hero h2 {
+    font-size: clamp(24px, 8vw, 30px);
+  }
+
+  .treasure-station__hero p {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .treasure-station__points {
+    padding: 14px 16px;
+  }
+
+  .treasure-station__wish-stats {
+    flex-direction: column;
+
+    span {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
+  .station-panel {
+    padding: 18px 16px;
+  }
+
+  .treasure-card {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .treasure-card__crest {
+    width: 68px;
+    height: 68px;
+    border-radius: 20px;
+    font-size: 32px;
+  }
+
+  .treasure-card__body h4 {
+    font-size: 17px;
+  }
+
+  .treasure-card__body p {
+    font-size: 13px;
+    line-height: 1.58;
+  }
+
+  .treasure-card__type,
+  .status-pill,
+  .history-stats__pill {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  .wish-chip {
+    padding: 10px;
+    border-radius: 16px;
+
+    strong {
+      font-size: 13px;
+    }
+
+    span {
+      font-size: 11px;
+    }
+  }
+
+  .echo-card {
+    padding: 12px;
+    border-radius: 20px;
+  }
+
+  .echo-card__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    font-size: 20px;
+  }
+
+  .echo-card__header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>

@@ -107,12 +107,26 @@ const avatarLabel = computed(() => displayName.value.slice(0, 1))
 </template>
 
 <style scoped lang="scss">
+@use '../adventure-theme.scss' as theme;
+
 .portal-shell {
   --portal-amber: #ffaa00;
   --portal-sky: #42baff;
   --portal-mint: #4cdb5e;
   --portal-rose: #ff725c;
   --portal-ink: #1a2a40;
+  --portal-shell-side-padding: 24px;
+  --portal-dock-item-size: 72px;
+  --portal-dock-gap: 12px;
+  --portal-dock-padding: 12px;
+  --portal-dock-bottom: 24px;
+  --portal-dock-radius: 32px;
+  --portal-main-bottom-padding: calc(
+    var(--portal-dock-bottom) +
+    (var(--portal-dock-padding) * 2) +
+    var(--portal-dock-item-size) +
+    28px
+  );
   
   position: relative;
   min-height: 100vh;
@@ -141,7 +155,7 @@ const avatarLabel = computed(() => displayName.value.slice(0, 1))
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
+  padding: 16px var(--portal-shell-side-padding);
   gap: 16px;
   pointer-events: none; /* 让中间部分可穿透点击 */
 }
@@ -247,7 +261,7 @@ const avatarLabel = computed(() => displayName.value.slice(0, 1))
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 0 24px 100px; /* 留出底部 dock 的空间 */
+  padding: 0 var(--portal-shell-side-padding) var(--portal-main-bottom-padding);
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
@@ -257,19 +271,20 @@ const avatarLabel = computed(() => displayName.value.slice(0, 1))
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 /* 底部 Dock */
 .portal-dock {
   position: fixed;
-  bottom: 24px;
+  bottom: var(--portal-dock-bottom);
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
   display: flex;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 32px;
+  gap: var(--portal-dock-gap);
+  padding: var(--portal-dock-padding);
+  border-radius: var(--portal-dock-radius);
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(16px);
   box-shadow: 0 16px 40px rgba(20, 50, 80, 0.12), inset 0 0 0 2px rgba(255, 255, 255, 0.5);
@@ -281,8 +296,8 @@ const avatarLabel = computed(() => displayName.value.slice(0, 1))
   align-items: center;
   justify-content: center;
   gap: 4px;
-  width: 72px;
-  height: 72px;
+  width: var(--portal-dock-item-size);
+  height: var(--portal-dock-item-size);
   border-radius: 20px;
   color: #7b94b0;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -343,22 +358,160 @@ const avatarLabel = computed(() => displayName.value.slice(0, 1))
   color: #2b9e44;
 }
 
-@media (max-width: 768px) {
+@include theme.respond-max(phone) {
+  .portal-shell {
+    --portal-shell-side-padding: 16px;
+    --portal-dock-item-size: 60px;
+    --portal-dock-gap: clamp(6px, 2vw, 10px);
+    --portal-dock-padding: 10px;
+    --portal-dock-bottom: 16px;
+    --portal-dock-radius: 28px;
+    --portal-main-bottom-padding: calc(
+      var(--portal-dock-bottom) +
+      (var(--portal-dock-padding) * 2) +
+      var(--portal-dock-item-size) +
+      30px
+    );
+  }
+
   .portal-hud {
-    padding: 12px 16px;
     flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 12px;
   }
-  .portal-main {
-    padding: 0 16px 100px;
+
+  .portal-hud__left,
+  .portal-hud__right {
+    width: 100%;
+    justify-content: space-between;
+    gap: 10px;
   }
+
+  .portal-hud__avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    font-size: 24px;
+  }
+
+  .portal-hud__info h1 {
+    font-size: clamp(20px, 5.8vw, 26px);
+  }
+
+  .portal-hud__badge {
+    font-size: 13px;
+  }
+
+  .portal-hud__expiry {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: center;
+    font-size: 13px;
+  }
+
+  .portal-hud__stars {
+    padding: 6px 14px;
+
+    svg {
+      font-size: 22px;
+    }
+
+    strong {
+      font-size: 20px;
+    }
+  }
+
   .portal-dock {
-    bottom: 16px;
     width: calc(100% - 32px);
-    justify-content: space-around;
+    justify-content: space-between;
   }
+
   .portal-dock__item {
-    width: 64px;
-    height: 64px;
+    min-width: 0;
+    border-radius: 18px;
+  }
+
+  .portal-dock__item--active {
+    transform: translateY(-6px);
+  }
+
+  .portal-dock__icon {
+    font-size: 28px;
+  }
+
+  .portal-dock__label {
+    font-size: 12px;
+  }
+}
+
+@include theme.respond-max(narrow) {
+  .portal-shell {
+    --portal-shell-side-padding: 12px;
+    --portal-dock-item-size: 56px;
+    --portal-dock-gap: 2px;
+    --portal-dock-padding: 8px;
+    --portal-dock-bottom: 12px;
+    --portal-dock-radius: 24px;
+  }
+
+  .portal-hud__left {
+    gap: 10px;
+  }
+
+  .portal-hud__avatar {
+    width: 52px;
+    height: 52px;
+    border-width: 3px;
+    border-radius: 16px;
+    font-size: 22px;
+  }
+
+  .portal-hud__info h1 {
+    font-size: 18px;
+  }
+
+  .portal-hud__badge {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  .portal-hud__expiry {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+
+  .portal-hud__stars {
+    padding: 6px 11px;
+
+    svg {
+      font-size: 18px;
+    }
+
+    strong {
+      font-size: 18px;
+    }
+  }
+
+  .portal-dock {
+    width: calc(100% - 24px);
+  }
+
+  .portal-dock__item {
+    flex: 1 1 0;
+    gap: 3px;
+    border-radius: 16px;
+  }
+
+  .portal-dock__item--active {
+    transform: translateY(-4px);
+  }
+
+  .portal-dock__icon {
+    font-size: 24px;
+  }
+
+  .portal-dock__label {
+    font-size: 11px;
   }
 }
 </style>

@@ -94,11 +94,63 @@ const mapNodes = computed(() =>
 const adventureRoute = computed(() => buildAdventureRoute(mapNodes.value))
 const adventureLayout = computed(() => buildAdventureLayout(mapNodes.value, adventureViewport.value))
 const adventureEdges = computed(() => buildAdventureEdges(adventureRoute.value, adventureLayout.value))
+const mapResponsiveProfile = computed(() => adventureLayout.value.responsive)
 const containerHeight = computed(() => `${adventureLayout.value.height}px`)
 const mapPathClass = computed(() => ({
   'map-path--compact': adventureLayout.value.compact,
   'map-path--challenge': adventureRoute.value.mode === 'challenge'
 }))
+const mapPathStyle = computed(() => {
+  const profile = mapResponsiveProfile.value
+  const labelPaddingX = profile.tier === 'desktop' ? 16 : profile.tier === 'tablet' ? 14 : profile.tier === 'phone' ? 12 : 10
+  const labelPaddingY = profile.tier === 'narrow-phone' ? 6 : 7
+  const nodeGap = profile.tier === 'desktop' ? 12 : profile.tier === 'tablet' ? 10 : 8
+  const titleFontSize = profile.tier === 'desktop' ? 16 : profile.tier === 'tablet' ? 15 : profile.tier === 'phone' ? 13 : 12
+  const orbShadowOffset = Math.max(6, Math.round(profile.orbSizePx * 0.1))
+  const orbShadowBlur = Math.max(18, Math.round(profile.orbSizePx * 0.24))
+  const rerollFontSize = profile.tier === 'desktop' ? 14 : profile.tier === 'tablet' ? 13 : 12
+  const rerollPadY = profile.tier === 'desktop' ? 10 : profile.tier === 'tablet' ? 9 : 8
+  const rerollPadX = profile.tier === 'desktop' ? 16 : profile.tier === 'tablet' ? 14 : profile.tier === 'phone' ? 12 : 10
+  const rerollTop = profile.tier === 'desktop' ? 10 : profile.tier === 'tablet' ? 6 : -4
+  const rerollIconSize = profile.tier === 'desktop' ? 18 : 16
+  const lineDash = profile.tier === 'desktop' ? '18 16' : profile.tier === 'tablet' ? '16 14' : profile.tier === 'phone' ? '12 12' : '10 12'
+  const challengeDash = profile.tier === 'desktop' ? '14 18' : profile.tier === 'tablet' ? '13 16' : profile.tier === 'phone' ? '11 13' : '9 12'
+  const actionFontSize = profile.tier === 'desktop' ? 18 : profile.tier === 'tablet' ? 16 : 14
+  const actionPadY = profile.tier === 'desktop' ? 12 : profile.tier === 'tablet' ? 11 : 10
+  const actionPadX = profile.tier === 'desktop' ? 20 : profile.tier === 'tablet' ? 18 : profile.tier === 'phone' ? 15 : 13
+  const actionIconSize = profile.tier === 'desktop' ? 24 : profile.tier === 'tablet' ? 22 : 20
+
+  return {
+    height: containerHeight.value,
+    '--map-orb-size': `${profile.orbSizePx}px`,
+    '--map-orb-radius': `${Math.round(profile.orbSizePx * 0.32)}px`,
+    '--map-orb-font-size': `${Math.round(profile.orbSizePx * 0.48)}px`,
+    '--map-orb-border-width': `${profile.tier === 'desktop' ? 4 : 3}px`,
+    '--map-orb-shadow-offset': `${orbShadowOffset}px`,
+    '--map-orb-shadow-blur': `${orbShadowBlur}px`,
+    '--map-node-gap': `${nodeGap}px`,
+    '--map-label-max-width': `${profile.labelMaxWidthPx}px`,
+    '--map-label-padding-y': `${labelPaddingY}px`,
+    '--map-label-padding-x': `${labelPaddingX}px`,
+    '--map-title-font-size': `${titleFontSize}px`,
+    '--map-line-width': `${profile.lineStrokePx}px`,
+    '--map-line-dash': lineDash,
+    '--map-line-challenge-dash': challengeDash,
+    '--map-marker-size': `${profile.markerSizePx}px`,
+    '--map-reroll-top': `${rerollTop}px`,
+    '--map-reroll-font-size': `${rerollFontSize}px`,
+    '--map-reroll-padding-y': `${rerollPadY}px`,
+    '--map-reroll-padding-x': `${rerollPadX}px`,
+    '--map-reroll-gap': `${profile.tier === 'narrow-phone' ? 6 : 8}px`,
+    '--map-reroll-icon-size': `${rerollIconSize}px`,
+    '--map-action-font-size': `${actionFontSize}px`,
+    '--map-action-padding-y': `${actionPadY}px`,
+    '--map-action-padding-x': `${actionPadX}px`,
+    '--map-action-radius': `${profile.tier === 'desktop' ? 20 : 18}px`,
+    '--map-action-icon-size': `${actionIconSize}px`,
+    '--map-info-font-size': `${Math.max(actionFontSize - 2, 12)}px`
+  } as Record<string, string>
+})
 const nodePositions = computed(() => adventureLayout.value.positions)
 
 function hashString(input: string): number {
@@ -147,7 +199,7 @@ const currentTaskNodeId = computed(() => {
 const currentTaskMarker = computed(() => {
   const positions = nodePositions.value
   const markerTarget = positions[currentTaskNodeId.value] || positions.start
-  const verticalOffset = adventureLayout.value.compact ? 96 : 108
+  const verticalOffset = mapResponsiveProfile.value.markerOffsetPx
 
   return {
     id: currentTaskNodeId.value,
@@ -238,9 +290,10 @@ const OBSTACLES = [
 ] as const
 
 const pathObstacles = computed(() => {
-  const compact = adventureLayout.value.compact
-  const density = compact ? 0.34 : 0.58
-  const sizeScale = compact ? 0.78 : 1
+  const responsive = mapResponsiveProfile.value
+  const density = responsive.obstacleDensity
+  const sizeScale = Math.max(0.52, responsive.orbSizePx / 100)
+  const offsetRange = Math.max(responsive.orbSizePx * 0.36, 18)
 
   return adventureEdges.value.flatMap((edge, index) => {
     const edgeSeed = `${adventureLayout.value.seed}:${edge.id}:${index}`
@@ -250,7 +303,7 @@ const pathObstacles = computed(() => {
     }
 
     const t = 0.28 + seededUnit(adventureLayout.value.seed, `${edgeSeed}:t`) * 0.44
-    const offset = (seededUnit(adventureLayout.value.seed, `${edgeSeed}:offset`) - 0.5) * (compact ? 28 : 40)
+    const offset = (seededUnit(adventureLayout.value.seed, `${edgeSeed}:offset`) - 0.5) * offsetRange
     const baseX = edge.fromPoint.x + (edge.toPoint.x - edge.fromPoint.x) * t
     const baseY = edge.fromPoint.y + (edge.toPoint.y - edge.fromPoint.y) * t
     const dx = edge.toPoint.x - edge.fromPoint.x
@@ -309,7 +362,7 @@ function getNodeActionPlacement(nodeId: string) {
       </div>
     </transition>
 
-    <div ref="mapPathRef" class="map-path" :class="mapPathClass" :style="{ height: containerHeight }" @click.stop>
+    <div ref="mapPathRef" class="map-path" :class="mapPathClass" :style="mapPathStyle" @click.stop>
       <button type="button" class="map-reroll-btn" @click.stop="rerollLayout">
         <Icon icon="ph:shuffle-angular-fill" />
         <span>重新排版</span>
@@ -471,6 +524,8 @@ function getNodeActionPlacement(nodeId: string) {
 </template>
 
 <style scoped lang="scss">
+@use '../adventure-theme.scss' as theme;
+
 .adventure-map {
   position: relative;
   width: 100%;
@@ -513,6 +568,34 @@ function getNodeActionPlacement(nodeId: string) {
 }
 
 .map-path {
+  --map-orb-size: 100px;
+  --map-orb-radius: 32px;
+  --map-orb-font-size: 48px;
+  --map-orb-border-width: 4px;
+  --map-orb-shadow-offset: 10px;
+  --map-orb-shadow-blur: 24px;
+  --map-node-gap: 12px;
+  --map-label-max-width: 168px;
+  --map-label-padding-y: 8px;
+  --map-label-padding-x: 16px;
+  --map-title-font-size: 16px;
+  --map-line-width: 8px;
+  --map-line-dash: 18 16;
+  --map-line-challenge-dash: 14 18;
+  --map-marker-size: 42px;
+  --map-reroll-top: 10px;
+  --map-reroll-font-size: 14px;
+  --map-reroll-padding-y: 10px;
+  --map-reroll-padding-x: 16px;
+  --map-reroll-gap: 8px;
+  --map-reroll-icon-size: 18px;
+  --map-action-font-size: 18px;
+  --map-action-padding-y: 12px;
+  --map-action-padding-x: 20px;
+  --map-action-radius: 20px;
+  --map-action-icon-size: 24px;
+  --map-info-font-size: 16px;
+
   position: relative;
   width: 100%;
   max-width: 900px;
@@ -523,25 +606,25 @@ function getNodeActionPlacement(nodeId: string) {
 
 .map-reroll-btn {
   position: absolute;
-  top: 10px;
+  top: var(--map-reroll-top);
   right: 8px;
   z-index: 5;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border: 3px solid rgba(255, 255, 255, 0.92);
+  gap: var(--map-reroll-gap);
+  padding: var(--map-reroll-padding-y) var(--map-reroll-padding-x);
+  border: clamp(2px, calc(var(--map-line-width) * 0.4), 3px) solid rgba(255, 255, 255, 0.92);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.92);
   color: #28527d;
-  font-size: 14px;
+  font-size: var(--map-reroll-font-size);
   font-weight: 900;
   box-shadow: 0 12px 24px rgba(61, 123, 196, 0.16);
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 
   svg {
-    font-size: 18px;
+    font-size: var(--map-reroll-icon-size);
     color: #3a7bc4;
   }
 
@@ -558,28 +641,7 @@ function getNodeActionPlacement(nodeId: string) {
 
 .map-path--compact {
   .map-node {
-    gap: 10px;
-  }
-
-  .map-node__orb {
-    width: 84px;
-    height: 84px;
-    border-radius: 28px;
-    font-size: 38px;
-  }
-
-  .map-node__label {
-    padding: 7px 13px;
-  }
-
-  .map-node__title {
-    font-size: 14px;
-  }
-
-  .complete-btn,
-  .node-action--info {
-    padding: 10px 16px;
-    font-size: 15px;
+    gap: max(8px, calc(var(--map-node-gap) - 1px));
   }
 }
 
@@ -595,17 +657,17 @@ function getNodeActionPlacement(nodeId: string) {
 .map-svg-lines__path {
   fill: none;
   stroke: rgba(255, 255, 255, 0.9);
-  stroke-width: 8px;
+  stroke-width: var(--map-line-width);
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: 18 16;
+  stroke-dasharray: var(--map-line-dash);
   filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.42));
   animation: pathRedraw 0.55s ease-out;
 }
 
 .map-svg-lines__path--challenge {
   stroke: rgba(255, 255, 255, 0.8);
-  stroke-dasharray: 14 18;
+  stroke-dasharray: var(--map-line-challenge-dash);
 }
 
 .map-node-wrapper {
@@ -631,7 +693,7 @@ function getNodeActionPlacement(nodeId: string) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: var(--map-node-gap);
   transition: transform 0.2s, filter 0.2s, opacity 0.2s;
   cursor: pointer;
   user-select: none;
@@ -655,13 +717,13 @@ function getNodeActionPlacement(nodeId: string) {
 }
 
 .map-node__orb {
-  width: 100px;
-  height: 100px;
-  border-radius: 32px;
+  width: var(--map-orb-size);
+  height: var(--map-orb-size);
+  border-radius: var(--map-orb-radius);
   display: grid;
   place-items: center;
-  font-size: 48px;
-  border: 4px solid rgba(255,255,255,0.8);
+  font-size: var(--map-orb-font-size);
+  border: var(--map-orb-border-width) solid rgba(255,255,255,0.8);
   overflow: hidden;
 
   img {
@@ -674,25 +736,33 @@ function getNodeActionPlacement(nodeId: string) {
 .map-node--amber .map-node__orb {
   background: linear-gradient(135deg, #ffd772, #f8a93d);
   color: #5f3800;
-  box-shadow: 0 10px 0 #d98014, 0 16px 24px rgba(217, 128, 20, 0.3);
+  box-shadow:
+    0 var(--map-orb-shadow-offset) 0 #d98014,
+    0 var(--map-orb-shadow-blur) calc(var(--map-orb-shadow-blur) * 1.15) rgba(217, 128, 20, 0.3);
 }
 
 .map-node--sky .map-node__orb {
   background: linear-gradient(135deg, #92dcff, #68a8ff);
   color: #1f4f81;
-  box-shadow: 0 10px 0 #3a7bc4, 0 16px 24px rgba(58, 123, 196, 0.3);
+  box-shadow:
+    0 var(--map-orb-shadow-offset) 0 #3a7bc4,
+    0 var(--map-orb-shadow-blur) calc(var(--map-orb-shadow-blur) * 1.15) rgba(58, 123, 196, 0.3);
 }
 
 .map-node--mint .map-node__orb {
   background: linear-gradient(135deg, #a4ecae, #63c56f);
   color: #245a32;
-  box-shadow: 0 10px 0 #3b9146, 0 16px 24px rgba(59, 145, 70, 0.3);
+  box-shadow:
+    0 var(--map-orb-shadow-offset) 0 #3b9146,
+    0 var(--map-orb-shadow-blur) calc(var(--map-orb-shadow-blur) * 1.15) rgba(59, 145, 70, 0.3);
 }
 
 .map-node--rose .map-node__orb {
   background: linear-gradient(135deg, #ffc980, #f3865e);
   color: #643200;
-  box-shadow: 0 10px 0 #c75630, 0 16px 24px rgba(199, 86, 48, 0.3);
+  box-shadow:
+    0 var(--map-orb-shadow-offset) 0 #c75630,
+    0 var(--map-orb-shadow-blur) calc(var(--map-orb-shadow-blur) * 1.15) rgba(199, 86, 48, 0.3);
 }
 
 .map-node__label {
@@ -701,15 +771,15 @@ function getNodeActionPlacement(nodeId: string) {
   align-items: center;
   gap: 2px;
   background: rgba(255,255,255,0.92);
-  padding: 8px 16px;
+  padding: var(--map-label-padding-y) var(--map-label-padding-x);
   border-radius: 999px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  max-width: min(168px, 24vw);
+  max-width: min(var(--map-label-max-width), 48vw);
   text-align: center;
 }
 
 .map-node__title {
-  font-size: 16px;
+  font-size: var(--map-title-font-size);
   font-weight: 900;
   color: #24354c;
   line-height: 1.2;
@@ -750,15 +820,15 @@ function getNodeActionPlacement(nodeId: string) {
     background: linear-gradient(135deg, #a4ecae, #63c56f);
     color: #1a4325;
     border: 3px solid #fff;
-    padding: 12px 20px;
-    border-radius: 20px;
-    font-size: 18px;
+    padding: var(--map-action-padding-y) var(--map-action-padding-x);
+    border-radius: var(--map-action-radius);
+    font-size: var(--map-action-font-size);
     font-weight: 900;
     box-shadow: 0 8px 16px rgba(99, 197, 111, 0.3);
     cursor: pointer;
     transition: transform 0.2s;
 
-    svg { font-size: 24px; }
+    svg { font-size: var(--map-action-icon-size); }
     &:hover:not(:disabled) { transform: scale(1.05); }
     &:active:not(:disabled) { transform: scale(0.95); }
     &:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -767,8 +837,9 @@ function getNodeActionPlacement(nodeId: string) {
 
 .node-action--info {
   background: #fff;
-  padding: 12px 20px;
-  border-radius: 20px;
+  padding: var(--map-action-padding-y) var(--map-action-padding-x);
+  border-radius: var(--map-action-radius);
+  font-size: var(--map-info-font-size);
   font-weight: 800;
   color: #5d7592;
   box-shadow: 0 8px 16px rgba(0,0,0,0.08);
@@ -784,8 +855,8 @@ function getNodeActionPlacement(nodeId: string) {
 }
 
 .current-task-marker__icon {
-  width: 42px;
-  height: 42px;
+  width: var(--map-marker-size);
+  height: var(--map-marker-size);
   object-fit: contain;
   filter:
     drop-shadow(0 0 0 rgba(255, 255, 255, 0.96))
@@ -1068,7 +1139,7 @@ function getNodeActionPlacement(nodeId: string) {
 .fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
-@media (max-width: 768px) {
+@include theme.respond-max(phone) {
   .adventure-map {
     padding: 28px 0;
   }
@@ -1079,16 +1150,6 @@ function getNodeActionPlacement(nodeId: string) {
     border-radius: 28px;
   }
 
-  .map-reroll-btn {
-    top: 0;
-    right: 0;
-    padding: 9px 13px;
-    font-size: 13px;
-  }
-
-  .map-node__orb { width: 72px; height: 72px; font-size: 34px; border-radius: 24px; }
-  .map-node__label { max-width: min(144px, 48vw); padding: 7px 12px; }
-  .map-node__title { font-size: 13px; }
   .node-action {
     left: 50%;
     right: auto;
@@ -1099,13 +1160,66 @@ function getNodeActionPlacement(nodeId: string) {
 
   .node-action .complete-btn,
   .node-action--info {
-    padding: 10px 14px;
-    font-size: 14px;
+    max-width: min(260px, 72vw);
+  }
+}
+
+@include theme.respond-max(narrow) {
+  .adventure-map {
+    padding: 22px 0;
   }
 
-  .current-task-marker__icon {
-    width: 36px;
-    height: 36px;
+  .celebration-banner {
+    gap: 10px;
+    padding: 12px 14px;
+    margin-bottom: 24px;
+
+    h3 {
+      font-size: 18px;
+    }
+
+    p {
+      font-size: 13px;
+    }
+  }
+
+  .map-reroll-btn {
+    right: 0;
+  }
+
+  .map-node__label {
+    max-width: min(var(--map-label-max-width), 42vw);
+  }
+
+  .rewards-modal-overlay {
+    padding: 14px;
+  }
+
+  .rewards-modal {
+    padding: 22px 18px;
+    border-radius: 28px;
+  }
+
+  .reward-mini-card {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .reward-mini-card__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    font-size: 24px;
+  }
+
+  .reward-mini-card__info h4 {
+    font-size: 16px;
+  }
+
+  .rewards-modal__btn {
+    padding: 14px;
+    font-size: 16px;
   }
 }
 </style>

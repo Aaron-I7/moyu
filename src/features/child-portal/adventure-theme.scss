@@ -2,6 +2,29 @@ $portal-ink: #213b56;
 $portal-soft-ink: #5f7591;
 $portal-border: rgba(255, 255, 255, 0.88);
 $portal-panel-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 251, 255, 0.92) 100%);
+$portal-breakpoint-tablet: 1024px;
+$portal-breakpoint-phone: 768px;
+$portal-breakpoint-narrow: 480px;
+
+@mixin respond-max($breakpoint) {
+  @if $breakpoint == tablet {
+    @media (max-width: $portal-breakpoint-tablet) {
+      @content;
+    }
+  } @else if $breakpoint == phone {
+    @media (max-width: $portal-breakpoint-phone) {
+      @content;
+    }
+  } @else if $breakpoint == narrow {
+    @media (max-width: $portal-breakpoint-narrow) {
+      @content;
+    }
+  } @else {
+    @media (max-width: $breakpoint) {
+      @content;
+    }
+  }
+}
 
 @mixin page-shell {
   display: flex;
@@ -11,6 +34,14 @@ $portal-panel-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248
   margin: 0 auto;
   width: 100%;
   animation: portalAdventureRise 0.45s ease;
+
+  @include respond-max(phone) {
+    gap: 20px;
+  }
+
+  @include respond-max(narrow) {
+    gap: 16px;
+  }
 }
 
 @mixin sign-shell($gradient, $ink, $shadowColor) {
@@ -49,6 +80,37 @@ $portal-panel-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248
     inset: auto -52px -74px auto;
     background: radial-gradient(circle, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0) 74%);
   }
+
+  @include respond-max(tablet) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  @include respond-max(phone) {
+    gap: 18px;
+    padding: 24px 20px;
+    border-radius: 28px;
+  }
+
+  @include respond-max(narrow) {
+    gap: 14px;
+    padding: 18px 16px;
+    border-width: 3px;
+    border-radius: 24px;
+    box-shadow: 0 10px 0 rgba($shadowColor, 0.38), 0 18px 28px rgba(39, 64, 91, 0.1);
+
+    &::before {
+      width: 140px;
+      height: 140px;
+      inset: -38px auto auto -30px;
+    }
+
+    &::after {
+      width: 180px;
+      height: 180px;
+      inset: auto -44px -60px auto;
+    }
+  }
 }
 
 @mixin surface-card($padding: 24px, $radius: 28px) {
@@ -71,6 +133,18 @@ $portal-panel-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248
   color: $ink;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34);
   font-weight: 900;
+
+  @include respond-max(phone) {
+    gap: 8px;
+    padding: 8px 15px;
+    font-size: 13px;
+  }
+
+  @include respond-max(narrow) {
+    gap: 7px;
+    padding: 7px 12px;
+    font-size: 12px;
+  }
 }
 
 @mixin empty-state($minHeight: 200px) {
@@ -96,6 +170,19 @@ $portal-panel-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248
     font-size: 17px;
     font-weight: 800;
   }
+
+  @include respond-max(phone) {
+    min-height: max(180px, $minHeight - 24px);
+    padding: 18px 16px;
+
+    svg {
+      font-size: 38px;
+    }
+
+    p {
+      font-size: 15px;
+    }
+  }
 }
 
 @mixin stat-chip {
@@ -107,6 +194,18 @@ $portal-panel-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(255, 255, 255, 0.58);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
+
+  @include respond-max(phone) {
+    gap: 7px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  @include respond-max(narrow) {
+    gap: 6px;
+    padding: 7px 10px;
+    font-size: 12px;
+  }
 }
 
 @keyframes portalAdventureRise {

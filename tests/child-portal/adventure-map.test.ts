@@ -45,10 +45,28 @@ describe('adventure map layout', () => {
 
     expect(['left', 'center', 'right']).toContain(layout.anchors.startZone.column)
     expect(['left', 'center', 'right']).toContain(layout.anchors.endZone.column)
-    expect(isWithin(layout.positions.start.xPercent, 18, 82)).toBe(true)
-    expect(isWithin(layout.positions.start.yPercent, 9, 15)).toBe(true)
-    expect(isWithin(layout.positions.end.xPercent, 18, 82)).toBe(true)
-    expect(isWithin(layout.positions.end.yPercent, 88, 94)).toBe(true)
+    expect(isWithin(
+      layout.positions.start.xPercent,
+      layout.anchors.startZone.bounds.minX,
+      layout.anchors.startZone.bounds.maxX
+    )).toBe(true)
+    expect(isWithin(
+      layout.positions.start.yPercent,
+      layout.anchors.startZone.bounds.minY,
+      layout.anchors.startZone.bounds.maxY
+    )).toBe(true)
+    expect(isWithin(
+      layout.positions.end.xPercent,
+      layout.anchors.endZone.bounds.minX,
+      layout.anchors.endZone.bounds.maxX
+    )).toBe(true)
+    expect(isWithin(
+      layout.positions.end.yPercent,
+      layout.anchors.endZone.bounds.minY,
+      layout.anchors.endZone.bounds.maxY
+    )).toBe(true)
+    expect(layout.anchors.endZone.bounds.minY).toBeGreaterThanOrEqual(76)
+    expect(layout.anchors.endZone.bounds.maxY).toBeLessThanOrEqual(94)
   })
 
   it('keeps start and end anchors in different columns', () => {
@@ -83,11 +101,49 @@ describe('adventure map layout', () => {
     })
   })
 
+  it('derives responsive map profiles for desktop, tablet, phone, and narrow phone widths', () => {
+    const nodes = buildAdventureNodes([createTask('a'), createTask('b'), createTask('c')], '2026-04-10')
+    const desktop = buildAdventureLayout(nodes, { width: 960, height: 680 })
+    const tablet = buildAdventureLayout(nodes, { width: 820, height: 680 })
+    const phone = buildAdventureLayout(nodes, { width: 600, height: 680 })
+    const narrow = buildAdventureLayout(nodes, { width: 430, height: 680 })
+
+    expect(desktop.responsive.tier).toBe('desktop')
+    expect(tablet.responsive.tier).toBe('tablet')
+    expect(phone.responsive.tier).toBe('phone')
+    expect(narrow.responsive.tier).toBe('narrow-phone')
+    expect(desktop.responsive.orbSizePx).toBeGreaterThan(tablet.responsive.orbSizePx)
+    expect(tablet.responsive.orbSizePx).toBeGreaterThan(phone.responsive.orbSizePx)
+    expect(phone.responsive.orbSizePx).toBeGreaterThan(narrow.responsive.orbSizePx)
+    expect(phone.responsive.lineStrokePx).toBe(6)
+    expect(narrow.responsive.lineStrokePx).toBe(5)
+    expect(narrow.responsive.labelMaxWidthPx).toBeLessThan(phone.responsive.labelMaxWidthPx)
+    expect(narrow.minDistancePx).toBe(narrow.responsive.minDistancePx)
+  })
+
   it('keeps task nodes beyond the minimum center distance on a roomy compact layout', () => {
     const tasks = Array.from({ length: 9 }, (_, index) => createTask(String(index + 1)))
     const nodes = buildAdventureNodes(tasks, '2026-04-10')
     const layout = buildAdventureLayout(nodes, { width: 960, height: 680 })
     const points = getTaskPoints(layout)
+
+    for (let leftIndex = 0; leftIndex < points.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < points.length; rightIndex += 1) {
+        const left = points[leftIndex]
+        const right = points[rightIndex]
+        const distance = Math.hypot(left.x - right.x, left.y - right.y)
+        expect(distance).toBeGreaterThanOrEqual(layout.minDistancePx - 0.01)
+      }
+    }
+  })
+
+  it('keeps narrow phone layouts spaced even after shrinking the node profile', () => {
+    const tasks = Array.from({ length: 5 }, (_, index) => createTask(String(index + 1)))
+    const nodes = buildAdventureNodes(tasks, '2026-04-10')
+    const layout = buildAdventureLayout(nodes, { width: 430, height: 700 })
+    const points = getTaskPoints(layout)
+
+    expect(layout.responsive.tier).toBe('narrow-phone')
 
     for (let leftIndex = 0; leftIndex < points.length; leftIndex += 1) {
       for (let rightIndex = leftIndex + 1; rightIndex < points.length; rightIndex += 1) {

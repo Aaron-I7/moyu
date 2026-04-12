@@ -355,7 +355,7 @@ function getEntryScoreLabel(entry: ChildPointsLedgerEntry) {
 
 .star-archive__latest {
   @include theme.surface-card(18px 20px, 24px);
-  min-width: 240px;
+  min-width: min(240px, 100%);
 
   span {
     display: block;
@@ -542,7 +542,7 @@ function getEntryScoreLabel(entry: ChildPointsLedgerEntry) {
 }
 
 .journey-log__viewport {
-  max-height: 560px;
+  max-height: min(560px, calc(100vh - 280px));
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 12px;
@@ -848,7 +848,7 @@ function getEntryScoreLabel(entry: ChildPointsLedgerEntry) {
   @include theme.empty-state(220px);
 }
 
-@media (max-width: 1024px) {
+@include theme.respond-max(tablet) {
   .star-archive__sign {
     flex-direction: column;
     align-items: stretch;
@@ -859,16 +859,83 @@ function getEntryScoreLabel(entry: ChildPointsLedgerEntry) {
   }
 }
 
-@media (max-width: 720px) {
-  .star-archive {
-    gap: 20px;
+@include theme.respond-max(phone) {
+  .star-archive__latest {
+    width: 100%;
   }
 
-  .star-archive__sign,
-  .journey-log,
   .jar-card {
-    padding-left: 20px;
-    padding-right: 20px;
+    padding-top: 24px;
+    padding-bottom: 24px;
+    border-radius: 30px;
+  }
+
+  .jar-card__glow {
+    width: 150px;
+    height: 150px;
+    inset: auto auto -68px -24px;
+  }
+
+  .jar-card__glass {
+    width: clamp(150px, 46vw, 180px);
+    height: clamp(184px, 54vw, 216px);
+    border-width: 8px;
+    border-radius: 50px 50px 34px 34px;
+  }
+
+  .jar-card__fill {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    border-radius: 28px;
+  }
+
+  .jar-card__value {
+    margin-top: 18px;
+
+    strong {
+      font-size: 38px;
+    }
+  }
+
+  .archive-stat {
+    padding: 16px 18px;
+    gap: 12px;
+  }
+
+  .archive-stat__icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 18px;
+    font-size: 26px;
+  }
+
+  .archive-stat__content strong {
+    font-size: 22px;
+  }
+
+  .journey-log {
+    padding: 24px 20px;
+    border-radius: 30px;
+    gap: 18px;
+  }
+
+  .journey-log__title {
+    align-items: flex-start;
+
+    svg {
+      font-size: 30px;
+    }
+
+    h3 {
+      font-size: 22px;
+    }
+  }
+
+  .journey-log__viewport {
+    max-height: min(560px, calc(100vh - 300px));
+    padding-right: 8px;
+    margin-right: -8px;
   }
 
   .journey-log__item {
@@ -904,6 +971,163 @@ function getEntryScoreLabel(entry: ChildPointsLedgerEntry) {
     min-width: 0;
     align-items: flex-start;
     text-align: left;
+  }
+}
+
+@include theme.respond-max(narrow) {
+  .star-archive__hero h2 {
+    font-size: clamp(24px, 8vw, 30px);
+  }
+
+  .star-archive__hero p {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .star-archive__latest {
+    padding: 14px 16px;
+  }
+
+  .jar-card {
+    padding: 20px 16px;
+  }
+
+  .jar-card__glow {
+    width: 132px;
+    height: 132px;
+    inset: auto auto -56px -16px;
+  }
+
+  .jar-card__glass {
+    width: clamp(138px, 44vw, 164px);
+    height: clamp(166px, 50vw, 196px);
+    border-width: 7px;
+    border-radius: 44px 44px 30px 30px;
+  }
+
+  .jar-card__value strong {
+    font-size: 34px;
+  }
+
+  .archive-stat {
+    padding: 14px 16px;
+  }
+
+  .archive-stat__icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 16px;
+    font-size: 22px;
+  }
+
+  .journey-log {
+    padding: 20px 16px;
+    gap: 16px;
+  }
+
+  .journey-log__title svg {
+    font-size: 28px;
+  }
+
+  .journey-log__title h3 {
+    font-size: 20px;
+  }
+
+  .journey-log__viewport {
+    max-height: min(520px, calc(100vh - 320px));
+  }
+
+  .journey-log__container {
+    --journey-stamp-width: 50px;
+    --journey-node-width: 30px;
+    --journey-gap: 10px;
+  }
+
+  .journey-log__stamp {
+    padding-top: 14px;
+
+    span {
+      font-size: 10px;
+    }
+
+    strong {
+      font-size: 13px;
+    }
+  }
+
+  .journey-log__node {
+    padding-top: 18px;
+  }
+
+  .journey-log__node-inner {
+    width: 12px;
+    height: 12px;
+  }
+
+  .journey-card {
+    padding: 14px 12px 14px 14px;
+    border-radius: 22px;
+  }
+
+  .journey-card__top {
+    grid-template-columns: 40px minmax(0, 1fr) minmax(84px, 96px);
+    gap: 10px;
+    align-items: center;
+  }
+
+  .journey-card__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 14px;
+    font-size: 20px;
+  }
+
+  .journey-card__meta {
+    gap: 6px;
+  }
+
+  .journey-card__eyebrow,
+  .journey-card__chip {
+    padding: 5px 8px;
+    font-size: 10px;
+  }
+
+  .journey-card__content strong {
+    margin-top: 5px;
+    font-size: 16px;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .journey-card__content p {
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .journey-card__score {
+    grid-column: auto;
+    margin-left: 0;
+    min-width: 84px;
+    padding: 10px;
+    border-radius: 18px;
+    align-items: flex-end;
+    text-align: right;
+
+    span {
+      font-size: 10px;
+    }
+
+    strong {
+      font-size: 20px;
+    }
+  }
+
+  .journey-log__btn {
+    width: 100%;
+    padding: 12px 16px;
   }
 }
 </style>

@@ -12,6 +12,7 @@ export interface AdventureViewport {
   height: number
 }
 
+export type AdventureResponsiveTier = 'desktop' | 'tablet' | 'phone' | 'narrow-phone'
 export type AdventureAnchorColumn = 'left' | 'center' | 'right'
 
 export interface AdventureNode {
@@ -63,6 +64,18 @@ export interface AdventureAnchorSelection {
   column: AdventureAnchorColumn
   xPercent: number
   yPercent: number
+  bounds: Pick<AdventureAnchorZone, 'minX' | 'maxX' | 'minY' | 'maxY'>
+}
+
+export interface AdventureResponsiveProfile {
+  tier: AdventureResponsiveTier
+  orbSizePx: number
+  labelMaxWidthPx: number
+  lineStrokePx: number
+  markerSizePx: number
+  markerOffsetPx: number
+  minDistancePx: number
+  obstacleDensity: number
 }
 
 export interface AdventureLayoutResult {
@@ -72,6 +85,7 @@ export interface AdventureLayoutResult {
   seed: number
   minDistancePx: number
   positions: Record<string, AdventureLayoutPoint>
+  responsive: AdventureResponsiveProfile
   anchors: {
     startZone: AdventureAnchorSelection
     endZone: AdventureAnchorSelection
@@ -103,10 +117,10 @@ const START_ANCHOR_ZONES: AdventureAnchorZone[] = [
   { id: 'start-center', kind: 'start', column: 'center', minX: 42, maxX: 58, minY: 9, maxY: 15 },
   { id: 'start-right', kind: 'start', column: 'right', minX: 68, maxX: 82, minY: 9, maxY: 15 }
 ]
-const END_ANCHOR_ZONES: AdventureAnchorZone[] = [
-  { id: 'end-left', kind: 'end', column: 'left', minX: 18, maxX: 32, minY: 88, maxY: 94 },
-  { id: 'end-center', kind: 'end', column: 'center', minX: 42, maxX: 58, minY: 88, maxY: 94 },
-  { id: 'end-right', kind: 'end', column: 'right', minX: 68, maxX: 82, minY: 88, maxY: 94 }
+const END_ANCHOR_COLUMNS = [
+  { id: 'end-left', kind: 'end' as const, column: 'left' as const, minX: 18, maxX: 32 },
+  { id: 'end-center', kind: 'end' as const, column: 'center' as const, minX: 42, maxX: 58 },
+  { id: 'end-right', kind: 'end' as const, column: 'right' as const, minX: 68, maxX: 82 }
 ]
 const SAFE_AREA = { minX: 14, maxX: 86, minY: 18, maxY: 82 }
 
@@ -197,6 +211,101 @@ function createAnchorPoint(
   }
 }
 
+function getResponsiveTier(width: number): AdventureResponsiveTier {
+  if (width > 900) {
+    return 'desktop'
+  }
+  if (width > 640) {
+    return 'tablet'
+  }
+  if (width > 480) {
+    return 'phone'
+  }
+  return 'narrow-phone'
+}
+
+function getResponsiveProfile(
+  viewport: AdventureViewport,
+  compact: boolean
+): AdventureResponsiveProfile {
+  const width = Math.max(Math.round(viewport.width), 320)
+  const height = Math.max(Math.round(viewport.height), 440)
+  const tier = getResponsiveTier(width)
+  const baseProfile = tier === 'desktop'
+    ? {
+        orbSizePx: compact ? 84 : 100,
+        labelMaxWidthPx: compact ? 148 : 168,
+        lineStrokePx: 8,
+        markerSizePx: compact ? 40 : 42,
+        markerOffsetPx: compact ? 96 : 108,
+        minDistancePx: compact ? 148 : 180,
+        obstacleDensity: compact ? 0.44 : 0.58,
+        distanceScale: 0.32
+      }
+    : tier === 'tablet'
+      ? {
+          orbSizePx: compact ? 84 : 88,
+          labelMaxWidthPx: compact ? 142 : 148,
+          lineStrokePx: 7,
+          markerSizePx: 38,
+          markerOffsetPx: compact ? 92 : 98,
+          minDistancePx: 152,
+          obstacleDensity: compact ? 0.38 : 0.42,
+          distanceScale: 0.3
+        }
+      : tier === 'phone'
+        ? {
+            orbSizePx: compact ? 68 : 72,
+            labelMaxWidthPx: compact ? 116 : 124,
+            lineStrokePx: 6,
+            markerSizePx: 34,
+            markerOffsetPx: compact ? 82 : 88,
+            minDistancePx: 128,
+            obstacleDensity: compact ? 0.24 : 0.28,
+            distanceScale: 0.28
+          }
+        : {
+            orbSizePx: compact ? 58 : 62,
+            labelMaxWidthPx: compact ? 100 : 108,
+            lineStrokePx: 5,
+            markerSizePx: 30,
+            markerOffsetPx: compact ? 70 : 76,
+            minDistancePx: 112,
+            obstacleDensity: compact ? 0.16 : 0.2,
+            distanceScale: 0.27
+          }
+
+  return {
+    tier,
+    orbSizePx: baseProfile.orbSizePx,
+    labelMaxWidthPx: baseProfile.labelMaxWidthPx,
+    lineStrokePx: baseProfile.lineStrokePx,
+    markerSizePx: baseProfile.markerSizePx,
+    markerOffsetPx: baseProfile.markerOffsetPx,
+    minDistancePx: Math.round(
+      Math.min(baseProfile.minDistancePx, Math.min(width, height) * baseProfile.distanceScale) * 10
+    ) / 10,
+    obstacleDensity: baseProfile.obstacleDensity
+  }
+}
+
+function getEndAnchorZones(
+  viewport: AdventureViewport,
+  responsive: AdventureResponsiveProfile
+): AdventureAnchorZone[] {
+  const height = Math.max(Math.round(viewport.height), 440)
+  const bottomClearancePx = Math.max(responsive.orbSizePx * 0.72 + 18, responsive.markerSizePx + 20)
+  const bandHeightPx = Math.max(responsive.orbSizePx * 0.48, 34)
+  const maxY = clamp(((height - bottomClearancePx) / height) * 100, 82, 94)
+  const minY = clamp(maxY - ((bandHeightPx / height) * 100), 76, maxY - 1.2)
+
+  return END_ANCHOR_COLUMNS.map((zone) => ({
+    ...zone,
+    minY,
+    maxY
+  }))
+}
+
 function selectAnchor(
   seed: number,
   salt: string,
@@ -217,23 +326,53 @@ function selectAnchor(
     zoneId: zone.id,
     column: zone.column,
     xPercent,
-    yPercent
+    yPercent,
+    bounds: {
+      minX: zone.minX,
+      maxX: zone.maxX,
+      minY: zone.minY,
+      maxY: zone.maxY
+    }
   }
 }
 
 function createCandidates(
   seed: number,
   viewport: AdventureViewport,
-  compact: boolean
+  compact: boolean,
+  responsive: AdventureResponsiveProfile
 ): SlotCandidate[] {
-  const bandPercents = compact
-    ? [20, 32.5, 45, 57.5, 70]
-    : [22, 38, 56, 72]
-  const slotPercents = compact
-    ? [16, 39, 61, 84]
-    : [22, 50, 78]
-  const xJitter = compact ? 2.3 : 5.2
-  const yJitter = compact ? 3.8 : 4.8
+  const tier = responsive.tier
+  const bandPercents = tier === 'narrow-phone'
+    ? (compact ? [21, 34, 46.5, 59, 71.5] : [24, 40, 56, 72])
+    : tier === 'phone'
+      ? (compact ? [21, 33.5, 46, 58.5, 71] : [22, 39, 56, 73])
+      : compact
+        ? [20, 32.5, 45, 57.5, 70]
+        : [22, 38, 56, 72]
+  const slotPercents = tier === 'narrow-phone'
+    ? (compact ? [22, 39, 61, 78] : [26, 50, 74])
+    : tier === 'phone'
+      ? (compact ? [18, 40, 60, 82] : [24, 50, 76])
+      : tier === 'tablet'
+        ? (compact ? [17, 39, 61, 83] : [20, 50, 80])
+        : compact
+          ? [16, 39, 61, 84]
+          : [22, 50, 78]
+  const xJitter = tier === 'narrow-phone'
+    ? (compact ? 1.2 : 2.2)
+    : tier === 'phone'
+      ? (compact ? 1.8 : 3.2)
+      : compact
+        ? 2.3
+        : 5.2
+  const yJitter = tier === 'narrow-phone'
+    ? (compact ? 2.7 : 3.4)
+    : tier === 'phone'
+      ? (compact ? 3.1 : 4)
+      : compact
+        ? 3.8
+        : 4.8
   const width = Math.max(viewport.width, 320)
   const height = Math.max(viewport.height, 440)
   const candidates: SlotCandidate[] = []
@@ -511,15 +650,23 @@ export function buildAdventureLayout(
   const seed = hashString(getSeedInput(tasks, recordDate))
   const route = buildAdventureRoute(nodes)
   const compact = taskNodes.length > 6 || width < 900
-  const baseMinDistance = compact ? 148 : 180
-  const minDistancePx = Math.min(baseMinDistance, Math.min(width, height) * 0.32)
-  const anchorDistance = Math.max(Math.min(minDistancePx - 18, compact ? 120 : 140), 92)
-  const candidates = createCandidates(seed, { width, height }, compact)
+  const responsive = getResponsiveProfile({ width, height }, compact)
+  const minDistancePx = responsive.minDistancePx
+  const anchorDistance = Math.max(
+    Math.min(minDistancePx - 18, responsive.orbSizePx * 1.4),
+    responsive.orbSizePx + 10
+  )
+  const candidates = createCandidates(seed, { width, height }, compact, responsive)
   const routeCandidates = getRouteCandidates(candidates, compact, seed)
   const routeIndexes = getSpacedIndexes(routeCandidates.length, route.taskNodeIds.length)
   const usedKeys = new Set<string>()
   const startAnchor = selectAnchor(seed, 'anchor:start', START_ANCHOR_ZONES)
-  const endAnchor = selectAnchor(seed, 'anchor:end', END_ANCHOR_ZONES, startAnchor.column)
+  const endAnchor = selectAnchor(
+    seed,
+    'anchor:end',
+    getEndAnchorZones({ width, height }, responsive),
+    startAnchor.column
+  )
   const startPoint = createAnchorPoint('start', startAnchor.xPercent, startAnchor.yPercent, width, height)
   const endPoint = createAnchorPoint('end', endAnchor.xPercent, endAnchor.yPercent, width, height)
   const positions: Record<string, AdventureLayoutPoint> = {
@@ -605,6 +752,7 @@ export function buildAdventureLayout(
     seed,
     minDistancePx,
     positions,
+    responsive,
     anchors: {
       startZone: startAnchor,
       endZone: endAnchor

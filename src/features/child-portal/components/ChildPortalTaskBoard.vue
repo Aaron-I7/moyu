@@ -271,7 +271,7 @@ function getTaskHint(task: ChildTaskItem) {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  min-width: 240px;
+  min-width: min(240px, 100%);
 }
 
 .challenge-camp__date {
@@ -286,7 +286,7 @@ function getTaskHint(task: ChildTaskItem) {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-width: 220px;
+  min-width: min(220px, 100%);
 
   strong {
     font-size: 34px;
@@ -399,7 +399,7 @@ function getTaskHint(task: ChildTaskItem) {
 
 .mission-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 18px;
 }
 
@@ -603,7 +603,7 @@ function getTaskHint(task: ChildTaskItem) {
 
 .trophy-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
 }
 
@@ -679,7 +679,7 @@ function getTaskHint(task: ChildTaskItem) {
   @include theme.empty-state(240px);
 }
 
-@media (max-width: 960px) {
+@include theme.respond-max(tablet) {
   .challenge-camp__sign {
     flex-direction: column;
     align-items: stretch;
@@ -690,28 +690,77 @@ function getTaskHint(task: ChildTaskItem) {
   }
 }
 
-@media (max-width: 720px) {
-  .challenge-camp {
-    gap: 20px;
+@include theme.respond-max(phone) {
+  .challenge-camp__meta,
+  .challenge-camp__progress-card {
+    width: 100%;
   }
 
-  .challenge-camp__sign {
-    padding: 24px 20px;
+  .camp-stat {
+    padding: 16px 18px;
+    gap: 12px;
+  }
+
+  .camp-stat__icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 18px;
+    font-size: 26px;
+  }
+
+  .camp-stat__content strong {
+    font-size: 24px;
+  }
+
+  .camp-panel {
+    padding: 20px;
+    border-radius: 28px;
   }
 
   .mission-card {
     grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 18px;
+    border-radius: 24px;
   }
 
   .mission-card__media {
-    width: 82px;
-    height: 82px;
+    width: 78px;
+    height: 78px;
+    border-radius: 22px;
+    font-size: 36px;
+  }
+
+  .mission-card__body h4 {
+    font-size: 20px;
+  }
+
+  .mission-card__footer {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .mission-card__action {
+    width: 100%;
+    justify-content: center;
   }
 
   .mission-card__footer,
   .tent-card {
     grid-template-columns: 1fr;
     justify-items: start;
+  }
+
+  .tent-card {
+    padding: 16px;
+    border-radius: 22px;
+  }
+
+  .tent-card__icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    font-size: 26px;
   }
 
   .tent-card__header {
@@ -722,6 +771,122 @@ function getTaskHint(task: ChildTaskItem) {
   .tent-card__status {
     width: 100%;
     justify-content: center;
+  }
+
+  .trophy-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .trophy-card {
+    padding: 18px 16px 16px;
+  }
+
+  .trophy-card__crest {
+    width: 68px;
+    height: 68px;
+    border-radius: 20px;
+    font-size: 30px;
+  }
+}
+
+@include theme.respond-max(narrow) {
+  .challenge-camp__hero h2 {
+    font-size: clamp(24px, 8vw, 30px);
+  }
+
+  .challenge-camp__hero p {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .challenge-camp__progress-card {
+    padding: 16px;
+
+    strong {
+      font-size: 28px;
+    }
+  }
+
+  .camp-panel__title h3 {
+    font-size: 17px;
+  }
+
+  .mission-grid {
+    gap: 14px;
+  }
+
+  .mission-card {
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .mission-card__media {
+    width: 68px;
+    height: 68px;
+    border-radius: 20px;
+    font-size: 32px;
+  }
+
+  .mission-card__tag {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  .mission-card__body h4 {
+    font-size: 18px;
+  }
+
+  .mission-card__body p {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .mission-card__reward {
+    font-size: 15px;
+
+    strong {
+      font-size: 19px;
+    }
+  }
+
+  .mission-card__action {
+    padding: 12px 16px;
+    font-size: 15px;
+  }
+
+  .tent-card__icon {
+    width: 52px;
+    height: 52px;
+    font-size: 24px;
+  }
+
+  .tent-card__header strong {
+    font-size: 16px;
+  }
+
+  .tent-card__content p {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .trophy-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+  }
+
+  .trophy-card strong {
+    font-size: 16px;
+  }
+
+  .trophy-card__stamp {
+    font-size: 64px;
+  }
+
+  .trophy-card__crest {
+    width: 60px;
+    height: 60px;
+    border-radius: 18px;
+    font-size: 28px;
   }
 }
 </style>
