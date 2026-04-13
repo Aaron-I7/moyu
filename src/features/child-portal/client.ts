@@ -3,19 +3,25 @@ import {
   getChildPortalCloudbaseApp
 } from './cloudbase'
 import type {
-  ChildProfile,
   ChildHomeResponse,
   ChildPointsResponse,
-  ChildRewardItem,
   ChildPortalSessionResponse,
   ChildRewardsResponse,
-  ChildTaskItem,
   ChildTasksResponse
 } from './types'
 
 const MEDIA_URL_CACHE_BUFFER_MS = 30 * 1000
+const MEDIA_FIELD_NAMES = new Set([
+  'image_url',
+  'avatar_url',
+  'child_avatar_url',
+  'imageUrl',
+  'avatarUrl',
+  'childAvatarUrl'
+])
 
 const mediaUrlCache = new Map<string, { url: string; expiresAt: number | null }>()
+const mediaUrlPromiseCache = new Map<string, Promise<string>>()
 
 export class ChildPortalApiError extends Error {
   code: number
@@ -49,12 +55,16 @@ function normalizeSdkError(error: unknown): ChildPortalApiError {
   return new ChildPortalApiError(message)
 }
 
+function normalizeMediaKey(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
 function isCloudbaseFileId(value: unknown): value is string {
-  return typeof value === 'string' && value.startsWith('cloud://')
+  return normalizeMediaKey(value).startsWith('cloud://')
 }
 
 function isHttpUrl(value: string): boolean {
-  return /^https?:\/\//i.test(value)
+  return /^https?:\/\//i.test(normalizeMediaKey(value))
 }
 
 function parseMediaUrlExpiry(url: string): number | null {
@@ -73,7 +83,8 @@ function parseMediaUrlExpiry(url: string): number | null {
 }
 
 function readCachedMediaUrl(fileId: string): string | null {
-  const cached = mediaUrlCache.get(fileId)
+  const cacheKey = normalizeMediaKey(fileId)
+  const cached = mediaUrlCache.get(cacheKey)
   if (!cached) {
     return null
   }
@@ -82,7 +93,7 @@ function readCachedMediaUrl(fileId: string): string | null {
     cached.expiresAt !== null &&
     cached.expiresAt <= Date.now() + MEDIA_URL_CACHE_BUFFER_MS
   ) {
-    mediaUrlCache.delete(fileId)
+    mediaUrlCache.delete(cacheKey)
     return null
   }
 
@@ -90,169 +101,126 @@ function readCachedMediaUrl(fileId: string): string | null {
 }
 
 function cacheMediaUrl(fileId: string, url: string): void {
-  if (!fileId || !url) {
+  const cacheKey = normalizeMediaKey(fileId)
+  const normalizedUrl = normalizeMediaKey(url)
+
+  if (!cacheKey || !normalizedUrl) {
     return
   }
 
-  mediaUrlCache.set(fileId, {
-    url,
-    expiresAt: parseMediaUrlExpiry(url)
+  mediaUrlCache.set(cacheKey, {
+    url: normalizedUrl,
+    expiresAt: parseMediaUrlExpiry(normalizedUrl)
   })
 }
 
-async function ensureResolvedMediaUrls(urls: Array<string | undefined>): Promise<void> {
-  const pendingFileIds = [...new Set(
-    urls
-      .filter(isCloudbaseFileId)
-      .filter((fileId) => !readCachedMediaUrl(fileId))
-  )]
+async function resolveMediaUrl(url?: string): Promise<string> {
+  const source = normalizeMediaKey(url)
 
-  if (!pendingFileIds.length) {
-    return
-  }
-
-  try {
-    const app = getChildPortalCloudbaseApp()
-    const response = await app.getTempFileURL({ fileList: pendingFileIds })
-    const fileList = Array.isArray((response as { fileList?: unknown[] })?.fileList)
-      ? (response as {
-          fileList: Array<{
-            code?: string
-            download_url?: string
-            fileID?: string
-            fileid?: string
-            tempFileURL?: string
-          }>
-        }).fileList
-      : []
-
-    fileList.forEach((item) => {
-      const fileId = String(item?.fileID || item?.fileid || '')
-      const url = String(item?.tempFileURL || item?.download_url || '')
-
-      if ((item?.code === 'SUCCESS' || !item?.code) && fileId && url) {
-        cacheMediaUrl(fileId, url)
-      }
-    })
-  } catch (error) {
-    console.warn('[child-portal] failed to normalize media urls', error)
-  }
-}
-
-function normalizeMediaUrl(url?: string): string {
-  if (!url) {
+  if (!source) {
     return ''
   }
 
-  if (isHttpUrl(url)) {
-    return url
+  if (isHttpUrl(source)) {
+    return source
   }
 
-  if (!isCloudbaseFileId(url)) {
-    return url
+  if (!isCloudbaseFileId(source)) {
+    return source
   }
 
-  return readCachedMediaUrl(url) || ''
+  const cachedUrl = readCachedMediaUrl(source)
+  if (cachedUrl) {
+    return cachedUrl
+  }
+
+  const pending = mediaUrlPromiseCache.get(source)
+  if (pending) {
+    return pending
+  }
+
+  const promise = (async () => {
+    try {
+      const app = getChildPortalCloudbaseApp()
+      const response = await app.getTempFileURL({ fileList: [source] })
+      const fileList = Array.isArray((response as { fileList?: unknown[] })?.fileList)
+        ? (response as {
+            fileList: Array<{
+              code?: string
+              download_url?: string
+              fileID?: string
+              fileid?: string
+              tempFileURL?: string
+            }>
+          }).fileList
+        : []
+
+      const match = fileList.find((item) => normalizeMediaKey(item?.fileID || item?.fileid) === source)
+      const resolvedUrl = normalizeMediaKey(match?.tempFileURL || match?.download_url)
+
+      if ((match?.code === 'SUCCESS' || !match?.code) && resolvedUrl) {
+        cacheMediaUrl(source, resolvedUrl)
+        return resolvedUrl
+      }
+    } catch {
+    } finally {
+      mediaUrlPromiseCache.delete(source)
+    }
+
+    return ''
+  })()
+
+  mediaUrlPromiseCache.set(source, promise)
+  return promise
 }
 
-function normalizeChildProfileMedia(profile: ChildProfile): ChildProfile {
-  const nextAvatarUrl = normalizeMediaUrl(profile.avatar_url)
-  const nextAvatarUrlCamel = normalizeMediaUrl(
-    (profile as ChildProfile & { avatarUrl?: string }).avatarUrl
+async function normalizeMediaFieldsDeep<T>(value: T): Promise<T> {
+  if (!value || typeof value !== 'object') {
+    return value
+  }
+
+  if (Array.isArray(value)) {
+    return Promise.all(value.map((item) => normalizeMediaFieldsDeep(item))) as Promise<T>
+  }
+
+  const normalizedEntries = await Promise.all(
+    Object.entries(value as Record<string, unknown>).map(async ([key, fieldValue]) => {
+      if (MEDIA_FIELD_NAMES.has(key) && typeof fieldValue === 'string') {
+        return [key, await resolveMediaUrl(fieldValue)] as const
+      }
+
+      return [key, await normalizeMediaFieldsDeep(fieldValue)] as const
+    })
   )
 
-  if (
-    nextAvatarUrl === (profile.avatar_url || '') &&
-    nextAvatarUrlCamel === String((profile as ChildProfile & { avatarUrl?: string }).avatarUrl || '')
-  ) {
-    return profile
+  const normalizedObject = Object.fromEntries(normalizedEntries) as T
+
+  const mediaRecord = normalizedObject as Record<string, unknown>
+  const normalizedImageUrl = normalizeMediaKey(mediaRecord.image_url) || normalizeMediaKey(mediaRecord.imageUrl)
+  const normalizedAvatarUrl = normalizeMediaKey(mediaRecord.avatar_url) || normalizeMediaKey(mediaRecord.avatarUrl)
+  const normalizedChildAvatarUrl =
+    normalizeMediaKey(mediaRecord.child_avatar_url) || normalizeMediaKey(mediaRecord.childAvatarUrl)
+
+  if (normalizedImageUrl) {
+    mediaRecord.image_url = normalizedImageUrl
+    mediaRecord.imageUrl = normalizedImageUrl
   }
 
-  return {
-    ...profile,
-    avatar_url: nextAvatarUrl,
-    ...(Object.prototype.hasOwnProperty.call(profile, 'avatarUrl')
-      ? { avatarUrl: nextAvatarUrlCamel }
-      : {})
+  if (normalizedAvatarUrl) {
+    mediaRecord.avatar_url = normalizedAvatarUrl
+    mediaRecord.avatarUrl = normalizedAvatarUrl
   }
-}
 
-function collectChildProfileMediaUrls(profile: ChildProfile): Array<string | undefined> {
-  return [
-    profile.avatar_url,
-    (profile as ChildProfile & { avatarUrl?: string }).avatarUrl
-  ]
-}
-
-function normalizeTaskListMedia(tasks: ChildTaskItem[]): ChildTaskItem[] {
-  return tasks.map((task) => {
-    const nextImageUrl = normalizeMediaUrl(task.image_url)
-    if (nextImageUrl === (task.image_url || '')) {
-      return task
-    }
-
-    return {
-      ...task,
-      image_url: nextImageUrl
-    }
-  })
-}
-
-function normalizeRewardListMedia(rewards: ChildRewardItem[]): ChildRewardItem[] {
-  return rewards.map((reward) => {
-    const nextImageUrl = normalizeMediaUrl(reward.image_url)
-    if (nextImageUrl === (reward.image_url || '')) {
-      return reward
-    }
-
-    return {
-      ...reward,
-      image_url: nextImageUrl
-    }
-  })
-}
-
-async function normalizeHomeResponseMedia(response: ChildHomeResponse): Promise<ChildHomeResponse> {
-  await ensureResolvedMediaUrls([
-    ...collectChildProfileMediaUrls(response.child_profile),
-    ...response.today_tasks.map((task) => task.image_url)
-  ])
-
-  return {
-    ...response,
-    child_profile: normalizeChildProfileMedia(response.child_profile),
-    today_tasks: normalizeTaskListMedia(response.today_tasks)
+  if (normalizedChildAvatarUrl) {
+    mediaRecord.child_avatar_url = normalizedChildAvatarUrl
+    mediaRecord.childAvatarUrl = normalizedChildAvatarUrl
   }
+
+  return normalizedObject
 }
 
-async function normalizeTasksResponseMedia(response: ChildTasksResponse): Promise<ChildTasksResponse> {
-  await ensureResolvedMediaUrls([
-    ...collectChildProfileMediaUrls(response.child_profile),
-    ...response.active_tasks.map((task) => task.image_url),
-    ...response.pending_tasks.map((task) => task.image_url),
-    ...response.completed_tasks.map((task) => task.image_url)
-  ])
-
-  return {
-    ...response,
-    child_profile: normalizeChildProfileMedia(response.child_profile),
-    active_tasks: normalizeTaskListMedia(response.active_tasks),
-    pending_tasks: normalizeTaskListMedia(response.pending_tasks),
-    completed_tasks: normalizeTaskListMedia(response.completed_tasks)
-  }
-}
-
-async function normalizeRewardsResponseMedia(response: ChildRewardsResponse): Promise<ChildRewardsResponse> {
-  await ensureResolvedMediaUrls([
-    ...collectChildProfileMediaUrls(response.child_profile),
-    ...response.rewards.map((reward) => reward.image_url)
-  ])
-
-  return {
-    ...response,
-    child_profile: normalizeChildProfileMedia(response.child_profile),
-    rewards: normalizeRewardListMedia(response.rewards)
-  }
+async function normalizeResponseMedia<T>(response: T): Promise<T> {
+  return normalizeMediaFieldsDeep(response)
 }
 
 async function callChildAccessFunction<T>(action: string, payload: Record<string, unknown>): Promise<T> {
@@ -289,9 +257,11 @@ async function callChildAccessFunction<T>(action: string, payload: Record<string
 }
 
 export async function resolvePortalSession(accessToken: string): Promise<ChildPortalSessionResponse> {
-  return callChildAccessFunction<ChildPortalSessionResponse>('resolveWebPortalSession', {
+  const response = await callChildAccessFunction<ChildPortalSessionResponse>('resolveWebPortalSession', {
     access_token: accessToken
   })
+
+  return normalizeResponseMedia(response)
 }
 
 export async function fetchChildHome(webSessionToken: string): Promise<ChildHomeResponse> {
@@ -299,7 +269,7 @@ export async function fetchChildHome(webSessionToken: string): Promise<ChildHome
     web_session_token: webSessionToken
   })
 
-  return normalizeHomeResponseMedia(response)
+  return normalizeResponseMedia(response)
 }
 
 export async function fetchChildTasks(webSessionToken: string): Promise<ChildTasksResponse> {
@@ -307,7 +277,7 @@ export async function fetchChildTasks(webSessionToken: string): Promise<ChildTas
     web_session_token: webSessionToken
   })
 
-  return normalizeTasksResponseMedia(response)
+  return normalizeResponseMedia(response)
 }
 
 export async function submitChildTask(
@@ -329,7 +299,7 @@ export async function fetchChildRewards(webSessionToken: string): Promise<ChildR
     web_session_token: webSessionToken
   })
 
-  return normalizeRewardsResponseMedia(response)
+  return normalizeResponseMedia(response)
 }
 
 export async function submitChildRewardRequest(
@@ -348,7 +318,9 @@ export async function submitChildRewardRequest(
 }
 
 export async function fetchChildPoints(webSessionToken: string): Promise<ChildPointsResponse> {
-  return callChildAccessFunction<ChildPointsResponse>('pointsLedger', {
+  const response = await callChildAccessFunction<ChildPointsResponse>('pointsLedger', {
     web_session_token: webSessionToken
   })
+
+  return normalizeResponseMedia(response)
 }

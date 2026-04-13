@@ -443,6 +443,7 @@ watch(
       :description="rewardForm.description"
       :rewards-data="rewardsData"
       :title="rewardForm.title"
+      @redeem="(rewardId, cb) => handleRedeemReward(rewardId).then(cb.onSuccess).catch((e) => cb.onError(e.message))"
       @submit="handleSubmitRewardRequest"
       @update:description="rewardForm.description = $event"
       @update:title="rewardForm.title = $event"

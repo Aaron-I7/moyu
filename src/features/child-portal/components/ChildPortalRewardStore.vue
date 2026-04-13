@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import {
   getRewardAccent,
@@ -13,7 +13,22 @@ import {
   sortRewardsForDisplay
 } from '@/features/child-portal/helpers'
 import { formatPoints } from '@/features/child-portal/format'
-import type { ChildRewardItem, ChildRewardsResponse } from '@/features/child-portal/types'
+import type {
+  ChildRewardItem,
+  ChildRewardRequestItem,
+  ChildRewardsResponse
+} from '@/features/child-portal/types'
+
+type RequestReadiness = 'ready' | 'waiting_points' | 'pending' | 'rejected'
+type ModalStatus = '' | 'success' | 'error'
+
+interface RewardRequestCard extends ChildRewardRequestItem {
+  headline: string
+  pointsGap: number
+  readiness: RequestReadiness
+  reason: string
+  requiredPoints: number | null
+}
 
 const props = defineProps<{
   actionBusy: boolean
@@ -25,48 +40,17 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   submit: []
+  redeem: [rewardId: string, callback: { onSuccess: () => void; onError: (err: string) => void }]
   'update:description': [value: string]
   'update:title': [value: string]
 }>()
 
+const showRedeemModal = ref(false)
+const activeRedeemId = ref<string | null>(null)
+const modalStatus = ref<{ message: string; type: ModalStatus }>({ message: '', type: '' })
+
 const rewardCards = computed(() => sortRewardsForDisplay(props.rewardsData?.rewards || [], props.currentPoints))
-const nearThreshold = computed(() => Math.max(20, Math.min(60, Math.round(props.currentPoints * 0.45) || 20)))
-
-const rewardGroups = computed(() => {
-  const ready = rewardCards.value.filter((item) => getRewardGap(item, props.currentPoints) === 0)
-  const near = rewardCards.value.filter((item) => {
-    const gap = getRewardGap(item, props.currentPoints)
-    return gap > 0 && gap <= nearThreshold.value
-  })
-  const longRange = rewardCards.value.filter((item) => getRewardGap(item, props.currentPoints) > nearThreshold.value)
-
-  return [
-    {
-      key: 'ready',
-      title: '现在就能开箱',
-      subtitle: '这些宝箱今天已经能带回家了。',
-      icon: 'ph:treasure-chest-fill',
-      tone: 'mint',
-      items: ready
-    },
-    {
-      key: 'near',
-      title: '再攒一点就能拿下',
-      subtitle: `距离开启只差 ${nearThreshold.value} 星星以内的目标。`,
-      icon: 'ph:shooting-star-fill',
-      tone: 'amber',
-      items: near
-    },
-    {
-      key: 'long-range',
-      title: '远方大宝箱',
-      subtitle: '这是值得慢慢积累的长期目标。',
-      icon: 'ph:mountains-fill',
-      tone: 'sky',
-      items: longRange
-    }
-  ]
-})
+const requestHistory = computed(() => props.rewardsData?.request_history || [])
 
 const wishPresets = [
   { key: 'outing', label: '探险出游', value: '出去玩', icon: 'ph:park-fill', tone: 'sky' },
@@ -75,14 +59,95 @@ const wishPresets = [
   { key: 'together', label: '陪伴时光', value: '陪伴', icon: 'ph:hand-heart-fill', tone: 'mint' }
 ] as const
 
-const requestStats = computed(() => {
-  const history = props.rewardsData?.request_history || []
-  return {
-    pending: history.filter((item) => item.status === 'pending').length,
-    approved: history.filter((item) => item.status === 'approved').length,
-    rejected: history.filter((item) => item.status === 'rejected').length
-  }
+const requestCards = computed<RewardRequestCard[]>(() => {
+  return requestHistory.value.map((item) => {
+    const requiredPointsSource = item.approved_cost_points ?? item.suggested_points
+    const requiredPoints = typeof requiredPointsSource === 'number' ? requiredPointsSource : null
+    const pointsGap = requiredPoints === null ? 0 : Math.max(requiredPoints - props.currentPoints, 0)
+
+    if (item.status === 'approved') {
+      if (pointsGap === 0) {
+        return {
+          ...item,
+          readiness: 'ready',
+          headline: '现在可以使用',
+          reason: item.review_remark || '家长已经通过，而且你的星星也够了，可以去兑换。',
+          requiredPoints,
+          pointsGap
+        }
+      }
+
+      return {
+        ...item,
+        readiness: 'waiting_points',
+        headline: '已经通过，但还不能用',
+        reason: `家长已经同意了，不过还差 ${pointsGap} 星星${requiredPoints !== null ? `，要攒到 ${formatPoints(requiredPoints)}` : ''}。`,
+        requiredPoints,
+        pointsGap
+      }
+    }
+
+    if (item.status === 'rejected') {
+      return {
+        ...item,
+        readiness: 'rejected',
+        headline: '这次先放一放',
+        reason: item.review_remark || '这次申请还没有通过，可以换个愿望再试试看。',
+        requiredPoints,
+        pointsGap
+      }
+    }
+
+    return {
+      ...item,
+      readiness: 'pending',
+      headline: '还在等待确认',
+      reason: item.review_remark || '家长正在看这份申请，暂时还不能使用。',
+      requiredPoints,
+      pointsGap
+    }
+  })
 })
+
+const requestGroups = computed(() => [
+  {
+    key: 'ready',
+    title: '现在可用',
+    subtitle: '已经通过，现在就能用了。',
+    icon: 'ph:seal-check-fill',
+    tone: 'mint',
+    items: requestCards.value.filter((item) => item.readiness === 'ready')
+  },
+  {
+    key: 'blocked',
+    title: '暂时还不能用',
+    subtitle: '这里会告诉你原因。',
+    icon: 'ph:lock-key-fill',
+    tone: 'amber',
+    items: requestCards.value.filter((item) => item.readiness === 'waiting_points' || item.readiness === 'pending')
+  },
+  {
+    key: 'rejected',
+    title: '这次先缓一缓',
+    subtitle: '看看这次的回复吧。',
+    icon: 'ph:seal-warning-fill',
+    tone: 'rose',
+    items: requestCards.value.filter((item) => item.readiness === 'rejected')
+  }
+])
+
+const requestStats = computed(() => ({
+  ready: requestCards.value.filter((item) => item.readiness === 'ready').length,
+  blocked: requestCards.value.filter((item) => item.readiness === 'waiting_points' || item.readiness === 'pending').length,
+  rejected: requestCards.value.filter((item) => item.readiness === 'rejected').length
+}))
+
+const featuredReadyRequest = computed(() => requestCards.value.find((item) => item.readiness === 'ready') || null)
+const featuredBlockedRequest = computed(() => {
+  return requestCards.value.find((item) => item.readiness === 'waiting_points' || item.readiness === 'pending') || null
+})
+
+const redeemableRewards = computed(() => rewardCards.value.filter((item) => getRewardGap(item, props.currentPoints) === 0))
 
 function updateTitle(event: Event) {
   emit('update:title', (event.target as HTMLInputElement).value)
@@ -96,34 +161,75 @@ function isPresetActive(value: string) {
   return props.description === value
 }
 
-function getRewardProgress(item: ChildRewardItem) {
-  const cost = Math.max(Number(item.cost_points) || 0, 1)
-  return Math.max(8, Math.min(100, Math.round((props.currentPoints / cost) * 100)))
+function getRequestBadge(item: RewardRequestCard) {
+  if (item.readiness === 'ready') return '可使用'
+  if (item.readiness === 'waiting_points') return `还差 ${item.pointsGap} 星`
+  if (item.readiness === 'rejected') return '暂不可用'
+  return '等家长回应'
 }
 
-function getRewardTagline(item: ChildRewardItem) {
+function getRequestCostText(item: RewardRequestCard) {
+  if (item.requiredPoints !== null) {
+    return formatPoints(item.requiredPoints)
+  }
+
+  if (item.approved_cost_points !== undefined) {
+    return formatPoints(item.approved_cost_points)
+  }
+
+  if (item.suggested_points !== undefined) {
+    return formatPoints(item.suggested_points)
+  }
+
+  return '待定'
+}
+
+function getRedeemHint(item: ChildRewardItem) {
   const gap = getRewardGap(item, props.currentPoints)
   if (gap === 0) {
-    return '宝箱已经解锁，去首页终点宝库就能打开。'
+    return '你的星星已经够啦，现在就能兑换。'
   }
-  if (gap <= nearThreshold.value) {
-    return `再收集 ${gap} 星星，就能把它装进背包。`
-  }
-  return `这是需要耐心积累的远方大奖励，还差 ${gap} 星星。`
+
+  return `现在还差 ${gap} 星星，先继续完成任务。`
+}
+
+function openRedeemModal() {
+  modalStatus.value = { message: '', type: '' }
+  showRedeemModal.value = true
+}
+
+function closeRedeemModal() {
+  showRedeemModal.value = false
+}
+
+function handleRedeem(rewardId: string) {
+  modalStatus.value = { message: '', type: '' }
+  activeRedeemId.value = rewardId
+
+  emit('redeem', rewardId, {
+    onSuccess: () => {
+      modalStatus.value = { message: '兑换成功啦，去看看有没有新的回音。', type: 'success' }
+      activeRedeemId.value = null
+    },
+    onError: (err: string) => {
+      modalStatus.value = { message: err || '兑换失败，请稍后再试。', type: 'error' }
+      activeRedeemId.value = null
+    }
+  })
 }
 </script>
 
 <template>
-  <section class="treasure-station">
-    <header class="treasure-station__sign">
-      <div class="treasure-station__hero">
-        <span class="treasure-station__eyebrow">冒险世界 · 藏宝驿站</span>
-        <h2>把星星花在最想要的宝箱上</h2>
-        <p>先盯住最近能开启的目标，再把远方大宝箱慢慢收进旅途清单里。</p>
+  <section class="reward-command">
+    <header class="reward-command__sign">
+      <div class="reward-command__hero">
+        <span class="reward-command__eyebrow">冒险世界 · 奖励站</span>
+        <h2>看看哪些奖励已经可以用了</h2>
+        <p>已经通过的奖励会先亮出来，暂时不能用的也会告诉你原因。</p>
       </div>
 
-      <div class="treasure-station__meta">
-        <div class="treasure-station__points">
+      <div class="reward-command__meta">
+        <div class="reward-command__points">
           <Icon icon="ph:shooting-star-fill" />
           <div>
             <span>当前星星</span>
@@ -131,89 +237,185 @@ function getRewardTagline(item: ChildRewardItem) {
           </div>
         </div>
 
-        <div class="treasure-station__wish-stats">
-          <span><Icon icon="ph:paper-plane-tilt-fill" /> 等回应 {{ requestStats.pending }}</span>
-          <span><Icon icon="ph:seal-check-fill" /> 已实现 {{ requestStats.approved }}</span>
-        </div>
+        <button type="button" class="reward-command__redeem-entry" @click="openRedeemModal">
+          <span class="reward-command__redeem-copy">
+            <strong>打开兑换宝库</strong>
+            <small>现在能兑换 {{ redeemableRewards.length }} 个奖励</small>
+          </span>
+          <Icon icon="ph:treasure-chest-fill" />
+        </button>
       </div>
     </header>
 
-    <div class="treasure-station__layout">
-      <div class="treasure-station__routes">
-        <section
-          v-for="group in rewardGroups"
-          :key="group.key"
-          v-show="group.items.length"
-          class="station-panel"
-        >
-          <div class="station-panel__title" :class="`station-panel__title--${group.tone}`">
-            <Icon :icon="group.icon" />
+    <section class="reward-command__focus">
+      <article class="focus-card focus-card--mint">
+        <div class="focus-card__top">
+          <Icon icon="ph:seal-check-fill" />
+          <span>现在可用</span>
+        </div>
+        <strong>{{ requestStats.ready }}</strong>
+        <p>{{ featuredReadyRequest ? `最新可用: ${featuredReadyRequest.title}` : '还没有已经能用的申请。' }}</p>
+      </article>
+
+      <article class="focus-card focus-card--amber">
+        <div class="focus-card__top">
+          <Icon icon="ph:lock-key-fill" />
+          <span>暂时还不能用</span>
+        </div>
+        <strong>{{ requestStats.blocked }}</strong>
+        <p>{{ featuredBlockedRequest ? featuredBlockedRequest.reason : '目前没有卡住的申请。' }}</p>
+      </article>
+
+      <article class="focus-card focus-card--rose">
+        <div class="focus-card__top">
+          <Icon icon="ph:paper-plane-tilt-fill" />
+          <span>这次先放一放</span>
+        </div>
+        <strong>{{ requestStats.rejected }}</strong>
+        <p>家长的回复会直接显示在申请卡片上，方便你知道下一步怎么调整。</p>
+      </article>
+    </section>
+
+    <div class="reward-command__layout">
+      <div class="reward-command__main">
+        <section class="status-board">
+          <div class="status-board__title">
             <div>
-              <h3>{{ group.title }}</h3>
-              <p>{{ group.subtitle }}</p>
+              <span>我的申请</span>
+              <h3>我的奖励现在到底能不能用？</h3>
             </div>
-            <span>{{ group.items.length }}</span>
+            <button type="button" class="status-board__redeem-button" @click="openRedeemModal">
+              去兑换
+              <Icon icon="ph:arrow-right-bold" />
+            </button>
           </div>
 
-          <div class="treasure-grid">
-            <article
-              v-for="item in group.items"
-              :key="item.reward_id"
-              class="treasure-card"
-              :class="[`treasure-card--${getRewardAccent(item.reward_type)}`, { 'treasure-card--ready': getRewardGap(item, currentPoints) === 0 }]"
+          <div v-if="requestCards.length" class="status-board__groups">
+            <section
+              v-for="group in requestGroups"
+              :key="group.key"
+              v-show="group.items.length"
+              class="request-group"
             >
-              <div class="treasure-card__crest" :class="`treasure-card__crest--${getRewardAccent(item.reward_type)}`">
-                <img v-if="item.image_url" :src="item.image_url" :alt="item.title" />
-                <Icon v-else :icon="getRewardVisualIcon(item.reward_type)" />
+              <div class="request-group__header" :class="`request-group__header--${group.tone}`">
+                <Icon :icon="group.icon" />
+                <div>
+                  <h4>{{ group.title }}</h4>
+                  <p>{{ group.subtitle }}</p>
+                </div>
+                <span>{{ group.items.length }}</span>
               </div>
 
-              <div class="treasure-card__body">
-                <span class="treasure-card__type">{{ getRewardTypeLabel(item.reward_type) }}</span>
-                <h4>{{ item.title }}</h4>
-                <p>{{ getRewardTagline(item) }}</p>
-              </div>
+              <div class="request-grid">
+                <article
+                  v-for="item in group.items"
+                  :key="item.request_id"
+                  class="request-card"
+                  :class="`request-card--${getRewardRequestTone(item.status)}`"
+                >
+                  <div class="request-card__icon" :class="`request-card__icon--${getRewardRequestTone(item.status)}`">
+                    <Icon :icon="getRewardRequestIcon(item.status)" />
+                  </div>
 
-              <div class="treasure-card__footer">
-                <div class="treasure-card__cost">
-                  <Icon icon="ph:shooting-star-fill" />
-                  <strong>{{ formatPoints(item.cost_points) }}</strong>
-                </div>
-                <div class="treasure-card__status">
-                  <span v-if="getRewardGap(item, currentPoints) === 0" class="status-pill status-pill--mint">今天就能开启</span>
-                  <span v-else-if="getRewardGap(item, currentPoints) <= nearThreshold" class="status-pill status-pill--amber">差 {{ getRewardGap(item, currentPoints) }} 星</span>
-                  <span v-else class="status-pill status-pill--sky">长期目标</span>
-                </div>
-                <div class="treasure-card__progress">
-                  <span :style="{ width: `${getRewardProgress(item)}%` }" />
-                </div>
+                  <div class="request-card__body">
+                    <div class="request-card__header">
+                      <div class="request-card__title">
+                        <span v-if="item.reward_type" class="request-card__type">{{ getRewardTypeLabel(item.reward_type) }}</span>
+                        <h5>{{ item.title }}</h5>
+                      </div>
+                      <span class="request-card__status" :class="`request-card__status--${getRewardRequestTone(item.status)}`">
+                        {{ getRewardRequestStatusLabel(item.status) }}
+                      </span>
+                    </div>
+
+                    <div class="request-card__snapshot">
+                      <div class="request-card__snapshot-item">
+                        <span>现在状态</span>
+                        <strong>{{ item.headline }}</strong>
+                      </div>
+                      <div class="request-card__snapshot-item">
+                        <span>需要星星</span>
+                        <strong>{{ getRequestCostText(item) }}</strong>
+                      </div>
+                      <div class="request-card__snapshot-item">
+                        <span>结论</span>
+                        <strong>{{ getRequestBadge(item) }}</strong>
+                      </div>
+                    </div>
+
+                    <p class="request-card__reason">{{ item.reason }}</p>
+
+                    <div class="request-card__footer">
+                      <span class="request-card__summary">{{ getRewardRequestSummary(item) }}</span>
+                      <button
+                        v-if="item.readiness === 'ready'"
+                        type="button"
+                        class="request-card__action"
+                        @click="openRedeemModal"
+                      >
+                        去兑换
+                      </button>
+                    </div>
+                  </div>
+                </article>
               </div>
-            </article>
+            </section>
+          </div>
+
+          <div v-else class="reward-command__empty">
+            <Icon icon="ph:gift-light" />
+            <p>你还没有提交过奖励申请，先在下面写一个愿望吧。</p>
           </div>
         </section>
-
-        <div v-if="!rewardCards.length" class="treasure-station__empty">
-          <Icon icon="ph:treasure-chest-light" />
-          <p>藏宝驿站今天还没有摆出新的宝箱。</p>
-        </div>
       </div>
 
-      <aside class="treasure-station__sidebar">
-        <article class="station-panel station-panel--wish">
-          <div class="station-panel__title station-panel__title--rose">
+      <aside class="reward-command__sidebar">
+        <article class="side-panel side-panel--vault">
+          <div class="side-panel__title side-panel__title--sky">
+            <Icon icon="ph:treasure-chest-fill" />
+            <div>
+              <h3>兑换宝库</h3>
+              <p>看看现在能换什么。</p>
+            </div>
+          </div>
+
+          <div class="vault-preview">
+            <div class="vault-preview__hero">
+              <strong>{{ redeemableRewards.length }}</strong>
+              <span>个奖励现在能兑换</span>
+            </div>
+
+            <ul v-if="redeemableRewards.length" class="vault-preview__list">
+              <li v-for="item in redeemableRewards.slice(0, 3)" :key="item.reward_id">
+                <Icon :icon="getRewardVisualIcon(item.reward_type)" />
+                <span>{{ item.title }}</span>
+              </li>
+            </ul>
+
+            <p v-else class="vault-preview__hint">先攒星星，宝库里还没有已经解锁的奖励。</p>
+
+            <button type="button" class="vault-preview__button" @click="openRedeemModal">
+              打开宝库
+            </button>
+          </div>
+        </article>
+
+        <article class="side-panel side-panel--wish">
+          <div class="side-panel__title side-panel__title--rose">
             <Icon icon="ph:paper-plane-tilt-fill" />
             <div>
-              <h3>许愿驿站</h3>
-              <p>把最想要的愿望交给旅途信使。</p>
+              <h3>继续申请新奖励</h3>
+              <p>想要新的奖励，也可以继续申请。</p>
             </div>
           </div>
 
           <form class="wish-form" @submit.prevent="emit('submit')">
             <label class="wish-form__field">
-              <span>想许什么愿？</span>
+              <span>这次想申请什么？</span>
               <input
                 :value="title"
                 maxlength="30"
-                placeholder="比如：一次特别的冒险奖励"
+                placeholder="比如: 周末去公园探险"
                 @input="updateTitle"
               />
             </label>
@@ -235,99 +437,130 @@ function getRewardTagline(item: ChildRewardItem) {
               </button>
             </div>
 
-            <div class="wish-form__current" v-if="description">
+            <div v-if="description" class="wish-form__current">
               <Icon icon="ph:sparkle-fill" />
-              <span>这次愿望方向：{{ description }}</span>
+              <span>这次愿望方向: {{ description }}</span>
             </div>
 
             <button type="submit" class="wish-form__submit" :disabled="actionBusy || !title">
-              把愿望送出去
+              提交新申请
             </button>
           </form>
         </article>
-
-        <article class="station-panel station-panel--history">
-          <div class="station-panel__title station-panel__title--sky">
-            <Icon icon="ph:scroll-fill" />
-            <div>
-              <h3>家长回音墙</h3>
-              <p>看看愿望已经走到哪一步了。</p>
-            </div>
-          </div>
-
-          <div class="history-stats">
-            <span class="history-stats__pill history-stats__pill--sky">等待 {{ requestStats.pending }}</span>
-            <span class="history-stats__pill history-stats__pill--mint">通过 {{ requestStats.approved }}</span>
-            <span class="history-stats__pill history-stats__pill--rose">暂缓 {{ requestStats.rejected }}</span>
-          </div>
-
-          <ul v-if="rewardsData?.request_history?.length" class="echo-list">
-            <li v-for="item in rewardsData.request_history" :key="item.request_id" class="echo-card">
-              <div class="echo-card__icon" :class="`echo-card__icon--${getRewardRequestTone(item.status)}`">
-                <Icon :icon="getRewardRequestIcon(item.status)" />
-              </div>
-              <div class="echo-card__content">
-                <div class="echo-card__header">
-                  <strong>{{ item.title }}</strong>
-                  <span class="echo-card__tag" :class="`echo-card__tag--${getRewardRequestTone(item.status)}`">
-                    {{ getRewardRequestStatusLabel(item.status) }}
-                  </span>
-                </div>
-                <p>{{ getRewardRequestSummary(item) }}</p>
-              </div>
-            </li>
-          </ul>
-
-          <div v-else class="treasure-station__empty treasure-station__empty--small">
-            <Icon icon="ph:shooting-star-light" />
-            <p>回音墙上还没有新的消息。</p>
-          </div>
-        </article>
       </aside>
     </div>
+
+    <transition name="fade">
+      <div v-if="showRedeemModal" class="redeem-modal-overlay" @click="closeRedeemModal">
+        <div class="redeem-modal" @click.stop>
+          <button type="button" class="redeem-modal__close" @click="closeRedeemModal">
+            <Icon icon="ph:x-bold" />
+          </button>
+
+          <div class="redeem-modal__header">
+            <span class="redeem-modal__eyebrow">奖励宝库</span>
+            <h3>选择现在要兑换的奖励</h3>
+            <p>选择一个喜欢的奖励吧。能兑换的会排在前面。</p>
+
+            <transition name="fade">
+              <div v-if="modalStatus.message" class="redeem-modal__alert" :class="`redeem-modal__alert--${modalStatus.type}`">
+                <Icon :icon="modalStatus.type === 'success' ? 'ph:check-circle-fill' : 'ph:warning-circle-fill'" />
+                <span>{{ modalStatus.message }}</span>
+              </div>
+            </transition>
+          </div>
+
+          <div class="redeem-modal__list">
+            <article
+              v-for="item in rewardCards"
+              :key="item.reward_id"
+              class="reward-option"
+              :class="[`reward-option--${getRewardAccent(item.reward_type)}`, { 'reward-option--ready': getRewardGap(item, currentPoints) === 0 }]"
+            >
+              <div class="reward-option__media" :class="`reward-option__media--${getRewardAccent(item.reward_type)}`">
+                <img v-if="item.image_url" :src="item.image_url" :alt="item.title" />
+                <Icon v-else :icon="getRewardVisualIcon(item.reward_type)" />
+              </div>
+
+              <div class="reward-option__body">
+                <div class="reward-option__header">
+                  <div>
+                    <span class="reward-option__type">{{ getRewardTypeLabel(item.reward_type) }}</span>
+                    <h4>{{ item.title }}</h4>
+                  </div>
+                  <span class="reward-option__cost">
+                    <Icon icon="ph:shooting-star-fill" />
+                    {{ formatPoints(item.cost_points) }}
+                  </span>
+                </div>
+                <p>{{ getRedeemHint(item) }}</p>
+              </div>
+
+              <div class="reward-option__action">
+                <button
+                  type="button"
+                  class="reward-option__button"
+                  :class="{ 'reward-option__button--loading': activeRedeemId === item.reward_id }"
+                  :disabled="actionBusy || getRewardGap(item, currentPoints) > 0"
+                  @click="handleRedeem(item.reward_id)"
+                >
+                  <Icon v-if="activeRedeemId === item.reward_id" icon="ph:spinner-gap-bold" class="loading-spin" />
+                  <span v-else>{{ getRewardGap(item, currentPoints) === 0 ? '立即兑换' : '暂不可兑换' }}</span>
+                </button>
+              </div>
+            </article>
+
+            <div v-if="!rewardCards.length" class="reward-command__empty reward-command__empty--modal">
+              <Icon icon="ph:treasure-chest-light" />
+              <p>宝库里还没有新的奖励。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
   </section>
 </template>
 
 <style scoped lang="scss">
 @use '../adventure-theme.scss' as theme;
 
-.treasure-station {
+.reward-command {
   @include theme.page-shell;
 }
 
-.treasure-station__sign {
-  @include theme.sign-shell(linear-gradient(135deg, #ffcf9a 0%, #ffa2ac 48%, #ffd5f0 100%), #7a2842, #da7f8c);
+.reward-command__sign {
+  @include theme.sign-shell(linear-gradient(135deg, #ffd7a5 0%, #ffb6c7 42%, #ffc2f0 100%), #7b2d4d, #d37a90);
 }
 
-.treasure-station__hero,
-.treasure-station__meta {
+.reward-command__hero,
+.reward-command__meta {
   position: relative;
   z-index: 1;
 }
 
-.treasure-station__hero {
+.reward-command__hero {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-width: 620px;
+  max-width: 660px;
 
   h2 {
     margin: 0;
     font-size: clamp(28px, 4vw, 38px);
-    line-height: 1.08;
+    line-height: 1.06;
     font-weight: 900;
   }
 
   p {
     margin: 0;
+    max-width: 560px;
     font-size: 15px;
-    line-height: 1.7;
-    color: rgba(122, 40, 66, 0.8);
-    max-width: 520px;
+    line-height: 1.75;
+    color: rgba(123, 45, 77, 0.82);
   }
 }
 
-.treasure-station__eyebrow {
+.reward-command__eyebrow {
   display: inline-flex;
   width: fit-content;
   padding: 7px 14px;
@@ -338,14 +571,14 @@ function getRewardTagline(item: ChildRewardItem) {
   letter-spacing: 0.06em;
 }
 
-.treasure-station__meta {
+.reward-command__meta {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  min-width: min(240px, 100%);
+  min-width: min(280px, 100%);
 }
 
-.treasure-station__points {
+.reward-command__points {
   @include theme.surface-card(18px 20px, 24px);
   display: flex;
   align-items: center;
@@ -372,42 +605,175 @@ function getRewardTagline(item: ChildRewardItem) {
   }
 }
 
-.treasure-station__wish-stats {
+.reward-command__redeem-entry {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border: none;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #7cc7ff 0%, #55a7ff 45%, #9be5e1 100%);
+  color: white;
+  box-shadow: 0 12px 24px rgba(77, 132, 203, 0.22);
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
 
-  span {
-    @include theme.stat-chip;
-    color: #7c5063;
-    font-size: 13px;
-    font-weight: 900;
+  svg {
+    font-size: 34px;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 28px rgba(77, 132, 203, 0.24);
   }
 }
 
-.treasure-station__layout {
+.reward-command__redeem-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  strong {
+    font-size: 17px;
+    line-height: 1.2;
+    font-weight: 900;
+  }
+
+  small {
+    font-size: 13px;
+    opacity: 0.9;
+  }
+}
+
+.reward-command__focus {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.focus-card {
+  @include theme.surface-card(20px, 28px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  strong {
+    font-size: 34px;
+    line-height: 1;
+    font-weight: 900;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #607892;
+  }
+}
+
+.focus-card__top {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+
+  svg {
+    font-size: 18px;
+  }
+}
+
+.focus-card--mint .focus-card__top { background: rgba(86, 204, 118, 0.14); color: #258145; }
+.focus-card--amber .focus-card__top { background: rgba(255, 184, 71, 0.14); color: #9a5b00; }
+.focus-card--rose .focus-card__top { background: rgba(255, 137, 164, 0.14); color: #b5355d; }
+
+.focus-card--mint strong { color: #258145; }
+.focus-card--amber strong { color: #a95b00; }
+.focus-card--rose strong { color: #b5355d; }
+
+.reward-command__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.7fr);
   gap: 24px;
 }
 
-.treasure-station__routes,
-.treasure-station__sidebar {
+.reward-command__main,
+.reward-command__sidebar {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.station-panel {
+.status-board,
+.side-panel {
   @include theme.surface-card(24px, 30px);
 }
 
-.station-panel__title {
-  @include theme.title-pill(linear-gradient(135deg, #ffd89d 0%, #ffb86d 100%), #7a4300);
+.status-board__title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 18px;
-  width: auto;
+
+  span {
+    display: inline-flex;
+    width: fit-content;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: rgba(255, 220, 183, 0.46);
+    color: #8f5500;
+    font-size: 12px;
+    font-weight: 900;
+  }
 
   h3 {
+    margin: 10px 0 0;
+    font-size: 28px;
+    line-height: 1.08;
+    color: #24384c;
+  }
+}
+
+.status-board__redeem-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 18px;
+  border: none;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #ffc96f 0%, #f59e0b 100%);
+  color: #643b00;
+  font-size: 15px;
+  font-weight: 900;
+  box-shadow: 0 8px 0 rgba(224, 139, 0, 0.24);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.status-board__groups {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.request-group__header,
+.side-panel__title {
+  @include theme.title-pill(linear-gradient(135deg, #ffd89d 0%, #ffb86d 100%), #7a4300);
+  margin-bottom: 18px;
+
+  h3,
+  h4 {
     margin: 0;
     font-size: 20px;
     line-height: 1.1;
@@ -432,85 +798,90 @@ function getRewardTagline(item: ChildRewardItem) {
   }
 }
 
-.station-panel__title--mint { @include theme.title-pill(linear-gradient(135deg, #b8f4c1 0%, #6ed183 100%), #245a32); }
-.station-panel__title--amber { @include theme.title-pill(linear-gradient(135deg, #ffe28f 0%, #ffb444 100%), #704100); }
-.station-panel__title--sky { @include theme.title-pill(linear-gradient(135deg, #abe7ff 0%, #69b8ff 100%), #1f4f81); }
-.station-panel__title--rose { @include theme.title-pill(linear-gradient(135deg, #ffd2dc 0%, #ff9bb0 100%), #8e2d4f); }
+.request-group__header--mint,
+.side-panel__title--mint { @include theme.title-pill(linear-gradient(135deg, #b8f4c1 0%, #6ed183 100%), #245a32); }
+.request-group__header--amber,
+.side-panel__title--amber { @include theme.title-pill(linear-gradient(135deg, #ffe28f 0%, #ffb444 100%), #704100); }
+.request-group__header--sky,
+.side-panel__title--sky { @include theme.title-pill(linear-gradient(135deg, #abe7ff 0%, #69b8ff 100%), #1f4f81); }
+.request-group__header--rose,
+.side-panel__title--rose { @include theme.title-pill(linear-gradient(135deg, #ffd2dc 0%, #ff9bb0 100%), #8e2d4f); }
 
-.treasure-grid {
+.request-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 16px;
 }
 
-.treasure-card {
-  display: flex;
-  flex-direction: column;
+.request-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 16px;
   padding: 18px;
   border-radius: 26px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 248, 249, 0.94) 100%);
-  border: 2px solid rgba(255, 188, 198, 0.22);
-  box-shadow: 0 12px 18px rgba(106, 78, 95, 0.08);
-  transition: transform 0.18s ease;
-
-  &:hover {
-    transform: translateY(-3px);
-  }
+  border: 2px solid rgba(196, 210, 226, 0.18);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 251, 255, 0.94) 100%);
+  box-shadow: 0 12px 18px rgba(96, 118, 143, 0.08);
 }
 
-.treasure-card--ready {
-  box-shadow: 0 12px 18px rgba(57, 181, 109, 0.14), 0 0 0 4px rgba(99, 197, 111, 0.08);
+.request-card--mint {
+  border-color: rgba(86, 204, 118, 0.22);
+  box-shadow: 0 12px 18px rgba(57, 181, 109, 0.1);
 }
 
-.treasure-card__crest {
-  width: 88px;
-  height: 88px;
-  border-radius: 28px;
+.request-card--amber {
+  border-color: rgba(255, 184, 71, 0.24);
+}
+
+.request-card--rose {
+  border-color: rgba(255, 137, 164, 0.22);
+}
+
+.request-card__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
   display: grid;
   place-items: center;
-  font-size: 42px;
+  font-size: 28px;
   color: white;
-  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.12);
-  overflow: hidden;
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
 }
 
-.treasure-card__crest--rose { background: linear-gradient(135deg, #ffb4b8 0%, #ff7d8a 100%); }
-.treasure-card__crest--sky { background: linear-gradient(135deg, #8fe0ff 0%, #5e9cff 100%); }
-.treasure-card__crest--mint { background: linear-gradient(135deg, #b2f1b2 0%, #47bc72 100%); }
-.treasure-card__crest--amber { background: linear-gradient(135deg, #ffe07d 0%, #f59e0b 100%); }
+.request-card__icon--mint { background: linear-gradient(135deg, #a8edaf 0%, #4dbf75 100%); }
+.request-card__icon--amber,
+.request-card__icon--sky { background: linear-gradient(135deg, #9fe1ff 0%, #649cff 100%); }
+.request-card__icon--rose { background: linear-gradient(135deg, #ffb8b0 0%, #f2856a 100%); }
 
-.treasure-card__body {
+.request-card__body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  min-width: 0;
+}
 
-  h4 {
-    margin: 0;
+.request-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.request-card__title {
+  min-width: 0;
+
+  h5 {
+    margin: 8px 0 0;
     font-size: 20px;
     line-height: 1.15;
-    color: #263a4f;
+    color: #27384d;
     font-weight: 900;
-  }
-
-  p {
-    margin: 0;
-    font-size: 14px;
-    line-height: 1.65;
-    color: #6a7f95;
   }
 }
 
-.treasure-card__type {
+.request-card__type {
   display: inline-flex;
   width: fit-content;
-  padding: 6px 12px;
+  padding: 6px 10px;
   border-radius: 999px;
   background: rgba(122, 148, 176, 0.14);
   color: #627792;
@@ -518,55 +889,166 @@ function getRewardTagline(item: ChildRewardItem) {
   font-weight: 900;
 }
 
-.treasure-card__footer {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.treasure-card__cost {
+.request-card__status {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  color: #ff9d00;
-  font-size: 18px;
-
-  strong {
-    font-size: 22px;
-    line-height: 1;
-    font-weight: 900;
-  }
-}
-
-.treasure-card__progress {
-  height: 10px;
-  border-radius: 999px;
-  background: rgba(116, 138, 163, 0.12);
-  overflow: hidden;
-
-  span {
-    display: block;
-    height: 100%;
-    border-radius: 999px;
-    background: linear-gradient(90deg, #ffa73c 0%, #62d27d 100%);
-    transition: width 0.25s ease;
-  }
-}
-
-.status-pill {
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  padding: 7px 12px;
+  flex-shrink: 0;
+  padding: 7px 10px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 900;
 }
 
-.status-pill--mint { background: rgba(86, 204, 118, 0.14); color: #258145; }
-.status-pill--amber { background: rgba(255, 184, 71, 0.14); color: #9a5b00; }
-.status-pill--sky { background: rgba(105, 184, 255, 0.14); color: #2e5a8d; }
+.request-card__status--mint { background: rgba(86, 204, 118, 0.14); color: #258145; }
+.request-card__status--amber,
+.request-card__status--sky { background: rgba(105, 184, 255, 0.14); color: #2e5a8d; }
+.request-card__status--rose { background: rgba(255, 137, 164, 0.14); color: #b5355d; }
+
+.request-card__snapshot {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.request-card__snapshot-item {
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(244, 248, 252, 0.9);
+
+  span {
+    display: block;
+    font-size: 11px;
+    font-weight: 900;
+    color: #7b8fa7;
+  }
+
+  strong {
+    display: block;
+    margin-top: 8px;
+    font-size: 15px;
+    line-height: 1.3;
+    color: #284055;
+  }
+}
+
+.request-card__reason {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #607892;
+}
+
+.request-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.request-card__summary {
+  display: inline-flex;
+  width: fit-content;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(255, 226, 194, 0.34);
+  color: #8d5c1d;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.request-card__action {
+  padding: 11px 16px;
+  border: none;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #61df82 0%, #2fb35f 100%);
+  color: white;
+  font-size: 14px;
+  font-weight: 900;
+  box-shadow: 0 8px 0 rgba(47, 179, 95, 0.24);
+  cursor: pointer;
+}
+
+.vault-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.vault-preview__hero {
+  padding: 18px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(112, 198, 255, 0.18) 0%, rgba(171, 231, 255, 0.28) 100%);
+
+  strong {
+    display: block;
+    font-size: 36px;
+    line-height: 1;
+    color: #1f4f81;
+  }
+
+  span {
+    display: block;
+    margin-top: 8px;
+    font-size: 14px;
+    font-weight: 800;
+    color: #52789f;
+  }
+}
+
+.vault-preview__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 18px;
+    background: rgba(247, 251, 255, 0.92);
+    color: #2f506e;
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  svg {
+    font-size: 20px;
+    color: #4f8cff;
+  }
+}
+
+.vault-preview__hint {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #6a7f95;
+}
+
+.vault-preview__button,
+.wish-form__submit,
+.reward-option__button {
+  border: none;
+  border-radius: 18px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+  }
+}
+
+.vault-preview__button {
+  padding: 15px 16px;
+  background: linear-gradient(135deg, #7cc7ff 0%, #5c92ff 100%);
+  color: white;
+  box-shadow: 0 8px 0 rgba(78, 123, 212, 0.24);
+}
 
 .wish-form {
   display: flex;
@@ -655,6 +1137,7 @@ function getRewardTagline(item: ChildRewardItem) {
 .wish-chip--rose { background: #fff5f7; color: #cc476d; }
 .wish-chip--amber { background: #fff9ef; color: #b56f00; }
 .wish-chip--mint { background: #f4fff6; color: #2d8c4f; }
+
 .wish-chip--active {
   border-color: currentColor;
   box-shadow: 0 8px 16px rgba(95, 117, 145, 0.1);
@@ -675,24 +1158,10 @@ function getRewardTagline(item: ChildRewardItem) {
 
 .wish-form__submit {
   padding: 16px;
-  border-radius: 18px;
-  border: none;
   background: linear-gradient(135deg, #ff9eb1 0%, #ffcf8f 100%);
   color: #7d2b4f;
   font-size: 17px;
-  font-weight: 900;
   box-shadow: 0 8px 0 rgba(221, 120, 142, 0.28);
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-
-  &:hover:not(:disabled) {
-    transform: translateY(-2px);
-  }
-
-  &:active:not(:disabled) {
-    transform: translateY(4px);
-    box-shadow: 0 4px 0 rgba(221, 120, 142, 0.28);
-  }
 
   &:disabled {
     opacity: 0.58;
@@ -701,263 +1170,298 @@ function getRewardTagline(item: ChildRewardItem) {
   }
 }
 
-.history-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 14px;
+.redeem-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(31, 48, 67, 0.34);
+  backdrop-filter: blur(8px);
 }
 
-.history-stats__pill {
+.redeem-modal {
+  position: relative;
+  width: min(980px, 100%);
+  max-height: min(88vh, 920px);
+  overflow: auto;
+  padding: 28px;
+  border-radius: 30px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(247, 251, 255, 0.95) 100%);
+  box-shadow: 0 28px 56px rgba(44, 72, 110, 0.2);
+}
+
+.redeem-modal__close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.82);
+  color: #5c728c;
+  cursor: pointer;
+}
+
+.redeem-modal__header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 22px;
+
+  h3 {
+    margin: 0;
+    font-size: 30px;
+    line-height: 1.08;
+    color: #25384d;
+  }
+
+  p {
+    margin: 0;
+    max-width: 680px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #68809b;
+  }
+}
+
+.redeem-modal__eyebrow {
+  display: inline-flex;
+  width: fit-content;
   padding: 7px 12px;
   border-radius: 999px;
+  background: rgba(255, 220, 183, 0.42);
+  color: #8f5500;
   font-size: 12px;
   font-weight: 900;
 }
 
-.history-stats__pill--sky { background: rgba(105, 184, 255, 0.14); color: #2e5a8d; }
-.history-stats__pill--mint { background: rgba(86, 204, 118, 0.14); color: #258145; }
-.history-stats__pill--rose { background: rgba(255, 137, 164, 0.14); color: #b5355d; }
-
-.echo-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.redeem-modal__alert {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 900;
 }
 
-.echo-card {
-  display: flex;
-  gap: 12px;
-  padding: 14px;
-  border-radius: 22px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 251, 255, 0.92) 100%);
-  border: 1px solid rgba(145, 168, 198, 0.18);
+.redeem-modal__alert--success { background: rgba(86, 204, 118, 0.14); color: #258145; }
+.redeem-modal__alert--error { background: rgba(255, 137, 164, 0.14); color: #b5355d; }
 
-  &__icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 14px;
-    display: grid;
-    place-items: center;
-    color: white;
-    font-size: 22px;
-    flex-shrink: 0;
-  }
-
-  &__icon--sky { background: linear-gradient(135deg, #92dcff 0%, #68a8ff 100%); }
-  &__icon--mint { background: linear-gradient(135deg, #a4ecae 0%, #63c56f 100%); }
-  &__icon--rose { background: linear-gradient(135deg, #ffb8b0 0%, #f2856a 100%); }
-
-  &__content {
-    flex: 1;
-    min-width: 0;
-
-    p {
-      margin: 6px 0 0;
-      font-size: 13px;
-      line-height: 1.65;
-      color: #667c95;
-    }
-  }
-
-  &__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-
-    strong {
-      font-size: 15px;
-      color: #24384c;
-    }
-  }
-
-  &__tag {
-    padding: 5px 9px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 900;
-    white-space: nowrap;
-  }
-
-  &__tag--sky { background: rgba(105, 184, 255, 0.14); color: #2e5a8d; }
-  &__tag--mint { background: rgba(86, 204, 118, 0.14); color: #258145; }
-  &__tag--rose { background: rgba(255, 137, 164, 0.14); color: #b5355d; }
+.redeem-modal__list {
+  display: grid;
+  gap: 14px;
 }
 
-.treasure-station__empty {
+.reward-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 16px;
+  border-radius: 24px;
+  border: 2px solid rgba(198, 211, 225, 0.18);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.reward-option--ready {
+  border-color: rgba(86, 204, 118, 0.24);
+  box-shadow: 0 10px 18px rgba(57, 181, 109, 0.1);
+}
+
+.reward-option__media {
+  width: 78px;
+  height: 78px;
+  border-radius: 24px;
+  display: grid;
+  place-items: center;
+  font-size: 38px;
+  color: white;
+  overflow: hidden;
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.12);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.reward-option__media--rose { background: linear-gradient(135deg, #ffb4b8 0%, #ff7d8a 100%); }
+.reward-option__media--sky { background: linear-gradient(135deg, #8fe0ff 0%, #5e9cff 100%); }
+.reward-option__media--mint { background: linear-gradient(135deg, #b2f1b2 0%, #47bc72 100%); }
+.reward-option__media--amber { background: linear-gradient(135deg, #ffe07d 0%, #f59e0b 100%); }
+
+.reward-option__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+
+  h4 {
+    margin: 8px 0 0;
+    font-size: 20px;
+    line-height: 1.1;
+    color: #24384c;
+  }
+}
+
+.reward-option__type {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(122, 148, 176, 0.14);
+  color: #627792;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.reward-option__cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  color: #ff9d00;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.reward-option__body p {
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #667c95;
+}
+
+.reward-option__button {
+  min-width: 132px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #61df82 0%, #2fb35f 100%);
+  color: white;
+  font-size: 15px;
+  box-shadow: 0 8px 0 rgba(47, 179, 95, 0.24);
+
+  &:disabled {
+    background: linear-gradient(135deg, #d9e2ed 0%, #c3d0df 100%);
+    color: #607892;
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+.reward-option__button--loading {
+  pointer-events: none;
+}
+
+.loading-spin {
+  animation: spin 0.8s linear infinite;
+}
+
+.reward-command__empty {
   @include theme.empty-state(220px);
 }
 
-.treasure-station__empty--small {
-  min-height: 140px;
+.reward-command__empty--modal {
+  min-height: 180px;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 @include theme.respond-max(tablet) {
-  .treasure-station__sign {
+  .reward-command__sign {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .treasure-station__layout {
+  .reward-command__focus,
+  .reward-command__layout {
     grid-template-columns: 1fr;
+  }
+
+  .reward-option {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .reward-option__action {
+    grid-column: 1 / -1;
   }
 }
 
 @include theme.respond-max(phone) {
-  .treasure-station__meta {
-    width: 100%;
+  .status-board__title,
+  .request-card__header,
+  .request-card__footer,
+  .reward-option__header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  .treasure-station__points {
-    padding: 16px 18px;
-    gap: 12px;
-
-    svg {
-      font-size: 28px;
-    }
-
-    strong {
-      font-size: 28px;
-    }
-  }
-
-  .station-panel {
-    padding: 20px;
-    border-radius: 28px;
-  }
-
-  .station-panel__title h3 {
-    font-size: 18px;
-  }
-
-  .treasure-card {
-    padding: 16px;
-    gap: 14px;
-    border-radius: 24px;
-  }
-
-  .treasure-card__crest {
-    width: 76px;
-    height: 76px;
-    border-radius: 24px;
-    font-size: 36px;
-  }
-
-  .treasure-card__body h4 {
-    font-size: 18px;
-  }
-
-  .treasure-card__cost strong {
-    font-size: 20px;
-  }
-
-  .wish-form__presets,
-  .treasure-grid {
+  .request-card__snapshot {
     grid-template-columns: 1fr;
   }
 
-  .wish-chip {
-    padding: 11px;
-    gap: 9px;
-
-    svg {
-      font-size: 20px;
-    }
+  .wish-form__presets {
+    grid-template-columns: 1fr;
   }
 
-  .wish-form__submit {
-    padding: 14px;
-    font-size: 16px;
+  .redeem-modal {
+    padding: 22px 18px;
+    border-radius: 24px;
   }
 }
 
 @include theme.respond-max(narrow) {
-  .treasure-station__hero h2 {
+  .reward-command__hero h2 {
     font-size: clamp(24px, 8vw, 30px);
   }
 
-  .treasure-station__hero p {
-    font-size: 14px;
-    line-height: 1.6;
+  .reward-command__hero p,
+  .request-card__reason,
+  .reward-option__body p {
+    font-size: 13px;
+    line-height: 1.65;
   }
 
-  .treasure-station__points {
-    padding: 14px 16px;
+  .focus-card strong {
+    font-size: 28px;
   }
 
-  .treasure-station__wish-stats {
-    flex-direction: column;
-
-    span {
-      width: 100%;
-      justify-content: center;
-    }
-  }
-
-  .station-panel {
+  .status-board,
+  .side-panel {
     padding: 18px 16px;
   }
 
-  .treasure-card {
+  .request-card,
+  .reward-option {
     padding: 14px;
-    gap: 12px;
-  }
-
-  .treasure-card__crest {
-    width: 68px;
-    height: 68px;
-    border-radius: 20px;
-    font-size: 32px;
-  }
-
-  .treasure-card__body h4 {
-    font-size: 17px;
-  }
-
-  .treasure-card__body p {
-    font-size: 13px;
-    line-height: 1.58;
-  }
-
-  .treasure-card__type,
-  .status-pill,
-  .history-stats__pill {
-    padding: 6px 10px;
-    font-size: 11px;
-  }
-
-  .wish-chip {
-    padding: 10px;
-    border-radius: 16px;
-
-    strong {
-      font-size: 13px;
-    }
-
-    span {
-      font-size: 11px;
-    }
-  }
-
-  .echo-card {
-    padding: 12px;
     border-radius: 20px;
   }
 
-  .echo-card__icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    font-size: 20px;
-  }
-
-  .echo-card__header {
-    flex-direction: column;
-    align-items: flex-start;
+  .request-card__icon,
+  .reward-option__media {
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
   }
 }
 </style>

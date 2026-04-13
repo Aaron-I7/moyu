@@ -118,6 +118,10 @@ export interface ChildRewardRequestItem {
   request_id: string
   title: string
   description?: string
+  child_avatar_key?: string
+  child_avatar_url?: string
+  child_gender?: string
+  child_name?: string
   reward_type?: string
   suggested_points?: number
   approved_cost_points?: number
