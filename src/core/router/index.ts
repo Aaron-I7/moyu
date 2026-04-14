@@ -56,6 +56,15 @@ const childPortalRoutes: RouteRecordRaw[] = [
       layout: 'portal',
       portalSection: 'points'
     }
+  },
+  {
+    path: '/child/growth-stats',
+    name: 'ChildGrowthStats',
+    component: () => import('@/views/child-portal/ChildGrowthStatsView.vue'),
+    meta: {
+      title: '成长统计',
+      layout: 'portal'
+    }
   }
 ]
 

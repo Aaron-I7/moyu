@@ -2,10 +2,12 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
+  confirmChildRewardFulfillment,
   fetchChildHome,
   fetchChildPoints,
   fetchChildRewards,
   fetchChildTasks,
+  submitChildRewardRedemption,
   submitChildRewardRequest,
   submitChildTask
 } from '@/features/child-portal/client'
@@ -88,6 +90,14 @@ const navItems = [
     to: '/child/points',
     icon: 'ph:coins-fill',
     accent: '#7fd36b'
+  },
+  {
+    key: 'growth-stats',
+    label: '成长统计',
+    shortLabel: '图表舱',
+    to: '/child/growth-stats',
+    icon: 'ph:chart-line-up-fill',
+    accent: '#0f766e'
   }
 ] as const
 
@@ -355,17 +365,43 @@ async function handleRedeemReward(rewardId: string): Promise<void> {
       throw new Error('当前会话已经失效，请重新打开专属链接。')
     }
 
-    await submitChildRewardRequest(session.webSessionToken, {
-      title: '奖励兑换', // A title is required by the API, but this is a specific reward redeem
+    await submitChildRewardRedemption(session.webSessionToken, {
       reward_id: rewardId,
       idempotency_key: createIdempotencyKey('child_web_reward_redeem')
-    } as any)
+    })
 
     await loadCurrentSection(false) // 局部刷新
     return Promise.resolve() // 成功
   } catch (error) {
     const errorMsg = String((error as { message?: string })?.message || '兑换失败')
     return Promise.reject(new Error(errorMsg)) // 把错误抛给弹窗
+  } finally {
+    actionBusy.value = false
+  }
+}
+
+async function handleConfirmRewardUsage(requestId: string): Promise<void> {
+  if (actionBusy.value) {
+    return
+  }
+
+  actionBusy.value = true
+  resetMessages()
+
+  try {
+    const session = await ensureChildPortalSession()
+    if (!session?.webSessionToken) {
+      throw new Error('当前会话已经失效，请重新打开专属链接。')
+    }
+
+    await confirmChildRewardFulfillment(session.webSessionToken, {
+      request_id: requestId
+    })
+
+    setSuccess('这份奖励已经放进已使用里啦。')
+    await loadCurrentSection(false)
+  } catch (error) {
+    errorMessage.value = String((error as { message?: string })?.message || '更新奖励状态失败')
   } finally {
     actionBusy.value = false
   }
@@ -380,8 +416,8 @@ async function reopenPortalLink(): Promise<void> {
   await router.replace(`/child/portal/${encodeURIComponent(token)}`)
 }
 
-async function navigateToSection(nextSection: PortalSection): Promise<void> {
-  await router.push(`/child/${nextSection}`)
+async function navigateToPath(path: string): Promise<void> {
+  await router.push(path)
 }
 
 onMounted(() => {
@@ -408,7 +444,7 @@ watch(
     :portal-expiry-text="portalExpiryText"
     :section="section"
     :success-message="successMessage"
-    @navigate="navigateToSection"
+    @navigate="navigateToPath"
     @retry="reopenPortalLink"
   >
     <section v-if="loading" class="portal-loading">
@@ -423,7 +459,7 @@ watch(
       :home-data="homeData"
       :points-data="pointsData"
       :rewards-data="rewardsData"
-      @navigate="navigateToSection"
+      @navigate="(nextSection) => navigateToPath(`/child/${nextSection}`)"
       @complete="handleCompleteTask"
       @redeem="(rewardId, cb) => handleRedeemReward(rewardId).then(cb.onSuccess).catch((e) => cb.onError(e.message))"
     />
@@ -443,6 +479,7 @@ watch(
       :description="rewardForm.description"
       :rewards-data="rewardsData"
       :title="rewardForm.title"
+      @mark-used="handleConfirmRewardUsage"
       @redeem="(rewardId, cb) => handleRedeemReward(rewardId).then(cb.onSuccess).catch((e) => cb.onError(e.message))"
       @submit="handleSubmitRewardRequest"
       @update:description="rewardForm.description = $event"

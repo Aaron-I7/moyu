@@ -1,33 +1,27 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { Icon } from '@iconify/vue'
+import { formatPoints } from '@/features/child-portal/format'
 import {
   getRewardAccent,
   getRewardGap,
   getRewardRequestIcon,
   getRewardRequestStatusLabel,
   getRewardRequestSummary,
-  getRewardRequestTone,
   getRewardTypeLabel,
   getRewardVisualIcon,
   sortRewardsForDisplay
 } from '@/features/child-portal/helpers'
-import { formatPoints } from '@/features/child-portal/format'
 import type {
   ChildRewardItem,
   ChildRewardRequestItem,
   ChildRewardsResponse
 } from '@/features/child-portal/types'
 
-type RequestReadiness = 'ready' | 'waiting_points' | 'pending' | 'rejected'
 type ModalStatus = '' | 'success' | 'error'
 
 interface RewardRequestCard extends ChildRewardRequestItem {
-  headline: string
-  pointsGap: number
-  readiness: RequestReadiness
-  reason: string
-  requiredPoints: number | null
+  image_url?: string
 }
 
 const props = defineProps<{
@@ -41,6 +35,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   submit: []
   redeem: [rewardId: string, callback: { onSuccess: () => void; onError: (err: string) => void }]
+  markUsed: [requestId: string]
   'update:description': [value: string]
   'update:title': [value: string]
 }>()
@@ -49,9 +44,6 @@ const showRedeemModal = ref(false)
 const activeRedeemId = ref<string | null>(null)
 const modalStatus = ref<{ message: string; type: ModalStatus }>({ message: '', type: '' })
 
-const rewardCards = computed(() => sortRewardsForDisplay(props.rewardsData?.rewards || [], props.currentPoints))
-const requestHistory = computed(() => props.rewardsData?.request_history || [])
-
 const wishPresets = [
   { key: 'outing', label: '探险出游', value: '出去玩', icon: 'ph:park-fill', tone: 'sky' },
   { key: 'toy', label: '神秘玩具', value: '小玩具', icon: 'ph:teddy-bear-fill', tone: 'rose' },
@@ -59,95 +51,22 @@ const wishPresets = [
   { key: 'together', label: '陪伴时光', value: '陪伴', icon: 'ph:hand-heart-fill', tone: 'mint' }
 ] as const
 
-const requestCards = computed<RewardRequestCard[]>(() => {
-  return requestHistory.value.map((item) => {
-    const requiredPointsSource = item.approved_cost_points ?? item.suggested_points
-    const requiredPoints = typeof requiredPointsSource === 'number' ? requiredPointsSource : null
-    const pointsGap = requiredPoints === null ? 0 : Math.max(requiredPoints - props.currentPoints, 0)
-
-    if (item.status === 'approved') {
-      if (pointsGap === 0) {
-        return {
-          ...item,
-          readiness: 'ready',
-          headline: '现在可以使用',
-          reason: item.review_remark || '家长已经通过，而且你的星星也够了，可以去兑换。',
-          requiredPoints,
-          pointsGap
-        }
-      }
-
-      return {
-        ...item,
-        readiness: 'waiting_points',
-        headline: '已经通过，但还不能用',
-        reason: `家长已经同意了，不过还差 ${pointsGap} 星星${requiredPoints !== null ? `，要攒到 ${formatPoints(requiredPoints)}` : ''}。`,
-        requiredPoints,
-        pointsGap
-      }
-    }
-
-    if (item.status === 'rejected') {
-      return {
-        ...item,
-        readiness: 'rejected',
-        headline: '这次先放一放',
-        reason: item.review_remark || '这次申请还没有通过，可以换个愿望再试试看。',
-        requiredPoints,
-        pointsGap
-      }
-    }
-
-    return {
-      ...item,
-      readiness: 'pending',
-      headline: '还在等待确认',
-      reason: item.review_remark || '家长正在看这份申请，暂时还不能使用。',
-      requiredPoints,
-      pointsGap
-    }
-  })
-})
-
-const requestGroups = computed(() => [
-  {
-    key: 'ready',
-    title: '现在可用',
-    subtitle: '已经通过，现在就能用了。',
-    icon: 'ph:seal-check-fill',
-    tone: 'mint',
-    items: requestCards.value.filter((item) => item.readiness === 'ready')
-  },
-  {
-    key: 'blocked',
-    title: '暂时还不能用',
-    subtitle: '这里会告诉你原因。',
-    icon: 'ph:lock-key-fill',
-    tone: 'amber',
-    items: requestCards.value.filter((item) => item.readiness === 'waiting_points' || item.readiness === 'pending')
-  },
-  {
-    key: 'rejected',
-    title: '这次先缓一缓',
-    subtitle: '看看这次的回复吧。',
-    icon: 'ph:seal-warning-fill',
-    tone: 'rose',
-    items: requestCards.value.filter((item) => item.readiness === 'rejected')
+function toTimestamp(value?: number | string) {
+  if (!value) {
+    return 0
   }
-])
 
-const requestStats = computed(() => ({
-  ready: requestCards.value.filter((item) => item.readiness === 'ready').length,
-  blocked: requestCards.value.filter((item) => item.readiness === 'waiting_points' || item.readiness === 'pending').length,
-  rejected: requestCards.value.filter((item) => item.readiness === 'rejected').length
-}))
+  if (typeof value === 'number') {
+    return value
+  }
 
-const featuredReadyRequest = computed(() => requestCards.value.find((item) => item.readiness === 'ready') || null)
-const featuredBlockedRequest = computed(() => {
-  return requestCards.value.find((item) => item.readiness === 'waiting_points' || item.readiness === 'pending') || null
-})
+  const time = new Date(value).getTime()
+  return Number.isNaN(time) ? 0 : time
+}
 
-const redeemableRewards = computed(() => rewardCards.value.filter((item) => getRewardGap(item, props.currentPoints) === 0))
+function normalizeRewardKey(value?: string) {
+  return String(value || '').trim().replace(/\s+/g, '').toLowerCase()
+}
 
 function updateTitle(event: Event) {
   emit('update:title', (event.target as HTMLInputElement).value)
@@ -161,36 +80,55 @@ function isPresetActive(value: string) {
   return props.description === value
 }
 
-function getRequestBadge(item: RewardRequestCard) {
-  if (item.readiness === 'ready') return '可使用'
-  if (item.readiness === 'waiting_points') return `还差 ${item.pointsGap} 星`
-  if (item.readiness === 'rejected') return '暂不可用'
-  return '等家长回应'
-}
+const rewardCards = computed(() => sortRewardsForDisplay(props.rewardsData?.rewards || [], props.currentPoints))
 
-function getRequestCostText(item: RewardRequestCard) {
-  if (item.requiredPoints !== null) {
-    return formatPoints(item.requiredPoints)
+const rewardAssetMap = computed(() => {
+  const map = new Map<string, { image_url?: string; reward_type?: string }>()
+
+  for (const reward of props.rewardsData?.rewards || []) {
+    const key = normalizeRewardKey(reward.title)
+    if (!key || map.has(key)) {
+      continue
+    }
+
+    map.set(key, {
+      image_url: reward.image_url,
+      reward_type: reward.reward_type
+    })
   }
 
-  if (item.approved_cost_points !== undefined) {
-    return formatPoints(item.approved_cost_points)
-  }
+  return map
+})
 
-  if (item.suggested_points !== undefined) {
-    return formatPoints(item.suggested_points)
-  }
+const requestCards = computed<RewardRequestCard[]>(() => {
+  const items = [...(props.rewardsData?.request_history || [])]
 
-  return '待定'
-}
+  items.sort((left, right) => toTimestamp(right.requested_at) - toTimestamp(left.requested_at))
+
+  return items.map((item) => {
+    const matchedReward = rewardAssetMap.value.get(normalizeRewardKey(item.title))
+
+    return {
+      ...item,
+      image_url: matchedReward?.image_url,
+      reward_type: item.reward_type || matchedReward?.reward_type
+    }
+  })
+})
+
+const pendingCount = computed(() => requestCards.value.filter((item) => item.status === 'pending').length)
+const usableRequests = computed(() => requestCards.value.filter((item) => item.status === 'approved'))
+const rejectedRequests = computed(() => requestCards.value.filter((item) => item.status === 'rejected'))
+const usedRequests = computed(() => requestCards.value.filter((item) => item.status === 'fulfilled'))
+const redeemableRewards = computed(() => rewardCards.value.filter((item) => getRewardGap(item, props.currentPoints) === 0))
 
 function getRedeemHint(item: ChildRewardItem) {
   const gap = getRewardGap(item, props.currentPoints)
   if (gap === 0) {
-    return '你的星星已经够啦，现在就能兑换。'
+    return '积分已经够啦，现在就能发起兑换。'
   }
 
-  return `现在还差 ${gap} 星星，先继续完成任务。`
+  return `还差 ${gap} 分，先继续完成任务吧。`
 }
 
 function openRedeemModal() {
@@ -208,7 +146,7 @@ function handleRedeem(rewardId: string) {
 
   emit('redeem', rewardId, {
     onSuccess: () => {
-      modalStatus.value = { message: '兑换成功啦，去看看有没有新的回音。', type: 'success' }
+      modalStatus.value = { message: '兑换申请已经送给家长啦。', type: 'success' }
       activeRedeemId.value = null
     },
     onError: (err: string) => {
@@ -223,27 +161,32 @@ function handleRedeem(rewardId: string) {
   <section class="reward-command">
     <header class="reward-command__sign">
       <div class="reward-command__hero">
-        <span class="reward-command__eyebrow">冒险世界 · 奖励站</span>
-        <h2>看看哪些奖励已经可以用了</h2>
-        <p>已经通过的奖励会先亮出来，暂时不能用的也会告诉你原因。</p>
+        <span class="reward-command__eyebrow">奖励空间</span>
+        <h2>奖励现在分成三类，一眼就能看懂</h2>
+        <p>待使用、未通过、已使用会分开摆放。待确认的奖励不会混进去，只在上方轻提醒。</p>
       </div>
 
       <div class="reward-command__meta">
         <div class="reward-command__points">
           <Icon icon="ph:shooting-star-fill" />
           <div>
-            <span>当前星星</span>
+            <span>当前积分</span>
             <strong>{{ formatPoints(currentPoints) }}</strong>
           </div>
         </div>
 
         <button type="button" class="reward-command__redeem-entry" @click="openRedeemModal">
           <span class="reward-command__redeem-copy">
-            <strong>打开兑换宝库</strong>
+            <strong>兑换奖励</strong>
             <small>现在能兑换 {{ redeemableRewards.length }} 个奖励</small>
           </span>
           <Icon icon="ph:treasure-chest-fill" />
         </button>
+
+        <div v-if="pendingCount" class="reward-command__pending-tip">
+          <Icon icon="ph:paper-plane-tilt-fill" />
+          <span>{{ pendingCount }} 个奖励正在等待家长确认</span>
+        </div>
       </div>
     </header>
 
@@ -251,28 +194,28 @@ function handleRedeem(rewardId: string) {
       <article class="focus-card focus-card--mint">
         <div class="focus-card__top">
           <Icon icon="ph:seal-check-fill" />
-          <span>现在可用</span>
+          <span>待使用</span>
         </div>
-        <strong>{{ requestStats.ready }}</strong>
-        <p>{{ featuredReadyRequest ? `最新可用: ${featuredReadyRequest.title}` : '还没有已经能用的申请。' }}</p>
-      </article>
-
-      <article class="focus-card focus-card--amber">
-        <div class="focus-card__top">
-          <Icon icon="ph:lock-key-fill" />
-          <span>暂时还不能用</span>
-        </div>
-        <strong>{{ requestStats.blocked }}</strong>
-        <p>{{ featuredBlockedRequest ? featuredBlockedRequest.reason : '目前没有卡住的申请。' }}</p>
+        <strong>{{ usableRequests.length }}</strong>
+        <p>{{ usableRequests[0]?.title ? `最近可用: ${usableRequests[0].title}` : '还没有进入待使用的奖励。' }}</p>
       </article>
 
       <article class="focus-card focus-card--rose">
         <div class="focus-card__top">
-          <Icon icon="ph:paper-plane-tilt-fill" />
-          <span>这次先放一放</span>
+          <Icon icon="ph:seal-warning-fill" />
+          <span>未通过</span>
         </div>
-        <strong>{{ requestStats.rejected }}</strong>
-        <p>家长的回复会直接显示在申请卡片上，方便你知道下一步怎么调整。</p>
+        <strong>{{ rejectedRequests.length }}</strong>
+        <p>{{ rejectedRequests[0]?.review_remark || '未通过的奖励会在这里告诉你原因。' }}</p>
+      </article>
+
+      <article class="focus-card focus-card--amber">
+        <div class="focus-card__top">
+          <Icon icon="ph:check-circle-fill" />
+          <span>已使用</span>
+        </div>
+        <strong>{{ usedRequests.length }}</strong>
+        <p>{{ usedRequests[0]?.title ? `最近使用: ${usedRequests[0].title}` : '已经用过的奖励会收进这里。' }}</p>
       </article>
     </section>
 
@@ -281,39 +224,86 @@ function handleRedeem(rewardId: string) {
         <section class="status-board">
           <div class="status-board__title">
             <div>
-              <span>我的申请</span>
-              <h3>我的奖励现在到底能不能用？</h3>
+              <span>奖励记录</span>
+              <h3>状态只保留你最关心的三种</h3>
             </div>
             <button type="button" class="status-board__redeem-button" @click="openRedeemModal">
-              去兑换
+              兑换奖励
               <Icon icon="ph:arrow-right-bold" />
             </button>
           </div>
 
           <div v-if="requestCards.length" class="status-board__groups">
-            <section
-              v-for="group in requestGroups"
-              :key="group.key"
-              v-show="group.items.length"
-              class="request-group"
-            >
-              <div class="request-group__header" :class="`request-group__header--${group.tone}`">
-                <Icon :icon="group.icon" />
+            <section class="request-group">
+              <div class="request-group__header request-group__header--mint">
+                <Icon icon="ph:seal-check-fill" />
                 <div>
-                  <h4>{{ group.title }}</h4>
-                  <p>{{ group.subtitle }}</p>
+                  <h4>待使用</h4>
+                  <p>这些奖励已经通过，可以在用完后点一下“我已使用”。</p>
                 </div>
-                <span>{{ group.items.length }}</span>
+                <span>{{ usableRequests.length }}</span>
               </div>
 
-              <div class="request-grid">
+              <div v-if="usableRequests.length" class="request-grid">
                 <article
-                  v-for="item in group.items"
+                  v-for="item in usableRequests"
                   :key="item.request_id"
-                  class="request-card"
-                  :class="`request-card--${getRewardRequestTone(item.status)}`"
+                  class="request-card request-card--mint"
                 >
-                  <div class="request-card__icon" :class="`request-card__icon--${getRewardRequestTone(item.status)}`">
+                  <div class="request-card__icon request-card__icon--mint">
+                    <img v-if="item.image_url" :src="item.image_url" :alt="item.title" />
+                    <Icon v-else :icon="getRewardRequestIcon(item.status)" />
+                  </div>
+
+                  <div class="request-card__body">
+                    <div class="request-card__header">
+                      <div class="request-card__title">
+                        <span v-if="item.reward_type" class="request-card__type">{{ getRewardTypeLabel(item.reward_type) }}</span>
+                        <h5>{{ item.title }}</h5>
+                      </div>
+                      <span class="request-card__status request-card__status--mint">待使用</span>
+                    </div>
+
+                    <p class="request-card__reason">{{ item.review_remark || '已经准备好了，使用完再把它放进“已使用”。' }}</p>
+
+                    <div class="request-card__footer">
+                      <span class="request-card__summary">{{ getRewardRequestSummary(item) }}</span>
+                      <button
+                        type="button"
+                        class="request-card__action"
+                        :disabled="actionBusy"
+                        @click="emit('markUsed', item.request_id)"
+                      >
+                        我已使用
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              </div>
+
+              <div v-else class="reward-command__empty reward-command__empty--soft">
+                <Icon icon="ph:gift-light" />
+                <p>现在还没有进入待使用的奖励。</p>
+              </div>
+            </section>
+
+            <section class="request-group">
+              <div class="request-group__header request-group__header--rose">
+                <Icon icon="ph:seal-warning-fill" />
+                <div>
+                  <h4>未通过</h4>
+                  <p>这次为什么没通过，会直接写在卡片上。</p>
+                </div>
+                <span>{{ rejectedRequests.length }}</span>
+              </div>
+
+              <div v-if="rejectedRequests.length" class="request-grid">
+                <article
+                  v-for="item in rejectedRequests"
+                  :key="item.request_id"
+                  class="request-card request-card--rose"
+                >
+                  <div class="request-card__icon request-card__icon--rose">
                     <Icon :icon="getRewardRequestIcon(item.status)" />
                   </div>
 
@@ -323,48 +313,64 @@ function handleRedeem(rewardId: string) {
                         <span v-if="item.reward_type" class="request-card__type">{{ getRewardTypeLabel(item.reward_type) }}</span>
                         <h5>{{ item.title }}</h5>
                       </div>
-                      <span class="request-card__status" :class="`request-card__status--${getRewardRequestTone(item.status)}`">
-                        {{ getRewardRequestStatusLabel(item.status) }}
-                      </span>
+                      <span class="request-card__status request-card__status--rose">{{ getRewardRequestStatusLabel(item.status) }}</span>
                     </div>
 
-                    <div class="request-card__snapshot">
-                      <div class="request-card__snapshot-item">
-                        <span>现在状态</span>
-                        <strong>{{ item.headline }}</strong>
-                      </div>
-                      <div class="request-card__snapshot-item">
-                        <span>需要星星</span>
-                        <strong>{{ getRequestCostText(item) }}</strong>
-                      </div>
-                      <div class="request-card__snapshot-item">
-                        <span>结论</span>
-                        <strong>{{ getRequestBadge(item) }}</strong>
-                      </div>
-                    </div>
-
-                    <p class="request-card__reason">{{ item.reason }}</p>
-
-                    <div class="request-card__footer">
-                      <span class="request-card__summary">{{ getRewardRequestSummary(item) }}</span>
-                      <button
-                        v-if="item.readiness === 'ready'"
-                        type="button"
-                        class="request-card__action"
-                        @click="openRedeemModal"
-                      >
-                        去兑换
-                      </button>
-                    </div>
+                    <p class="request-card__reason">{{ item.review_remark || '这次没有通过，换个方向再试试。' }}</p>
                   </div>
                 </article>
+              </div>
+
+              <div v-else class="reward-command__empty reward-command__empty--soft">
+                <Icon icon="ph:confetti-light" />
+                <p>现在没有未通过的奖励。</p>
+              </div>
+            </section>
+
+            <section class="request-group">
+              <div class="request-group__header request-group__header--amber">
+                <Icon icon="ph:check-circle-fill" />
+                <div>
+                  <h4>已使用</h4>
+                  <p>已经收下的奖励会安静地放在这里。</p>
+                </div>
+                <span>{{ usedRequests.length }}</span>
+              </div>
+
+              <div v-if="usedRequests.length" class="request-grid">
+                <article
+                  v-for="item in usedRequests"
+                  :key="item.request_id"
+                  class="request-card request-card--amber"
+                >
+                  <div class="request-card__icon request-card__icon--amber">
+                    <Icon :icon="getRewardRequestIcon(item.status)" />
+                  </div>
+
+                  <div class="request-card__body">
+                    <div class="request-card__header">
+                      <div class="request-card__title">
+                        <span v-if="item.reward_type" class="request-card__type">{{ getRewardTypeLabel(item.reward_type) }}</span>
+                        <h5>{{ item.title }}</h5>
+                      </div>
+                      <span class="request-card__status request-card__status--amber">{{ getRewardRequestStatusLabel(item.status) }}</span>
+                    </div>
+
+                    <p class="request-card__reason">{{ item.review_remark || '这份奖励已经顺利使用过啦。' }}</p>
+                  </div>
+                </article>
+              </div>
+
+              <div v-else class="reward-command__empty reward-command__empty--soft">
+                <Icon icon="ph:check-fat-light" />
+                <p>还没有放进已使用里的奖励。</p>
               </div>
             </section>
           </div>
 
           <div v-else class="reward-command__empty">
             <Icon icon="ph:gift-light" />
-            <p>你还没有提交过奖励申请，先在下面写一个愿望吧。</p>
+            <p>你还没有奖励记录，先提交一个愿望或者去兑换现成奖励吧。</p>
           </div>
         </section>
       </div>
@@ -374,15 +380,15 @@ function handleRedeem(rewardId: string) {
           <div class="side-panel__title side-panel__title--sky">
             <Icon icon="ph:treasure-chest-fill" />
             <div>
-              <h3>兑换宝库</h3>
-              <p>看看现在能换什么。</p>
+              <h3>兑换奖励入口</h3>
+              <p>现成奖励在这里，提交愿望在下面。</p>
             </div>
           </div>
 
           <div class="vault-preview">
             <div class="vault-preview__hero">
               <strong>{{ redeemableRewards.length }}</strong>
-              <span>个奖励现在能兑换</span>
+              <span>个奖励现在就能兑换</span>
             </div>
 
             <ul v-if="redeemableRewards.length" class="vault-preview__list">
@@ -392,10 +398,10 @@ function handleRedeem(rewardId: string) {
               </li>
             </ul>
 
-            <p v-else class="vault-preview__hint">先攒星星，宝库里还没有已经解锁的奖励。</p>
+            <p v-else class="vault-preview__hint">继续攒积分，宝库会越来越热闹。</p>
 
             <button type="button" class="vault-preview__button" @click="openRedeemModal">
-              打开宝库
+              打开奖励宝库
             </button>
           </div>
         </article>
@@ -404,8 +410,8 @@ function handleRedeem(rewardId: string) {
           <div class="side-panel__title side-panel__title--rose">
             <Icon icon="ph:paper-plane-tilt-fill" />
             <div>
-              <h3>继续申请新奖励</h3>
-              <p>想要新的奖励，也可以继续申请。</p>
+              <h3>提交新愿望</h3>
+              <p>想申请一个新的奖励，也可以继续发给家长。</p>
             </div>
           </div>
 
@@ -442,7 +448,7 @@ function handleRedeem(rewardId: string) {
               <span>这次愿望方向: {{ description }}</span>
             </div>
 
-            <button type="submit" class="wish-form__submit" :disabled="actionBusy || !title">
+            <button type="submit" class="wish-form__submit" :disabled="actionBusy || !title.trim()">
               提交新申请
             </button>
           </form>
@@ -459,8 +465,8 @@ function handleRedeem(rewardId: string) {
 
           <div class="redeem-modal__header">
             <span class="redeem-modal__eyebrow">奖励宝库</span>
-            <h3>选择现在要兑换的奖励</h3>
-            <p>选择一个喜欢的奖励吧。能兑换的会排在前面。</p>
+            <h3>选择现在想兑换的奖励</h3>
+            <p>这里展示的是现成奖励。兑换后会进入家长审核，不会混进“提交新愿望”的记录里。</p>
 
             <transition name="fade">
               <div v-if="modalStatus.message" class="redeem-modal__alert" :class="`redeem-modal__alert--${modalStatus.type}`">
@@ -505,7 +511,7 @@ function handleRedeem(rewardId: string) {
                   @click="handleRedeem(item.reward_id)"
                 >
                   <Icon v-if="activeRedeemId === item.reward_id" icon="ph:spinner-gap-bold" class="loading-spin" />
-                  <span v-else>{{ getRewardGap(item, currentPoints) === 0 ? '立即兑换' : '暂不可兑换' }}</span>
+                  <span v-else>{{ getRewardGap(item, currentPoints) === 0 ? '立即兑换' : '积分不足' }}</span>
                 </button>
               </div>
             </article>
@@ -532,10 +538,18 @@ function handleRedeem(rewardId: string) {
   @include theme.sign-shell(linear-gradient(135deg, #ffd7a5 0%, #ffb6c7 42%, #ffc2f0 100%), #7b2d4d, #d37a90);
 }
 
+.reward-command__sign--simple {
+  min-height: 0;
+}
+
 .reward-command__hero,
 .reward-command__meta {
   position: relative;
   z-index: 1;
+}
+
+.reward-command__hero--tight {
+  max-width: 540px;
 }
 
 .reward-command__hero {
@@ -648,6 +662,23 @@ function handleRedeem(rewardId: string) {
   }
 }
 
+.reward-command__pending-tip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(124, 199, 255, 0.16);
+  color: #2b6a9b;
+  font-size: 13px;
+  font-weight: 800;
+
+  svg {
+    font-size: 18px;
+  }
+}
+
 .reward-command__focus {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -713,6 +744,10 @@ function handleRedeem(rewardId: string) {
 .status-board,
 .side-panel {
   @include theme.surface-card(24px, 30px);
+}
+
+.status-board--focused {
+  padding-top: 22px;
 }
 
 .status-board__title {
@@ -813,6 +848,10 @@ function handleRedeem(rewardId: string) {
   gap: 16px;
 }
 
+.request-grid--usable {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
 .request-card {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -845,6 +884,12 @@ function handleRedeem(rewardId: string) {
   place-items: center;
   font-size: 28px;
   color: white;
+}
+
+.request-card__icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .request-card__icon--mint { background: linear-gradient(135deg, #a8edaf 0%, #4dbf75 100%); }
@@ -1275,6 +1320,10 @@ function handleRedeem(rewardId: string) {
   box-shadow: 0 10px 18px rgba(57, 181, 109, 0.1);
 }
 
+.reward-option--focus {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
 .reward-option__media {
   width: 78px;
   height: 78px;
@@ -1360,12 +1409,21 @@ function handleRedeem(rewardId: string) {
   pointer-events: none;
 }
 
+.reward-option__action {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .loading-spin {
   animation: spin 0.8s linear infinite;
 }
 
 .reward-command__empty {
   @include theme.empty-state(220px);
+}
+
+.reward-command__empty--soft {
+  min-height: 160px;
 }
 
 .reward-command__empty--modal {

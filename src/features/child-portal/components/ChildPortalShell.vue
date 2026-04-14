@@ -24,7 +24,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  navigate: [section: PortalSection]
+  navigate: [to: string]
   retry: []
 }>()
 
@@ -95,7 +95,7 @@ const avatarLabel = computed(() => displayName.value.slice(0, 1))
         class="portal-dock__item"
         :class="{ 'portal-dock__item--active': section === item.key }"
         :style="{ '--portal-accent': item.accent }"
-        @click="emit('navigate', item.key)"
+        @click="emit('navigate', item.to)"
       >
         <span class="portal-dock__icon">
           <Icon :icon="item.icon" />

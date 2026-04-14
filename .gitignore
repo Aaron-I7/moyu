@@ -67,5 +67,7 @@ Desktop.ini
 !.dev.vars.example
 !.env.example
 
+/cloudfunctions
+
 # doc
 doc

@@ -1,8 +1,13 @@
 import {
   getChildAccessFunctionName,
+  getChildExtensionFunctionName,
   getChildPortalCloudbaseApp
 } from './cloudbase'
+import { buildFallbackGrowthAdvice, buildFallbackGrowthStats } from './growth-stats'
 import type {
+  ChildGrowthAdviceResponse,
+  ChildGrowthRange,
+  ChildGrowthStatsResponse,
   ChildHomeResponse,
   ChildPointsResponse,
   ChildPortalSessionResponse,
@@ -22,6 +27,8 @@ const MEDIA_FIELD_NAMES = new Set([
 
 const mediaUrlCache = new Map<string, { url: string; expiresAt: number | null }>()
 const mediaUrlPromiseCache = new Map<string, Promise<string>>()
+let childAccessFeatureStatus: 'unknown' | 'ready' | 'unavailable' = 'unknown'
+let childExtensionStatus: 'unknown' | 'ready' | 'unavailable' = 'unknown'
 
 export class ChildPortalApiError extends Error {
   code: number
@@ -53,6 +60,19 @@ function normalizeSdkError(error: unknown): ChildPortalApiError {
   }
 
   return new ChildPortalApiError(message)
+}
+
+function shouldUseChildExtensionFallback(error: unknown): boolean {
+  const message = String((error as { message?: string })?.message || '')
+  const code = Number((error as { code?: number })?.code || 0)
+
+  return (
+    message.includes('Unsupported action') ||
+    message.includes('not found') ||
+    message.includes('temporarily unavailable') ||
+    message.includes('temporarily') ||
+    code >= 50000
+  )
 }
 
 function normalizeMediaKey(value: unknown): string {
@@ -223,12 +243,16 @@ async function normalizeResponseMedia<T>(response: T): Promise<T> {
   return normalizeMediaFieldsDeep(response)
 }
 
-async function callChildAccessFunction<T>(action: string, payload: Record<string, unknown>): Promise<T> {
+async function callChildFunction<T>(
+  functionName: string,
+  action: string,
+  payload: Record<string, unknown>
+): Promise<T> {
   try {
     const app = getChildPortalCloudbaseApp()
     const response = await app.callFunction(
       {
-        name: getChildAccessFunctionName(),
+        name: functionName,
         data: {
           action,
           payload
@@ -254,6 +278,53 @@ async function callChildAccessFunction<T>(action: string, payload: Record<string
 
     throw normalizeSdkError(error)
   }
+}
+
+async function callChildAccessFunction<T>(action: string, payload: Record<string, unknown>): Promise<T> {
+  return callChildFunction<T>(getChildAccessFunctionName(), action, payload)
+}
+
+async function callChildExtensionFunction<T>(action: string, payload: Record<string, unknown>): Promise<T> {
+  const result = await callChildFunction<T>(getChildExtensionFunctionName(), action, payload)
+  childExtensionStatus = 'ready'
+  return result
+}
+
+async function callChildFeatureFunction<T>(
+  action: string,
+  payload: Record<string, unknown>
+): Promise<T> {
+  let lastError: unknown = null
+
+  if (childAccessFeatureStatus !== 'unavailable') {
+    try {
+      const result = await callChildAccessFunction<T>(action, payload)
+      childAccessFeatureStatus = 'ready'
+      return result
+    } catch (error) {
+      if (!shouldUseChildExtensionFallback(error)) {
+        throw error
+      }
+
+      childAccessFeatureStatus = 'unavailable'
+      lastError = error
+    }
+  }
+
+  if (childExtensionStatus !== 'unavailable') {
+    try {
+      return await callChildExtensionFunction<T>(action, payload)
+    } catch (error) {
+      if (!shouldUseChildExtensionFallback(error)) {
+        throw error
+      }
+
+      childExtensionStatus = 'unavailable'
+      lastError = error
+    }
+  }
+
+  throw lastError || new ChildPortalApiError('儿童入口功能暂时不可用，请稍后再试。')
 }
 
 export async function resolvePortalSession(accessToken: string): Promise<ChildPortalSessionResponse> {
@@ -317,10 +388,103 @@ export async function submitChildRewardRequest(
   })
 }
 
+export async function submitChildRewardRedemption(
+  webSessionToken: string,
+  payload: {
+    idempotency_key: string
+    reward_id: string
+  }
+): Promise<void> {
+  if (childAccessFeatureStatus === 'unavailable' && childExtensionStatus === 'unavailable') {
+    throw new ChildPortalApiError('兑换入口正在发布中，请稍后再试。')
+  }
+
+  try {
+    await callChildFeatureFunction('submitRewardRedemption', {
+      ...payload,
+      web_session_token: webSessionToken
+    })
+  } catch (error) {
+    if (shouldUseChildExtensionFallback(error)) {
+      childAccessFeatureStatus = 'unavailable'
+      childExtensionStatus = 'unavailable'
+      throw new ChildPortalApiError('兑换入口正在发布中，请稍后再试。')
+    }
+
+    throw error
+  }
+}
+
+export async function confirmChildRewardFulfillment(
+  webSessionToken: string,
+  payload: {
+    request_id: string
+  }
+): Promise<void> {
+  await callChildAccessFunction('confirmRewardFulfillment', {
+    ...payload,
+    web_session_token: webSessionToken
+  })
+}
+
 export async function fetchChildPoints(webSessionToken: string): Promise<ChildPointsResponse> {
   const response = await callChildAccessFunction<ChildPointsResponse>('pointsLedger', {
     web_session_token: webSessionToken
   })
 
   return normalizeResponseMedia(response)
+}
+
+export async function fetchChildGrowthStats(
+  webSessionToken: string,
+  range: ChildGrowthRange
+): Promise<ChildGrowthStatsResponse> {
+  try {
+    const response = await callChildFeatureFunction<ChildGrowthStatsResponse>('growthStats', {
+      range,
+      web_session_token: webSessionToken
+    })
+
+    return normalizeResponseMedia(response)
+  } catch (error) {
+    if (!shouldUseChildExtensionFallback(error)) {
+      throw error
+    }
+  }
+
+  const [home, tasks, rewards, points] = await Promise.all([
+    fetchChildHome(webSessionToken),
+    fetchChildTasks(webSessionToken).catch(() => null),
+    fetchChildRewards(webSessionToken),
+    fetchChildPoints(webSessionToken)
+  ])
+  const fallbackResponse = buildFallbackGrowthStats({
+    range,
+    home,
+    tasks,
+    rewards,
+    points,
+    session: null
+  })
+
+  return normalizeResponseMedia(fallbackResponse)
+}
+
+export async function fetchChildGrowthAdvice(
+  webSessionToken: string,
+  range: ChildGrowthRange
+): Promise<ChildGrowthAdviceResponse> {
+  try {
+    return await callChildFeatureFunction<ChildGrowthAdviceResponse>('growthAdvice', {
+      range,
+      web_session_token: webSessionToken
+    })
+  } catch (error) {
+    if (!shouldUseChildExtensionFallback(error)) {
+      throw error
+    }
+  }
+
+  const stats = await fetchChildGrowthStats(webSessionToken, range)
+  return buildFallbackGrowthAdvice(stats)
 }

@@ -109,6 +109,12 @@ export function getTaskStatusDescription(task: ChildTaskItem) {
   return '去完成'
 }
 
+export function getTaskCategoryLabel(category?: string) {
+  if (category === 'social_character') return '社交品格'
+  if (category === 'special_reward') return '特别挑战'
+  return '日常习惯'
+}
+
 export function sortTaskFocus(tasks: ChildTaskItem[] = []) {
   const weightMap = {
     active: 0,
@@ -162,30 +168,37 @@ export function getRewardVisualIcon(rewardType?: string) {
 }
 
 export function getRewardRequestStatusLabel(status?: string) {
-  if (status === 'approved') return '通过'
+  if (status === 'approved') return '待使用'
   if (status === 'rejected') return '未通过'
+  if (status === 'fulfilled') return '已使用'
   return '等待中'
 }
 
 export function getRewardRequestTone(status?: string) {
   if (status === 'approved') return 'mint'
   if (status === 'rejected') return 'rose'
+  if (status === 'fulfilled') return 'amber'
   return 'sky'
 }
 
 export function getRewardRequestIcon(status?: string) {
   if (status === 'approved') return 'ph:seal-check-fill'
   if (status === 'rejected') return 'ph:seal-warning-fill'
+  if (status === 'fulfilled') return 'ph:check-circle-fill'
   return 'ph:paper-plane-tilt-fill'
 }
 
 export function getRewardRequestSummary(item: ChildRewardRequestItem) {
+  if (item.status === 'fulfilled') {
+    return '已使用'
+  }
+
   if (item.review_remark) {
     return item.review_remark
   }
 
   if (item.status === 'approved' && item.approved_cost_points !== undefined) {
-    return `预计 ${formatPoints(item.approved_cost_points)}`
+    return `待使用 · ${formatPoints(item.approved_cost_points)}`
   }
 
   if (item.status === 'rejected') {
