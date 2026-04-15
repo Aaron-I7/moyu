@@ -41,6 +41,7 @@ interface StackedPreviewItem {
   depth: number
 }
 
+type StackDirection = 'next' | 'prev'
 type RequestProgressState = 'complete' | 'current' | 'pending' | 'failed'
 
 interface RequestProgressStep {
@@ -76,6 +77,12 @@ const stackIndexState = ref<Record<RewardStatusSectionKey, number>>({
   pending: 0,
   rejected: 0,
   fulfilled: 0
+})
+const stackTransitionDirection = ref<Record<RewardStatusSectionKey, StackDirection>>({
+  approved: 'next',
+  pending: 'next',
+  rejected: 'next',
+  fulfilled: 'next'
 })
 
 const stackGestureState: Record<RewardStatusSectionKey, { startX: number; startY: number; active: boolean }> = {
@@ -358,27 +365,63 @@ function getSafeStackIndex(key: RewardStatusSectionKey, total: number) {
   return Math.min(stackIndexState.value[key] || 0, total - 1)
 }
 
-function setStackIndex(key: RewardStatusSectionKey, nextIndex: number, total: number) {
+function resolveStackDirection(currentIndex: number, nextIndex: number, total: number): StackDirection {
+  if (total <= 1 || currentIndex === nextIndex) {
+    return 'next'
+  }
+
+  const forwardDistance = (nextIndex - currentIndex + total) % total
+  const backwardDistance = (currentIndex - nextIndex + total) % total
+
+  return forwardDistance <= backwardDistance ? 'next' : 'prev'
+}
+
+function setStackIndex(
+  key: RewardStatusSectionKey,
+  nextIndex: number,
+  total: number,
+  direction?: StackDirection
+) {
   if (total <= 0) {
     stackIndexState.value[key] = 0
     return
   }
 
+  const currentIndex = getSafeStackIndex(key, total)
   const normalizedIndex = ((nextIndex % total) + total) % total
+  if (normalizedIndex === currentIndex) {
+    return
+  }
+
+  stackTransitionDirection.value[key] = direction || resolveStackDirection(currentIndex, normalizedIndex, total)
   stackIndexState.value[key] = normalizedIndex
 }
 
 function goToNextStackCard(key: RewardStatusSectionKey, total: number) {
-  setStackIndex(key, getSafeStackIndex(key, total) + 1, total)
+  setStackIndex(key, getSafeStackIndex(key, total) + 1, total, 'next')
 }
 
-function getStackPreviewItems(items: RewardRequestCard[], key: RewardStatusSectionKey): StackedPreviewItem[] {
+function goToPreviousStackCard(key: RewardStatusSectionKey, total: number) {
+  setStackIndex(key, getSafeStackIndex(key, total) - 1, total, 'prev')
+}
+
+function getActiveStackItem(items: RewardRequestCard[], key: RewardStatusSectionKey) {
+  const total = items.length
+  if (total <= 0) {
+    return null
+  }
+
+  const activeIndex = getSafeStackIndex(key, total)
+  return items[activeIndex] || null
+}
+
+function getStackBackPreviewItems(items: RewardRequestCard[], key: RewardStatusSectionKey): StackedPreviewItem[] {
   const total = items.length
   const visibleCount = Math.min(total, 3)
   const activeIndex = getSafeStackIndex(key, total)
   const previews: StackedPreviewItem[] = []
 
-  for (let depth = visibleCount - 1; depth >= 0; depth -= 1) {
+  for (let depth = visibleCount - 1; depth >= 1; depth -= 1) {
     previews.push({
       item: items[(activeIndex + depth) % total]!,
       depth
@@ -386,6 +429,10 @@ function getStackPreviewItems(items: RewardRequestCard[], key: RewardStatusSecti
   }
 
   return previews
+}
+
+function getStackTransitionName(key: RewardStatusSectionKey) {
+  return stackTransitionDirection.value[key] === 'prev' ? 'stack-card-prev' : 'stack-card-next'
 }
 
 function handleStackTouchStart(key: RewardStatusSectionKey, event: TouchEvent) {
@@ -418,11 +465,16 @@ function handleStackTouchEnd(key: RewardStatusSectionKey, event: TouchEvent, tot
 
   const deltaX = touch.clientX - gesture.startX
   const deltaY = touch.clientY - gesture.startY
-  if (deltaX > -64 || Math.abs(deltaY) > 48) {
+  if (Math.abs(deltaY) > 48 || Math.abs(deltaX) < 64) {
     return
   }
 
-  goToNextStackCard(key, total)
+  if (deltaX <= -64) {
+    goToNextStackCard(key, total)
+    return
+  }
+
+  goToPreviousStackCard(key, total)
 }
 </script>
 
@@ -475,89 +527,15 @@ function handleStackTouchEnd(key: RewardStatusSectionKey, event: TouchEvent, tot
                   @touchend.passive="handleStackTouchEnd(group.key, $event, group.items.length)"
                 >
                   <div
-                    v-for="preview in getStackPreviewItems(group.items, group.key)"
-                    :key="`${group.key}-${preview.depth}-${preview.item.request_id}`"
+                    v-for="preview in getStackBackPreviewItems(group.items, group.key)"
+                    :key="`back-${group.key}-${preview.item.request_id}`"
                     class="stack-preview__layer"
                     :class="[
                       `stack-preview__layer--depth-${preview.depth}`,
-                      `stack-preview__layer--${group.tone}`,
-                      { 'stack-preview__layer--active': preview.depth === 0 }
+                      `stack-preview__layer--${group.tone}`
                     ]"
                   >
-                    <article
-                      v-if="preview.depth === 0"
-                      class="request-card request-card--stack"
-                      :class="`request-card--${group.tone}`"
-                    >
-                      <div class="request-card__side">
-                        <div class="request-card__icon" :class="`request-card__icon--${group.tone}`">
-                          <img v-if="preview.item.image_url" :src="preview.item.image_url" :alt="preview.item.title" />
-                          <Icon v-else :icon="getRewardRequestIcon(preview.item.status)" />
-                        </div>
-                      </div>
-
-                      <div class="request-card__body">
-                        <div class="request-card__topline">
-                          <div class="request-card__meta-strip">
-                            <span v-if="preview.item.reward_type" class="request-card__type">
-                              {{ getRewardTypeLabel(preview.item.reward_type) }}
-                            </span>
-                            <span
-                              class="request-card__time"
-                              :title="`最近记录 ${getRequestRecordTime(preview.item)}`"
-                            >
-                              <Icon icon="ph:clock-countdown-fill" />
-                              <strong>{{ getRequestRecordTime(preview.item) }}</strong>
-                            </span>
-                          </div>
-                        </div>
-
-                        <div class="request-card__copy">
-                          <div class="request-card__title">
-                            <h5>{{ preview.item.title }}</h5>
-                          </div>
-
-                          <p class="request-card__reason" :title="getRequestCardDetail(preview.item)">
-                            {{ getRequestCardDetail(preview.item) }}
-                          </p>
-                        </div>
-
-                        <div class="request-card__progress" :class="`request-card__progress--${group.tone}`">
-                          <div
-                            v-for="(step, index) in getRequestProgressSteps(preview.item)"
-                            :key="`${preview.item.request_id}-${step.key}`"
-                            class="request-card__progress-step"
-                            :class="`request-card__progress-step--${step.state}`"
-                          >
-                            <span class="request-card__progress-node">{{ index + 1 }}</span>
-                            <strong>{{ step.label }}</strong>
-                            <span>{{ step.caption }}</span>
-                            <i
-                              v-if="index < 2"
-                              class="request-card__progress-line"
-                              :class="{
-                                'request-card__progress-line--active': step.nextActive
-                              }"
-                            />
-                          </div>
-                        </div>
-
-                        <div class="request-card__actions">
-                          <button
-                            v-if="group.key === 'approved'"
-                            type="button"
-                            class="request-card__confirm"
-                            :disabled="actionBusy"
-                            @click="emit('markUsed', preview.item.request_id)"
-                          >
-                            我完成了
-                          </button>
-                        </div>
-                      </div>
-                    </article>
-
                     <div
-                      v-else
                       class="stack-preview__back-card"
                       :class="`stack-preview__back-card--${group.tone}`"
                     >
@@ -570,6 +548,101 @@ function handleStackTouchEnd(key: RewardStatusSectionKey, event: TouchEvent, tot
                       </div>
                     </div>
                   </div>
+
+                  <Transition :name="getStackTransitionName(group.key)">
+                    <div
+                      v-if="getActiveStackItem(group.items, group.key)"
+                      :key="`active-${group.key}-${getActiveStackItem(group.items, group.key)?.request_id}`"
+                      class="stack-preview__active-layer"
+                    >
+                      <article
+                        class="request-card request-card--stack"
+                        :class="`request-card--${group.tone}`"
+                      >
+                        <div class="request-card__side">
+                          <div class="request-card__icon" :class="`request-card__icon--${group.tone}`">
+                            <img
+                              v-if="getActiveStackItem(group.items, group.key)?.image_url"
+                              :src="getActiveStackItem(group.items, group.key)?.image_url"
+                              :alt="getActiveStackItem(group.items, group.key)?.title"
+                            />
+                            <Icon
+                              v-else
+                              :icon="getRewardRequestIcon(getActiveStackItem(group.items, group.key)?.status)"
+                            />
+                          </div>
+                        </div>
+
+                        <div class="request-card__body">
+                          <div class="request-card__topline">
+                            <div class="request-card__meta-strip">
+                              <span
+                                v-if="getActiveStackItem(group.items, group.key)?.reward_type"
+                                class="request-card__type"
+                              >
+                                {{ getRewardTypeLabel(getActiveStackItem(group.items, group.key)?.reward_type) }}
+                              </span>
+                              <span
+                                class="request-card__time"
+                                :title="`最近记录 ${getRequestRecordTime(getActiveStackItem(group.items, group.key)!)}`"
+                              >
+                                <Icon icon="ph:clock-countdown-fill" />
+                                <strong>{{ getRequestRecordTime(getActiveStackItem(group.items, group.key)!) }}</strong>
+                              </span>
+                            </div>
+                          </div>
+
+                          <div class="request-card__copy">
+                            <div class="request-card__title">
+                              <h5>{{ getActiveStackItem(group.items, group.key)?.title }}</h5>
+                            </div>
+
+                            <p
+                              class="request-card__reason"
+                              :title="getRequestCardDetail(getActiveStackItem(group.items, group.key)!)"
+                            >
+                              {{ getRequestCardDetail(getActiveStackItem(group.items, group.key)!) }}
+                            </p>
+                          </div>
+
+                          <div
+                            class="request-card__progress"
+                            :class="`request-card__progress--${group.tone}`"
+                          >
+                            <div
+                              v-for="(step, index) in getRequestProgressSteps(getActiveStackItem(group.items, group.key)!)"
+                              :key="`${getActiveStackItem(group.items, group.key)?.request_id}-${step.key}`"
+                              class="request-card__progress-step"
+                              :class="`request-card__progress-step--${step.state}`"
+                            >
+                              <span class="request-card__progress-node">{{ index + 1 }}</span>
+                              <strong>{{ step.label }}</strong>
+                              <span>{{ step.caption }}</span>
+                              <i
+                                v-if="index < 2"
+                                class="request-card__progress-line"
+                                :class="{
+                                  'request-card__progress-line--active': step.nextActive
+                                }"
+                              />
+                            </div>
+                          </div>
+
+                          <div class="request-card__actions">
+                            <button
+                              v-if="group.key === 'approved'"
+                              type="button"
+                              class="request-card__confirm"
+                              :disabled="actionBusy"
+                              @click="emit('markUsed', getActiveStackItem(group.items, group.key)!.request_id)"
+                            >
+                              我完成了
+                            </button>
+                          </div>
+                        </div>
+                      </article>
+                    </div>
+                  </Transition>
                 </div>
 
                 <div class="stack-preview__footer">
@@ -1197,6 +1270,12 @@ function handleStackTouchEnd(key: RewardStatusSectionKey, event: TouchEvent, tot
   pointer-events: none;
 }
 
+.stack-preview__active-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+}
+
 .stack-preview__back-card {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -1698,6 +1777,34 @@ function handleStackTouchEnd(key: RewardStatusSectionKey, event: TouchEvent, tot
     cursor: not-allowed;
     box-shadow: none;
   }
+}
+
+.stack-card-next-enter-active,
+.stack-card-next-leave-active,
+.stack-card-prev-enter-active,
+.stack-card-prev-leave-active {
+  transition: transform 0.3s cubic-bezier(0.22, 0.8, 0.3, 1), opacity 0.3s ease;
+  will-change: transform, opacity;
+}
+
+.stack-card-next-enter-from {
+  opacity: 0;
+  transform: translateX(26px) scale(0.98);
+}
+
+.stack-card-next-leave-to {
+  opacity: 0;
+  transform: translateX(-26px) scale(0.98);
+}
+
+.stack-card-prev-enter-from {
+  opacity: 0;
+  transform: translateX(-26px) scale(0.98);
+}
+
+.stack-card-prev-leave-to {
+  opacity: 0;
+  transform: translateX(26px) scale(0.98);
 }
 
 .request-card--stack .request-card__confirm {
