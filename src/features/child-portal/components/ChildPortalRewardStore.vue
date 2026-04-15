@@ -1077,7 +1077,6 @@ function handleStackTouchEnd(key: RewardStatusSectionKey, event: TouchEvent, tot
 .side-panel__title {
   @include theme.title-pill(linear-gradient(135deg, #ffd89d 0%, #ffb86d 100%), #7a4300);
   margin-bottom: 18px;
-  max-width: calc(100% - 112px);
 
   h3,
   h4 {
@@ -1092,6 +1091,22 @@ function handleStackTouchEnd(key: RewardStatusSectionKey, event: TouchEvent, tot
     font-weight: 700;
     opacity: 0.82;
   }
+}
+
+.request-group__header {
+  max-width: calc(100% - 112px);
+}
+
+.request-group__header h4 {
+  white-space: nowrap;
+}
+
+.side-panel__title {
+  max-width: 100%;
+}
+
+.side-panel__title h3 {
+  white-space: nowrap;
 }
 
 .request-group__header--mint,
@@ -2185,10 +2200,237 @@ function handleStackTouchEnd(key: RewardStatusSectionKey, event: TouchEvent, tot
   to { transform: rotate(360deg); }
 }
 
+@include theme.respond-max(1120px) {
+  .reward-command__layout {
+    gap: 18px;
+    grid-template-columns: minmax(0, 1fr) clamp(214px, 22vw, 248px);
+  }
+
+  .reward-command__main,
+  .reward-command__sidebar {
+    gap: 18px;
+  }
+
+  .reward-command__sidebar {
+    align-self: start;
+  }
+
+  .status-board,
+  .side-panel {
+    padding: 20px 18px;
+    border-radius: 28px;
+  }
+
+  .status-board__groups {
+    gap: 16px;
+    grid-template-columns: repeat(2, minmax(292px, 1fr));
+  }
+
+  .request-group {
+    min-height: 324px;
+    padding: 20px 18px;
+    border-radius: 26px;
+  }
+
+  .request-group__header,
+  .side-panel__title {
+    margin-bottom: 16px;
+
+    h3,
+    h4 {
+      font-size: 18px;
+    }
+  }
+
+  .request-group__header {
+    max-width: calc(100% - 96px);
+  }
+
+  .side-panel__title {
+    max-width: 100%;
+  }
+
+  .request-group__view-all {
+    top: 18px;
+    right: 16px;
+    padding: 6px 10px;
+    min-height: 30px;
+    font-size: 11px;
+  }
+
+  .stack-preview {
+    gap: 12px;
+  }
+
+  .stack-preview__stage {
+    min-height: 286px;
+  }
+
+  .stack-preview__back-card {
+    padding: 16px;
+    border-radius: 24px;
+  }
+
+  .stack-preview__back-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    font-size: 20px;
+  }
+
+  .stack-preview__back-copy strong {
+    font-size: 14px;
+  }
+
+  .request-card,
+  .reward-option {
+    padding: 14px;
+    border-radius: 22px;
+  }
+
+  .request-card {
+    gap: 14px;
+  }
+
+  .request-card__side {
+    width: 52px;
+  }
+
+  .request-card__icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    font-size: 24px;
+  }
+
+  .request-card__copy {
+    gap: 8px;
+  }
+
+  .request-card__title h5 {
+    font-size: 18px;
+  }
+
+  .request-card__reason {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .request-card__progress {
+    min-height: 86px;
+    padding: 10px 8px 4px;
+  }
+
+  .request-card__progress-step strong {
+    font-size: 11px;
+  }
+
+  .request-card__progress-step span {
+    font-size: 10px;
+  }
+
+  .request-card--stack .request-card__actions {
+    position: static;
+    right: auto;
+    bottom: auto;
+    min-height: 40px;
+    padding-top: 2px;
+    margin-top: auto;
+  }
+
+  .request-card__confirm {
+    min-width: 92px;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 14px;
+    font-size: 13px;
+  }
+
+  .vault-preview__hero {
+    padding: 16px;
+    border-radius: 22px;
+
+    strong {
+      font-size: 32px;
+    }
+  }
+
+  .wish-form__presets {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .wish-chip {
+    gap: 8px;
+    padding: 10px;
+    border-radius: 16px;
+
+    svg {
+      font-size: 20px;
+    }
+  }
+
+  .reward-option {
+    gap: 14px;
+  }
+
+  .reward-option__media {
+    width: 70px;
+    height: 70px;
+    border-radius: 20px;
+    font-size: 34px;
+  }
+
+  .reward-option__header h4 {
+    font-size: 18px;
+  }
+
+  .reward-option__button {
+    min-width: 116px;
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+
+  .request-collection-modal__list {
+    gap: 14px;
+  }
+}
+
+@include theme.respond-max(880px) {
+  .reward-command__sign {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reward-command__latest {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .reward-command__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .reward-command__sidebar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-self: stretch;
+  }
+
+  .reward-command__sidebar > .side-panel {
+    height: 100%;
+  }
+}
+
 @include theme.respond-max(tablet) {
   .reward-command__focus,
   .reward-command__layout {
     grid-template-columns: 1fr;
+  }
+
+  .reward-command__sidebar {
+    display: flex;
+    grid-template-columns: none;
   }
 
   .status-board__groups {
@@ -2220,6 +2462,10 @@ function handleStackTouchEnd(key: RewardStatusSectionKey, event: TouchEvent, tot
   .request-group__header,
   .side-panel__title {
     max-width: calc(100% - 104px);
+  }
+
+  .side-panel__title {
+    max-width: 100%;
   }
 
   .request-group__view-all {
@@ -2291,6 +2537,10 @@ function handleStackTouchEnd(key: RewardStatusSectionKey, event: TouchEvent, tot
   .request-group__header,
   .side-panel__title {
     max-width: calc(100% - 92px);
+  }
+
+  .side-panel__title {
+    max-width: 100%;
   }
 
   .request-group__view-all {

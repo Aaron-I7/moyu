@@ -358,6 +358,70 @@ const avatarLabel = computed(() => displayName.value.slice(0, 1))
   color: #2b9e44;
 }
 
+@include theme.respond-max(pad) {
+  .portal-shell {
+    --portal-shell-side-padding: 18px;
+    --portal-dock-item-size: 64px;
+    --portal-dock-gap: 8px;
+    --portal-dock-padding: 10px;
+    --portal-dock-bottom: 18px;
+    --portal-dock-radius: 28px;
+    --portal-main-bottom-padding: calc(
+      var(--portal-dock-bottom) +
+      (var(--portal-dock-padding) * 2) +
+      var(--portal-dock-item-size) +
+      24px
+    );
+  }
+
+  .portal-hud {
+    gap: 12px;
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  .portal-hud__left,
+  .portal-hud__right {
+    gap: 10px;
+  }
+
+  .portal-hud__avatar {
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
+    font-size: 24px;
+  }
+
+  .portal-hud__info h1 {
+    font-size: 22px;
+  }
+
+  .portal-hud__badge,
+  .portal-hud__expiry {
+    font-size: 13px;
+  }
+
+  .portal-hud__stars {
+    padding: 6px 14px;
+
+    svg {
+      font-size: 22px;
+    }
+
+    strong {
+      font-size: 20px;
+    }
+  }
+
+  .portal-dock__icon {
+    font-size: 28px;
+  }
+
+  .portal-dock__label {
+    font-size: 12px;
+  }
+}
+
 @include theme.respond-max(phone) {
   .portal-shell {
     --portal-shell-side-padding: 16px;

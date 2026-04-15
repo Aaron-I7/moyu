@@ -858,6 +858,134 @@ function getEntryScoreLabel(entry: ChildPointsLedgerEntry) {
   @include theme.empty-state(220px);
 }
 
+@include theme.respond-max(pad) {
+  .star-archive__layout {
+    grid-template-columns: minmax(250px, 0.8fr) minmax(0, 1.2fr);
+    gap: 18px;
+  }
+
+  .star-archive__aside {
+    gap: 16px;
+  }
+
+  .jar-card {
+    padding: 24px 18px;
+    border-radius: 30px;
+  }
+
+  .jar-card__glow {
+    width: 160px;
+    height: 160px;
+    inset: auto auto -72px -30px;
+  }
+
+  .jar-card__glass {
+    width: 168px;
+    height: 204px;
+    border-width: 9px;
+    border-radius: 52px 52px 36px 36px;
+  }
+
+  .jar-card__fill {
+    left: 11px;
+    right: 11px;
+    bottom: 11px;
+    border-radius: 30px;
+  }
+
+  .jar-card__value {
+    margin-top: 20px;
+
+    strong {
+      font-size: 40px;
+    }
+  }
+
+  .archive-stats {
+    gap: 12px;
+  }
+
+  .archive-stat {
+    padding: 16px 18px;
+    gap: 12px;
+    border-radius: 22px;
+  }
+
+  .archive-stat__icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 18px;
+    font-size: 26px;
+  }
+
+  .archive-stat__content strong {
+    font-size: 22px;
+  }
+
+  .journey-log {
+    padding: 24px 20px;
+    border-radius: 30px;
+    gap: 18px;
+  }
+
+  .journey-log__title {
+    svg {
+      font-size: 30px;
+    }
+
+    h3 {
+      font-size: 22px;
+    }
+  }
+
+  .journey-log__viewport {
+    max-height: min(560px, calc(100vh - 300px));
+    padding-right: 8px;
+    margin-right: -8px;
+  }
+
+  .journey-log__container {
+    --journey-stamp-width: 58px;
+    --journey-node-width: 36px;
+    --journey-gap: 12px;
+  }
+
+  .journey-log__stamp {
+    padding-top: 16px;
+  }
+
+  .journey-card {
+    padding: 16px 16px 16px 18px;
+    border-radius: 24px;
+  }
+
+  .journey-card__top {
+    grid-template-columns: 48px minmax(0, 1fr) minmax(104px, auto);
+    gap: 12px;
+  }
+
+  .journey-card__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    font-size: 24px;
+  }
+
+  .journey-card__content strong {
+    font-size: 17px;
+  }
+
+  .journey-card__score {
+    min-width: 104px;
+    padding: 10px 12px;
+    border-radius: 18px;
+
+    strong {
+      font-size: 22px;
+    }
+  }
+}
+
 @include theme.respond-max(tablet) {
   .star-archive__sign {
     flex-direction: column;

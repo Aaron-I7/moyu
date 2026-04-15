@@ -227,6 +227,7 @@ function canCompleteTask(task: ChildTaskItem) {
   }
 }
 
+.challenge-camp__layout,
 .challenge-camp__sections {
   display: flex;
   flex-direction: column;
@@ -543,9 +544,103 @@ function canCompleteTask(task: ChildTaskItem) {
   @include theme.empty-state(240px);
 }
 
+@include theme.respond-max(pad) {
+  .challenge-camp__latest {
+    min-width: min(220px, 100%);
+  }
+
+  .challenge-camp__layout {
+    gap: 20px;
+  }
+
+  .camp-panel {
+    padding: 20px 18px;
+    border-radius: 28px;
+  }
+
+  .camp-panel__title {
+    margin-bottom: 16px;
+
+    h3 {
+      font-size: 18px;
+    }
+
+    span {
+      min-width: 26px;
+      height: 26px;
+      font-size: 13px;
+    }
+  }
+
+  .mission-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+  }
+
+  .mission-card {
+    gap: 14px;
+    padding: 18px;
+    border-radius: 24px;
+  }
+
+  .mission-card__media {
+    width: 80px;
+    height: 80px;
+    border-radius: 22px;
+    font-size: 36px;
+  }
+
+  .mission-card__body h4 {
+    font-size: 20px;
+  }
+
+  .mission-card__reward strong {
+    font-size: 20px;
+  }
+
+  .mission-card__action {
+    padding: 12px 18px;
+    font-size: 15px;
+  }
+
+  .tent-card {
+    gap: 12px;
+    padding: 16px;
+    border-radius: 22px;
+  }
+
+  .tent-card__icon {
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
+    font-size: 26px;
+  }
+
+  .tent-card__header strong {
+    font-size: 17px;
+  }
+
+  .trophy-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+  }
+
+  .trophy-card {
+    padding: 20px 16px 16px;
+    border-radius: 24px;
+  }
+
+  .trophy-card__crest {
+    width: 70px;
+    height: 70px;
+    border-radius: 22px;
+    font-size: 32px;
+  }
+}
+
 @include theme.respond-max(tablet) {
-  .challenge-camp__overview {
-    grid-template-columns: 1fr;
+  .challenge-camp__layout {
+    gap: 18px;
   }
 }
 
