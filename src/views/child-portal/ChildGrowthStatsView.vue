@@ -8,21 +8,24 @@ import { BarChart, LineChart, PieChart, RadarChart } from 'echarts/charts'
 import { GridComponent, LegendComponent, RadarComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import VChart from 'vue-echarts'
-import { fetchChildGrowthAdvice, fetchChildGrowthStats } from '@/features/child-portal/client'
+import { fetchChildGrowthAdvice, fetchChildGrowthStats, fetchChildRewards } from '@/features/child-portal/client'
 import {
   buildGrowthStatsViewModel,
   GROWTH_RANGE_OPTIONS,
   getGrowthEmptyState,
-  getGrowthTrendLabel,
   PRIORITY_LABELS,
-  PRIORITY_TONES
+  PRIORITY_TONES,
+  createBuckets,
+  normalizeTimestamp,
+  findBucketIndex
 } from '@/features/child-portal/growth-stats'
 import { getDisplayName } from '@/features/child-portal/helpers'
 import { ensureChildPortalSession, useChildPortalSession } from '@/features/child-portal/session'
 import type {
   ChildGrowthAdviceResponse,
   ChildGrowthRange,
-  ChildGrowthStatsResponse
+  ChildGrowthStatsResponse,
+  ChildRewardRequestItem
 } from '@/features/child-portal/types'
 
 use([
@@ -41,10 +44,11 @@ const router = useRouter()
 const { width: windowWidth } = useWindowSize()
 const { childPortalSession } = useChildPortalSession()
 
-const range = ref<ChildGrowthRange>('90d')
+const range = ref<ChildGrowthRange>('30d')
 const loading = ref(true)
 const errorMessage = ref('')
 const stats = ref<ChildGrowthStatsResponse | null>(null)
+const rewardsHistory = ref<ChildRewardRequestItem[]>([])
 
 const adviceOpen = ref(false)
 const adviceLoading = ref(false)
@@ -65,13 +69,6 @@ const chartPalette = {
   tooltip: 'rgba(255, 252, 246, 0.98)'
 } as const
 
-const sceneStickers = [
-  { key: 'mountain', icon: 'ph:mountains-fill', className: 'growth-scene--mountain' },
-  { key: 'tree', icon: 'ph:tree-evergreen-fill', className: 'growth-scene--tree' },
-  { key: 'waves', icon: 'ph:waves-fill', className: 'growth-scene--waves' },
-  { key: 'camp', icon: 'ph:campfire-fill', className: 'growth-scene--camp' }
-] as const
-
 const childProfile = computed(() => stats.value?.child_profile || childPortalSession.value?.childProfile || {})
 const displayName = computed(() => getDisplayName(childProfile.value))
 const emptyState = computed(() => getGrowthEmptyState(stats.value))
@@ -79,20 +76,6 @@ const isPhone = computed(() => windowWidth.value <= 768)
 const isTablet = computed(() => windowWidth.value <= 1199)
 const isCompactDrawer = computed(() => windowWidth.value <= 900)
 const viewModel = computed(() => (stats.value ? buildGrowthStatsViewModel(stats.value) : null))
-const topRisk = computed(() => viewModel.value?.risk_flags[0] || null)
-const trendLabel = computed(() => (
-  viewModel.value ? getGrowthTrendLabel(viewModel.value.trend_direction) : '持平中'
-))
-
-const leadMessage = computed(() => {
-  const model = viewModel.value
-  if (!model) return ''
-  const focusCategory = model.category_risks[0]
-  if (!focusCategory) {
-    return `${displayName.value} 最近的成长航线 ${trendLabel.value}，整体节奏比较平稳。`
-  }
-  return `${displayName.value} 最近最值得先看的是 ${focusCategory.label}，目前走势 ${trendLabel.value}。`
-})
 
 const routeMetrics = computed(() => {
   const model = viewModel.value
@@ -120,13 +103,6 @@ function formatAxisLabel(value: string, index: number, total: number) {
     return value
   }
   return ''
-}
-
-function getToneColor(tone: 'sky' | 'mint' | 'rose' | 'amber') {
-  if (tone === 'mint') return chartPalette.mint
-  if (tone === 'rose') return chartPalette.rose
-  if (tone === 'amber') return chartPalette.amber
-  return chartPalette.sky
 }
 
 const executionOption = computed(() => {
@@ -292,16 +268,22 @@ const categoryOption = computed(() => {
   const items = model.category_risks
   return {
     animationDuration: 700,
-    color: [chartPalette.mint, chartPalette.rose, chartPalette.amberDeep],
+    color: [
+      chartPalette.sky,
+      chartPalette.mint,
+      chartPalette.amber,
+      chartPalette.rose,
+      chartPalette.skyDeep,
+      chartPalette.amberDeep
+    ],
     tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
+      trigger: 'item',
       backgroundColor: chartPalette.tooltip,
       borderColor: 'rgba(255,255,255,0.85)',
       textStyle: { color: chartPalette.ink },
-      extraCssText: 'border-radius:18px; box-shadow:0 18px 36px rgba(47,86,128,0.16); padding:14px 16px;',
-      formatter: (params: Array<{ dataIndex: number }>) => {
-        const item = items[params[0]?.dataIndex ?? 0]
+      extraCssText: 'border-radius:18px; box-shadow:0 18px 36px rgba(47,86,128,0.16); padding:12px 14px;',
+      formatter: (params: any) => {
+        const item = items[params.dataIndex]
         if (!item) return ''
         return [
           `<strong>${item.label}</strong>`,
@@ -313,150 +295,69 @@ const categoryOption = computed(() => {
       }
     },
     legend: {
-      top: 0,
-      icon: 'roundRect',
-      itemWidth: 14,
-      itemHeight: 14,
+      bottom: 0,
+      icon: 'circle',
+      itemWidth: 10,
+      itemHeight: 10,
       textStyle: { color: chartPalette.softInk, fontWeight: 700, fontSize: isPhone.value ? 11 : 12 }
     },
-    grid: {
-      left: isPhone.value ? 72 : 110,
-      right: isPhone.value ? 18 : 48,
-      top: 54,
-      bottom: 10,
-      containLabel: true
-    },
-    xAxis: {
-      type: 'value',
-      minInterval: 1,
-      axisLabel: { color: chartPalette.softInk, fontWeight: 700 },
-      splitLine: { lineStyle: { color: chartPalette.line, type: 'dashed' } }
-    },
-    yAxis: {
-      type: 'category',
-      inverse: true,
-      data: items.map((item) => item.label),
-      axisLine: { show: false },
-      axisTick: { show: false },
-      axisLabel: { color: chartPalette.ink, fontWeight: 800, fontSize: isPhone.value ? 11 : 12 }
-    },
-    series: [
-      { name: '完成', type: 'bar', stack: 'terrain', barMaxWidth: isPhone.value ? 16 : 20, itemStyle: { color: chartPalette.mint, borderRadius: [10, 0, 0, 10] }, data: items.map((item) => item.completed) },
-      { name: '未通过', type: 'bar', stack: 'terrain', barMaxWidth: isPhone.value ? 16 : 20, itemStyle: { color: chartPalette.rose }, data: items.map((item) => item.rejected) },
-      {
-        name: '未闭环',
-        type: 'bar',
-        stack: 'terrain',
-        barMaxWidth: isPhone.value ? 16 : 20,
-        label: {
-          show: true,
-          position: 'right',
-          color: chartPalette.ink,
-          fontWeight: 800,
-          fontSize: isPhone.value ? 10 : 11,
-          formatter: ({ dataIndex }: { dataIndex: number }) => {
-            const item = items[dataIndex]
-            return item ? `提交 ${item.submitted}` : ''
-          }
-        },
-        itemStyle: { color: chartPalette.amberDeep, borderRadius: [0, 10, 10, 0] },
-        data: items.map((item) => item.open_loop)
-      }
-    ]
-  }
-})
-
-const rewardStatusOption = computed(() => {
-  const model = viewModel.value
-  if (!model) return {}
-
-  const items = model.reward_fulfillment.status_breakdown
-  return {
-    animationDuration: 700,
-    tooltip: {
-      trigger: 'item',
-      backgroundColor: chartPalette.tooltip,
-      borderColor: 'rgba(255,255,255,0.85)',
-      textStyle: { color: chartPalette.ink },
-      extraCssText: 'border-radius:18px; box-shadow:0 18px 36px rgba(47,86,128,0.16); padding:12px 14px;'
-    },
     series: [
       {
+        name: '任务分布',
         type: 'pie',
-        radius: isPhone.value ? ['50%', '74%'] : ['56%', '78%'],
-        center: ['50%', '52%'],
-        minAngle: 12,
+        radius: isPhone.value ? ['35%', '50%'] : ['45%', '60%'],
+        center: ['50%', '45%'],
         padAngle: 2,
-        labelLine: { length: isPhone.value ? 10 : 14, length2: isPhone.value ? 8 : 10 },
+        itemStyle: { borderRadius: 8, borderColor: 'rgba(255,255,255,0.9)', borderWidth: 2 },
         label: {
           color: chartPalette.ink,
           fontWeight: 800,
           fontSize: isPhone.value ? 10 : 11,
-          formatter: '{b|{b}}\n{c|{c}}',
-          rich: {
-            b: { fontWeight: 800, color: chartPalette.ink, lineHeight: 18 },
-            c: { fontWeight: 700, color: chartPalette.softInk }
-          }
+          formatter: '{b}\n{c} 项'
         },
-        itemStyle: { borderColor: 'rgba(255,255,255,0.92)', borderWidth: 4, borderRadius: 10 },
-        data: items.map((item) => ({ name: item.label, value: item.value, itemStyle: { color: getToneColor(item.tone) } }))
+        labelLine: { length: isPhone.value ? 5 : 15, length2: isPhone.value ? 5 : 12 },
+        data: items.map((item) => ({ name: item.label, value: item.submitted }))
       }
     ]
   }
 })
 
-const rewardTrendOption = computed(() => {
+const rewardTimeline = computed(() => {
   const model = viewModel.value
-  if (!model) return {}
+  if (!model) return []
 
   const labels = model.reward_fulfillment.labels
-  return {
-    animationDuration: 700,
-    color: [chartPalette.amber, chartPalette.skyDeep],
-    tooltip: {
-      trigger: 'axis',
-      backgroundColor: chartPalette.tooltip,
-      borderColor: 'rgba(255,255,255,0.85)',
-      textStyle: { color: chartPalette.ink },
-      extraCssText: 'border-radius:18px; box-shadow:0 18px 36px rgba(47,86,128,0.16); padding:14px 16px;'
-    },
-    legend: {
-      top: 0,
-      icon: 'roundRect',
-      itemWidth: 14,
-      itemHeight: 14,
-      textStyle: { color: chartPalette.softInk, fontWeight: 700, fontSize: isPhone.value ? 11 : 12 }
-    },
-    grid: {
-      left: isPhone.value ? 18 : 26,
-      right: isPhone.value ? 12 : 18,
-      top: 52,
-      bottom: 12,
-      containLabel: true
-    },
-    xAxis: {
-      type: 'category',
-      data: labels,
-      axisLine: { lineStyle: { color: chartPalette.line } },
-      axisTick: { show: false },
-      axisLabel: {
-        color: chartPalette.softInk,
-        fontWeight: 700,
-        fontSize: isPhone.value ? 11 : 12,
-        formatter: (value: string, index: number) => formatAxisLabel(value, index, labels.length)
+  const redeemed = model.reward_fulfillment.redeemed
+  const used = model.reward_fulfillment.used
+
+  // 获取时间桶用于匹配具体记录
+  const buckets = createBuckets(range.value)
+
+  const timeline = []
+  if (labels && redeemed && used) {
+    for (let i = labels.length - 1; i >= 0; i--) {
+      // 找到这个时间桶里所有的兑换记录
+      const bucketItems = rewardsHistory.value.filter((record) => {
+        const ts = normalizeTimestamp(record.requested_at)
+        const idx = findBucketIndex(buckets, ts)
+        return idx === i
+      })
+
+      const rejectedItems = bucketItems.filter((item) => item.status === 'rejected')
+      const rejectedCount = rejectedItems.length
+
+      if ((redeemed[i] ?? 0) > 0 || (used[i] ?? 0) > 0 || rejectedCount > 0) {
+        timeline.push({
+          label: labels[i],
+          redeemed: redeemed[i] ?? 0,
+          used: used[i] ?? 0,
+          rejected: rejectedCount,
+          items: bucketItems
+        })
       }
-    },
-    yAxis: {
-      type: 'value',
-      minInterval: 1,
-      axisLabel: { color: chartPalette.softInk, fontWeight: 700 },
-      splitLine: { lineStyle: { color: chartPalette.line, type: 'dashed' } }
-    },
-    series: [
-      { name: '已兑换', type: 'bar', barMaxWidth: isPhone.value ? 14 : 18, itemStyle: { color: chartPalette.amber, borderRadius: [10, 10, 0, 0] }, data: model.reward_fulfillment.redeemed },
-      { name: '已使用', type: 'line', smooth: true, symbol: 'circle', symbolSize: isPhone.value ? 6 : 8, lineStyle: { width: 4, color: chartPalette.skyDeep }, itemStyle: { color: chartPalette.skyDeep }, data: model.reward_fulfillment.used }
-    ]
+    }
   }
+  return timeline
 })
 
 async function loadStats(showLoading = true) {
@@ -468,7 +369,12 @@ async function loadStats(showLoading = true) {
     if (!session?.webSessionToken) {
       throw new Error('当前会话已经失效，请重新打开家长分享的儿童入口。')
     }
-    stats.value = await fetchChildGrowthStats(session.webSessionToken, range.value)
+    const [statsRes, rewardsRes] = await Promise.all([
+      fetchChildGrowthStats(session.webSessionToken, range.value),
+      fetchChildRewards(session.webSessionToken)
+    ])
+    stats.value = statsRes
+    rewardsHistory.value = rewardsRes.request_history || []
   } catch (error) {
     errorMessage.value = String((error as { message?: string })?.message || '成长统计加载失败')
   } finally {
@@ -536,7 +442,6 @@ onMounted(() => {
 
         <div class="growth-topbar__title">
           <span class="growth-topbar__eyebrow">成长航线</span>
-          <h1>成长统计</h1>
           <p>和 {{ displayName }} 一起看清最近的成长节奏。</p>
         </div>
 
@@ -580,32 +485,6 @@ onMounted(() => {
 
       <template v-else-if="stats && viewModel">
         <section class="growth-hero">
-          <div
-            v-for="item in sceneStickers"
-            :key="item.key"
-            class="growth-scene"
-            :class="item.className"
-          >
-            <Icon :icon="item.icon" />
-          </div>
-
-          <div class="growth-hero__header">
-            <div>
-              <span class="growth-pill growth-pill--sky">
-                <Icon icon="ph:map-trifold-fill" />
-                习惯执行航线
-              </span>
-              <h2>先看路线，再看分叉</h2>
-              <p>{{ leadMessage }}</p>
-            </div>
-
-            <div v-if="topRisk" class="growth-hero__focus" :class="`growth-hero__focus--${topRisk.tone}`">
-              <span>当前提醒</span>
-              <strong>{{ topRisk.label }}</strong>
-              <p>{{ topRisk.detail }}</p>
-            </div>
-          </div>
-
           <div class="growth-signal-strip">
             <article
               v-for="item in viewModel.summary_signals"
@@ -662,7 +541,6 @@ onMounted(() => {
                   <Icon icon="ph:compass-tool-fill" />
                   成长罗盘
                 </span>
-                <h3>把稳定度和回升势头一起看</h3>
               </div>
             </header>
 
@@ -676,7 +554,6 @@ onMounted(() => {
                   <Icon icon="ph:mountains-fill" />
                   任务地形分布
                 </span>
-                <h3>先看哪些习惯更容易掉队</h3>
               </div>
             </header>
 
@@ -684,13 +561,12 @@ onMounted(() => {
           </article>
 
           <article class="growth-panel growth-panel--reward">
-            <header class="growth-panel__header growth-panel__header--reward">
+            <header class="growth-panel__header">
               <div>
                 <span class="growth-pill growth-pill--rose">
                   <Icon icon="ph:treasure-chest-fill" />
                   奖励兑现轨迹
                 </span>
-                <h3>奖励有没有真正走到兑现这一步</h3>
               </div>
 
               <div class="growth-panel__reward-meta">
@@ -699,13 +575,73 @@ onMounted(() => {
               </div>
             </header>
 
-            <div class="growth-reward-layout">
-              <div class="growth-reward-chart growth-reward-chart--ring">
-                <v-chart class="growth-chart growth-chart--reward-ring" :option="rewardStatusOption" autoresize />
+            <div class="growth-reward-timeline-wrapper">
+              <div v-if="rewardTimeline.length === 0" class="growth-reward-empty">
+                <Icon icon="ph:ghost-duotone" />
+                <p>最近没有奖励兑换记录</p>
               </div>
-
-              <div class="growth-reward-chart">
-                <v-chart class="growth-chart growth-chart--reward-trend" :option="rewardTrendOption" autoresize />
+              <div v-else class="growth-reward-timeline">
+                <div v-for="(item, index) in rewardTimeline" :key="index" class="growth-reward-timeline-item">
+                  <div class="timeline-date">{{ item.label }}</div>
+                  <div class="timeline-node">
+                    <div class="timeline-line"></div>
+                    <div class="timeline-dot"></div>
+                  </div>
+                  <div class="timeline-content">
+                    <div v-if="item.redeemed > 0" class="timeline-card timeline-card--amber">
+                      <div class="timeline-card__summary">
+                        <Icon icon="ph:ticket-fill" />
+                        <span>兑换 {{ item.redeemed }} 项</span>
+                      </div>
+                      
+                      <!-- 悬浮明细 -->
+                      <div class="timeline-detail">
+                        <div 
+                          v-for="detail in item.items.filter(d => d.status === 'approved' || d.status === 'fulfilled')" 
+                          :key="detail.request_id" 
+                          class="timeline-detail-item"
+                        >
+                          <span>{{ detail.title }}</span>
+                          <span class="detail-points">-{{ detail.approved_cost_points }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div v-if="item.used > 0" class="timeline-card timeline-card--sky">
+                      <div class="timeline-card__summary">
+                        <Icon icon="ph:check-circle-fill" />
+                        <span>使用 {{ item.used }} 项</span>
+                      </div>
+                      
+                      <div class="timeline-detail">
+                        <div 
+                          v-for="detail in item.items.filter(d => d.status === 'fulfilled')" 
+                          :key="detail.request_id" 
+                          class="timeline-detail-item"
+                        >
+                          <span>{{ detail.title }}</span>
+                          <span class="detail-status">已使用</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div v-if="item.rejected > 0" class="timeline-card timeline-card--rose">
+                      <div class="timeline-card__summary">
+                        <Icon icon="ph:x-circle-fill" />
+                        <span>驳回 {{ item.rejected }} 项</span>
+                      </div>
+                      
+                      <div class="timeline-detail">
+                        <div 
+                          v-for="detail in item.items.filter(d => d.status === 'rejected')" 
+                          :key="detail.request_id" 
+                          class="timeline-detail-item"
+                        >
+                          <span>{{ detail.title }}</span>
+                          <span class="detail-status">被驳回</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </article>
@@ -798,9 +734,12 @@ onMounted(() => {
   color: var(--growth-ink);
   overflow-x: hidden;
   font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  width: 100%;
+  box-sizing: border-box;
 
   @include theme.respond-max(phone) {
     padding: 16px 14px calc(108px + env(safe-area-inset-bottom, 0px));
+    width: 100%;
   }
 }
 
@@ -887,15 +826,6 @@ onMounted(() => {
 .growth-topbar__title {
   flex: 1;
 
-  h1 {
-    margin: 4px 0 0;
-    font-family: 'STZhongsong', 'Songti SC', 'Noto Serif SC', serif;
-    font-size: clamp(34px, 4vw, 52px);
-    font-weight: 900;
-    line-height: 1;
-    letter-spacing: 1px;
-  }
-
   p {
     margin: 10px 0 0;
     color: var(--growth-soft-ink);
@@ -961,8 +891,11 @@ onMounted(() => {
 .growth-shell {
   @include theme.page-shell;
   max-width: 1320px;
+  width: 100%;
+  box-sizing: border-box;
   position: relative;
   z-index: 2;
+  overflow: hidden;
 }
 
 .growth-loading {
@@ -1045,6 +978,9 @@ onMounted(() => {
 .growth-hero,
 .growth-panel {
   @include theme.surface-card(26px, 30px);
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .growth-hero {
@@ -1052,177 +988,14 @@ onMounted(() => {
   overflow: hidden;
   padding: 30px 30px 24px;
   background: linear-gradient(180deg, rgba(255, 252, 243, 0.96) 0%, rgba(245, 250, 255, 0.98) 58%, rgba(255, 255, 255, 0.96) 100%);
-
-  &::before {
-    content: '';
-    position: absolute;
-    inset: auto 10% 108px 8%;
-    height: 0;
-    border-top: 4px dashed rgba(73, 174, 245, 0.34);
-    transform: rotate(-2.2deg);
-  }
-
-  &::after {
-    content: '';
-    position: absolute;
-    inset: auto auto 92px 16%;
-    width: 18px;
-    height: 18px;
-    border-radius: 999px;
-    background: linear-gradient(135deg, var(--growth-sky) 0%, var(--growth-sky-deep) 100%);
-    border: 4px solid rgba(255, 255, 255, 0.92);
-    box-shadow: 0 0 0 6px rgba(69, 174, 245, 0.14);
-    animation: portalOrbPulse 2.8s ease-in-out infinite;
-  }
+  width: 100%;
+  box-sizing: border-box;
 
   @include theme.respond-max(phone) {
     padding: 22px 18px 18px;
     border-radius: 26px;
+    width: 100%;
   }
-}
-
-.growth-scene {
-  position: absolute;
-  display: grid;
-  place-items: center;
-  width: 54px;
-  height: 54px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.58);
-  color: var(--growth-soft-ink);
-  opacity: 0.88;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
-  pointer-events: none;
-
-  svg {
-    font-size: 28px;
-  }
-
-  @include theme.respond-max(phone) {
-    width: 42px;
-    height: 42px;
-
-    svg {
-      font-size: 22px;
-    }
-  }
-}
-
-.growth-scene--mountain {
-  top: 18px;
-  right: 26px;
-  color: rgba(83, 118, 148, 0.8);
-}
-
-.growth-scene--tree {
-  right: 112px;
-  top: 146px;
-  color: rgba(67, 163, 100, 0.85);
-}
-
-.growth-scene--waves {
-  left: 28px;
-  bottom: 34px;
-  color: rgba(64, 168, 233, 0.82);
-}
-
-.growth-scene--camp {
-  left: 136px;
-  top: 112px;
-  color: rgba(240, 155, 42, 0.82);
-}
-
-.growth-hero__header,
-.growth-panel__header {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 18px;
-
-  h2,
-  h3 {
-    margin: 14px 0 0;
-    font-size: clamp(24px, 2.8vw, 34px);
-    font-weight: 900;
-    line-height: 1.1;
-    color: var(--growth-ink);
-  }
-
-  p {
-    margin: 10px 0 0;
-    color: var(--growth-soft-ink);
-    font-size: 15px;
-    font-weight: 700;
-  }
-
-  @include theme.respond-max(tablet) {
-    flex-direction: column;
-  }
-}
-
-.growth-panel__header {
-  h3 {
-    font-size: clamp(22px, 2.4vw, 28px);
-  }
-}
-
-.growth-panel__header--reward {
-  @include theme.respond-max(tablet) {
-    align-items: stretch;
-  }
-}
-
-.growth-hero__focus {
-  min-width: min(320px, 100%);
-  padding: 18px 20px;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.82);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
-
-  span {
-    display: inline-flex;
-    align-items: center;
-    padding: 6px 10px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.78);
-    font-size: 12px;
-    font-weight: 900;
-  }
-
-  strong {
-    display: block;
-    margin-top: 12px;
-    font-size: 19px;
-    font-weight: 900;
-  }
-
-  p {
-    margin-top: 8px;
-    font-size: 14px;
-  }
-}
-
-.growth-hero__focus--rose {
-  background: rgba(255, 242, 239, 0.94);
-  color: #8b473f;
-}
-
-.growth-hero__focus--amber {
-  background: rgba(255, 247, 228, 0.94);
-  color: #8d5a13;
-}
-
-.growth-hero__focus--sky {
-  background: rgba(239, 248, 255, 0.94);
-  color: #275f9f;
-}
-
-.growth-hero__focus--mint {
-  background: rgba(239, 255, 247, 0.94);
-  color: #21644c;
 }
 
 .growth-pill {
@@ -1253,16 +1026,25 @@ onMounted(() => {
   z-index: 2;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: 22px;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+  width: 100%;
+  box-sizing: border-box;
 
   @include theme.respond-max(tablet) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   @include theme.respond-max(phone) {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     margin-top: 18px;
+    padding: 16px;
+    gap: 14px;
+    width: 100%;
   }
 }
 
@@ -1270,11 +1052,6 @@ onMounted(() => {
   display: flex;
   gap: 12px;
   align-items: flex-start;
-  padding: 16px 16px 14px;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.84);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
 }
 
 .growth-signal__icon {
@@ -1332,6 +1109,10 @@ onMounted(() => {
     font-size: 13px;
     font-weight: 700;
     line-height: 1.5;
+
+    @include theme.respond-max(phone) {
+      display: none;
+    }
   }
 }
 
@@ -1339,6 +1120,8 @@ onMounted(() => {
   position: relative;
   z-index: 2;
   margin-top: 20px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .growth-chart {
@@ -1378,6 +1161,8 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 10px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .growth-route-metric {
@@ -1418,13 +1203,16 @@ onMounted(() => {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin-top: 14px;
+  width: 100%;
+  box-sizing: border-box;
 
   @include theme.respond-max(tablet) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   @include theme.respond-max(phone) {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
   }
 }
 
@@ -1473,10 +1261,13 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 24px;
+  width: 100%;
+  box-sizing: border-box;
 
   @include theme.respond-max(phone) {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 18px;
+    width: 100%;
   }
 }
 
@@ -1507,11 +1298,20 @@ onMounted(() => {
   }
 }
 
+.growth-panel__header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+}
+
 .growth-panel__reward-meta {
   display: inline-flex;
   flex-wrap: wrap;
   gap: 10px;
-
+  
   span {
     @include theme.stat-chip;
     font-size: 13px;
@@ -1520,23 +1320,215 @@ onMounted(() => {
   }
 }
 
-.growth-reward-layout {
-  display: grid;
-  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
-  gap: 18px;
-  margin-top: 18px;
-
-  @include theme.respond-max(tablet) {
-    grid-template-columns: 1fr;
+.growth-reward-timeline-wrapper {
+  margin-top: 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 12px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  width: 100%;
+  box-sizing: border-box;
+  /* 允许容器滑动 */
+  overscroll-behavior-x: contain;
+  
+  &::-webkit-scrollbar {
+    display: none;
   }
 }
 
-.growth-reward-chart {
-  min-width: 0;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.56);
-  border: 1px solid rgba(255, 255, 255, 0.82);
-  padding: 12px 12px 6px;
+.growth-reward-timeline {
+  display: flex;
+  flex-wrap: nowrap;
+  min-width: 100%;
+  padding-top: 10px;
+}
+
+.growth-reward-timeline-item {
+  position: relative;
+  flex: 1 0 140px;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.timeline-date {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--growth-soft-ink);
+  margin-bottom: 12px;
+}
+
+.timeline-node {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.timeline-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: rgba(115, 148, 185, 0.15);
+  transform: translateY(-50%);
+  z-index: 0;
+}
+
+.growth-reward-timeline-item:first-child .timeline-line {
+  left: 50%;
+  width: 50%;
+}
+
+.growth-reward-timeline-item:last-child .timeline-line {
+  left: 0;
+  width: 50%;
+}
+
+.growth-reward-timeline-item:only-child .timeline-line {
+  display: none;
+}
+
+.timeline-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--growth-sky-deep);
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 3px rgba(44, 134, 223, 0.15);
+  position: relative;
+  z-index: 1;
+}
+
+.timeline-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 0 12px;
+}
+
+.timeline-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 4px 12px rgba(47, 86, 128, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 8px 16px rgba(47, 86, 128, 0.08);
+
+    .timeline-detail {
+      max-height: 500px;
+      opacity: 1;
+      margin-top: 8px;
+      padding-top: 8px;
+    }
+  }
+}
+
+.timeline-card__summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+
+  svg {
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+}
+
+.timeline-detail {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  border-top: 1px dashed rgba(115, 148, 185, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.timeline-detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--growth-soft-ink);
+
+  span:first-child {
+    flex: 1;
+    word-break: break-all;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+.detail-points {
+  color: var(--growth-amber-deep);
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.detail-status {
+  color: var(--growth-soft-ink);
+  white-space: nowrap;
+  opacity: 0.7;
+}
+
+.timeline-card--amber {
+  color: var(--growth-amber-deep);
+  svg { color: var(--growth-amber); }
+}
+
+.timeline-card--sky {
+  color: var(--growth-sky-deep);
+  svg { color: var(--growth-sky); }
+}
+
+.timeline-card--rose {
+  color: #8b473f;
+  svg { color: var(--growth-rose); }
+}
+
+.growth-reward-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  color: var(--growth-soft-ink);
+
+  svg {
+    font-size: 48px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+  }
+
+  p {
+    font-size: 14px;
+    font-weight: 700;
+  }
 }
 
 .growth-aigc-entry {

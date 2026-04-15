@@ -132,10 +132,26 @@ export interface ChildRewardRequestItem {
   requested_at?: number
 }
 
+export interface ChildRewardRedemptionItem {
+  redemption_id: string
+  reward_id: string
+  reward_title?: string
+  child_avatar_key?: string
+  child_avatar_url?: string
+  child_gender?: string
+  child_name?: string
+  requested_points?: number
+  status?: string
+  review_remark?: string
+  requested_at?: number
+  reviewed_at?: number
+}
+
 export interface ChildRewardsResponse {
   child_profile: ChildProfile
   rewards: ChildRewardItem[]
   request_history: ChildRewardRequestItem[]
+  redemption_history?: ChildRewardRedemptionItem[]
 }
 
 export interface ChildPointsLedgerEntry {
@@ -146,6 +162,7 @@ export interface ChildPointsLedgerEntry {
   balance_after?: number
   record_date?: string
   remark?: string
+  image_url?: string
   created_at?: number
 }
 

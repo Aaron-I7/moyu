@@ -167,11 +167,44 @@ export function getRewardVisualIcon(rewardType?: string) {
   return 'ph:gift-fill'
 }
 
+export type RewardRequestStatusKey = 'approved' | 'pending' | 'rejected' | 'fulfilled'
+
+export function groupRewardRequestsByStatus<T extends { status?: string }>(items: T[] = []) {
+  const groups: Record<RewardRequestStatusKey, T[]> = {
+    approved: [],
+    pending: [],
+    rejected: [],
+    fulfilled: []
+  }
+
+  items.forEach((item) => {
+    if (item.status === 'approved') {
+      groups.approved.push(item)
+      return
+    }
+
+    if (item.status === 'rejected') {
+      groups.rejected.push(item)
+      return
+    }
+
+    if (item.status === 'fulfilled') {
+      groups.fulfilled.push(item)
+      return
+    }
+
+    groups.pending.push(item)
+  })
+
+  return groups
+}
+
 export function getRewardRequestStatusLabel(status?: string) {
   if (status === 'approved') return '待使用'
+  if (status === 'pending') return '待审核'
   if (status === 'rejected') return '未通过'
   if (status === 'fulfilled') return '已使用'
-  return '等待中'
+  return '待审核'
 }
 
 export function getRewardRequestTone(status?: string) {
@@ -205,7 +238,7 @@ export function getRewardRequestSummary(item: ChildRewardRequestItem) {
     return '未通过'
   }
 
-  return '等待回应'
+  return '待审核'
 }
 
 export function getLedgerTitle(entry: ChildPointsLedgerEntry) {

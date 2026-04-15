@@ -3,7 +3,6 @@ import { computed, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import {
   getLedgerIcon,
-  getLedgerSummary,
   getLedgerTitle,
   getLedgerTone
 } from '@/features/child-portal/helpers'
@@ -174,15 +173,14 @@ function getEntryScoreLabel(entry: ChildPointsLedgerEntry) {
   <section class="star-archive">
     <header class="star-archive__sign">
       <div class="star-archive__hero">
-        <span class="star-archive__eyebrow">冒险世界 · 星轨档案</span>
-        <h2>每一颗星星，都在旅途里留下回响</h2>
-        <p>这里会记录你一路得到的奖励、花掉的星星，还有每一次完成挑战之后留下的足迹。</p>
+        <span class="star-archive__eyebrow">积分档案</span>
+        <h2>每颗星星，都记下今天进步</h2>
       </div>
 
       <div class="star-archive__latest" v-if="latestEntry">
-        <span>最新回响</span>
+        <span>最新记录</span>
         <strong>{{ getLedgerTitle(latestEntry) }}</strong>
-        <p>{{ getLedgerSummary(latestEntry) }}</p>
+        <p>{{ getEntryTimelineDate(latestEntry) }} · {{ getEntryTimelineTime(latestEntry) }}</p>
       </div>
     </header>
 
@@ -220,7 +218,6 @@ function getEntryScoreLabel(entry: ChildPointsLedgerEntry) {
           <Icon icon="ph:scroll-fill" />
           <div>
             <h3>冒险日志</h3>
-            <p>最新的回响排在最前面，左边看时间，中间看记录内容，右边看现在拥有的总分。</p>
           </div>
         </div>
 
@@ -246,8 +243,9 @@ function getEntryScoreLabel(entry: ChildPointsLedgerEntry) {
 
                 <article class="journey-card">
                   <div class="journey-card__top">
-                    <div class="journey-card__icon" :class="`journey-card__icon--${getLedgerTone(item)}`">
-                      <Icon :icon="getLedgerIcon(item)" />
+                    <div class="journey-card__icon" :class="[`journey-card__icon--${getLedgerTone(item)}`, { 'journey-card__icon--image': item.image_url }]">
+                      <img v-if="item.image_url" :src="item.image_url" :alt="getLedgerTitle(item)" />
+                      <Icon v-else :icon="getLedgerIcon(item)" />
                     </div>
 
                     <div class="journey-card__content">
@@ -683,6 +681,18 @@ function getEntryScoreLabel(entry: ChildPointsLedgerEntry) {
 
 .journey-card__icon--mint { background: linear-gradient(135deg, #a4ecae 0%, #63c56f 100%); }
 .journey-card__icon--rose { background: linear-gradient(135deg, #ffbaba 0%, #ff7b89 100%); }
+
+.journey-card__icon--image {
+  overflow: hidden;
+  padding: 0;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+  }
+}
 
 .journey-card__content {
   flex: 1;

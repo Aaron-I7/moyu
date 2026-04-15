@@ -110,7 +110,7 @@ function average(values: number[]) {
   return values.reduce((sum, value) => sum + value, 0) / values.length
 }
 
-function normalizeTimestamp(value?: number | string | null) {
+export function normalizeTimestamp(value?: number | string | null) {
   if (!value) {
     return 0
   }
@@ -162,7 +162,7 @@ function formatMonthDay(timestamp: number) {
   return `${month}/${day}`
 }
 
-function createBuckets(range: ChildGrowthRange): GrowthBucket[] {
+export function createBuckets(range: ChildGrowthRange): GrowthBucket[] {
   const config = GROWTH_RANGE_META[range] || GROWTH_RANGE_META['90d']
   const todayStart = startOfDay()
 
@@ -197,7 +197,7 @@ function createBuckets(range: ChildGrowthRange): GrowthBucket[] {
   })
 }
 
-function findBucketIndex(buckets: GrowthBucket[], timestamp: number) {
+export function findBucketIndex(buckets: GrowthBucket[], timestamp: number): number {
   if (!(timestamp > 0)) {
     return -1
   }

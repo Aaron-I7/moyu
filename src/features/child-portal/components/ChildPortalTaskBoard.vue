@@ -23,53 +23,11 @@ const activeTasks = computed(() => props.tasksData?.active_tasks || [])
 const pendingTasks = computed(() => props.tasksData?.pending_tasks || [])
 const completedTasks = computed(() => props.tasksData?.completed_tasks || [])
 const totalTasks = computed(() => activeTasks.value.length + pendingTasks.value.length + completedTasks.value.length)
-const progressValue = computed(() => {
-  if (!totalTasks.value) return 0
-  return Math.round(((pendingTasks.value.length + completedTasks.value.length) / totalTasks.value) * 100)
-})
 
-const campStats = computed(() => [
-  {
-    key: 'active',
-    label: '待出发挑战',
-    value: activeTasks.value.length,
-    icon: 'ph:rocket-launch-fill',
-    tone: 'amber'
-  },
-  {
-    key: 'pending',
-    label: '帐篷里等待点亮',
-    value: pendingTasks.value.length,
-    icon: 'ph:campfire-fill',
-    tone: 'sky'
-  },
-  {
-    key: 'completed',
-    label: '今天带回的徽章',
-    value: completedTasks.value.length,
-    icon: 'ph:shield-star-fill',
-    tone: 'mint'
-  }
-])
+const hasAnyTasks = computed(() => totalTasks.value > 0)
 
 function canCompleteTask(task: ChildTaskItem) {
   return (task.type || 'active') === 'active'
-}
-
-function getTaskHint(task: ChildTaskItem) {
-  if (task.type === 'completed') {
-    return task.description || '这枚徽章已经稳稳收进背包啦。'
-  }
-
-  if (task.type === 'pending') {
-    return task.description || '任务已经送到家长确认帐篷，等一下就会点亮。'
-  }
-
-  if (task.auto_confirm_completion) {
-    return task.description || '完成后会自己点亮并收入星星。'
-  }
-
-  return task.description || '完成它，把星星和新的徽章带回营地。'
 }
 </script>
 
@@ -77,43 +35,22 @@ function getTaskHint(task: ChildTaskItem) {
   <section class="challenge-camp">
     <header class="challenge-camp__sign">
       <div class="challenge-camp__hero">
-        <span class="challenge-camp__eyebrow">冒险世界 · 挑战营地</span>
-        <h2>今天先攻下哪一关？</h2>
-        <p>把当前最重要的挑战先完成，等点亮后再把徽章收进今天的战利品墙。</p>
+        <span class="challenge-camp__eyebrow">任务营地</span>
+        <h2>今天任务，一起慢慢做完</h2>
       </div>
 
-      <div class="challenge-camp__meta">
-        <span class="challenge-camp__date">
-          <Icon icon="ph:calendar-blank-fill" />
-          {{ recordDate || '今天' }}
-        </span>
-        <div class="challenge-camp__progress-card">
-          <strong>{{ progressValue }}%</strong>
-          <span>今日旅程推进度</span>
-          <div class="challenge-camp__progress-track">
-            <span :style="{ width: `${Math.max(progressValue, totalTasks ? 10 : 0)}%` }" />
-          </div>
-        </div>
+      <div class="challenge-camp__latest" v-if="activeTasks && activeTasks.length > 0">
+        <span>进行中</span>
+        <strong>{{ activeTasks.length }} 项待做</strong>
+        <p>下一项：{{ activeTasks[0]?.title }}</p>
       </div>
     </header>
 
-    <section class="challenge-camp__overview">
-      <article v-for="item in campStats" :key="item.key" class="camp-stat" :class="`camp-stat--${item.tone}`">
-        <div class="camp-stat__icon">
-          <Icon :icon="item.icon" />
-        </div>
-        <div class="camp-stat__content">
-          <span>{{ item.label }}</span>
-          <strong>{{ item.value }}</strong>
-        </div>
-      </article>
-    </section>
-
-    <div v-if="totalTasks" class="challenge-camp__sections">
+    <div v-if="hasAnyTasks" class="challenge-camp__layout">
       <section v-if="activeTasks.length" class="camp-panel">
         <div class="camp-panel__title camp-panel__title--amber">
           <Icon icon="ph:rocket-launch-fill" />
-          <h3>下一步挑战</h3>
+          <h3>待出发</h3>
           <span>{{ activeTasks.length }}</span>
         </div>
 
@@ -135,7 +72,6 @@ function getTaskHint(task: ChildTaskItem) {
                 {{ item.auto_confirm_completion ? '自动点亮任务' : '主线挑战' }}
               </span>
               <h4>{{ item.title }}</h4>
-              <p>{{ getTaskHint(item) }}</p>
             </div>
 
             <div class="mission-card__footer">
@@ -175,7 +111,6 @@ function getTaskHint(task: ChildTaskItem) {
                 <strong>{{ item.title }}</strong>
                 <span class="tent-card__reward">+{{ formatPoints(item.points) }}</span>
               </div>
-              <p>{{ getTaskHint(item) }}</p>
             </div>
             <div class="tent-card__status">
               <Icon icon="ph:hourglass-medium-fill" />
@@ -203,7 +138,6 @@ function getTaskHint(task: ChildTaskItem) {
             </div>
             <strong>{{ item.title }}</strong>
             <span class="trophy-card__points">+{{ formatPoints(item.points) }}</span>
-            <p>{{ getTaskHint(item) }}</p>
           </article>
         </div>
       </section>
@@ -224,11 +158,11 @@ function getTaskHint(task: ChildTaskItem) {
 }
 
 .challenge-camp__sign {
-  @include theme.sign-shell(linear-gradient(135deg, #ffd679 0%, #ffb86a 45%, #ff9d6c 100%), #643b00, #d5841f);
+  @include theme.sign-shell(linear-gradient(135deg, #ffe082 0%, #ffc44d 42%, #ffe0a0 100%), #5f3800, #c9922a);
 }
 
 .challenge-camp__hero,
-.challenge-camp__meta {
+.challenge-camp__latest {
   position: relative;
   z-index: 1;
 }
@@ -250,118 +184,48 @@ function getTaskHint(task: ChildTaskItem) {
     margin: 0;
     font-size: 15px;
     line-height: 1.7;
-    color: rgba(100, 59, 0, 0.82);
-    max-width: 520px;
+    color: rgba(95, 56, 0, 0.82);
+    max-width: 540px;
   }
 }
 
 .challenge-camp__eyebrow {
   display: inline-flex;
-  align-items: center;
   width: fit-content;
   padding: 7px 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.58);
   font-size: 13px;
   font-weight: 900;
   letter-spacing: 0.06em;
 }
 
-.challenge-camp__meta {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-width: min(240px, 100%);
-}
-
-.challenge-camp__date {
-  @include theme.stat-chip;
-  justify-content: center;
-  color: #724109;
-  font-weight: 900;
-}
-
-.challenge-camp__progress-card {
+.challenge-camp__latest {
   @include theme.surface-card(18px 20px, 24px);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: min(220px, 100%);
-
-  strong {
-    font-size: 34px;
-    line-height: 1;
-    color: #5f3800;
-  }
-
-  span {
-    font-size: 13px;
-    font-weight: 800;
-    color: rgba(95, 56, 0, 0.72);
-  }
-}
-
-.challenge-camp__progress-track {
-  height: 12px;
-  border-radius: 999px;
-  background: rgba(102, 61, 0, 0.12);
-  overflow: hidden;
+  min-width: min(240px, 100%);
 
   span {
     display: block;
-    height: 100%;
-    border-radius: 999px;
-    background: linear-gradient(90deg, #fff6a5 0%, #63c56f 100%);
-    box-shadow: 0 0 12px rgba(99, 197, 111, 0.3);
-    transition: width 0.25s ease;
-  }
-}
-
-.challenge-camp__overview {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
-}
-
-.camp-stat {
-  @include theme.surface-card(18px 20px, 24px);
-  display: flex;
-  align-items: center;
-  gap: 14px;
-
-  &__icon {
-    width: 58px;
-    height: 58px;
-    border-radius: 20px;
-    display: grid;
-    place-items: center;
-    font-size: 30px;
-    color: white;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    font-size: 13px;
+    font-weight: 900;
+    color: #8f6a2f;
   }
 
-  &__content {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+  strong {
+    display: block;
+    margin-top: 8px;
+    font-size: 24px;
+    line-height: 1.15;
+    color: #5f3800;
+  }
 
-    span {
-      font-size: 13px;
-      font-weight: 800;
-      color: #627894;
-    }
-
-    strong {
-      font-size: 28px;
-      line-height: 1.1;
-      color: #233950;
-    }
+  p {
+    margin: 8px 0 0;
+    font-size: 13px;
+    line-height: 1.65;
+    color: #8a6d3b;
   }
 }
-
-.camp-stat--amber .camp-stat__icon { background: linear-gradient(135deg, #ffcb63 0%, #f59e0b 100%); }
-.camp-stat--sky .camp-stat__icon { background: linear-gradient(135deg, #75d6ff 0%, #4f8cff 100%); }
-.camp-stat--mint .camp-stat__icon { background: linear-gradient(135deg, #92e6a7 0%, #39b56d 100%); }
 
 .challenge-camp__sections {
   display: flex;
@@ -680,19 +544,13 @@ function getTaskHint(task: ChildTaskItem) {
 }
 
 @include theme.respond-max(tablet) {
-  .challenge-camp__sign {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
   .challenge-camp__overview {
     grid-template-columns: 1fr;
   }
 }
 
 @include theme.respond-max(phone) {
-  .challenge-camp__meta,
-  .challenge-camp__progress-card {
+  .challenge-camp__latest {
     width: 100%;
   }
 
@@ -797,6 +655,10 @@ function getTaskHint(task: ChildTaskItem) {
   .challenge-camp__hero p {
     font-size: 14px;
     line-height: 1.6;
+  }
+
+  .challenge-camp__latest {
+    padding: 14px 16px;
   }
 
   .challenge-camp__progress-card {

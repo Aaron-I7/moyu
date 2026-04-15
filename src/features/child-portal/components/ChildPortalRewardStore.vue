@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { Icon } from '@iconify/vue'
-import { formatPoints } from '@/features/child-portal/format'
+import { formatDateTime, formatPoints } from '@/features/child-portal/format'
 import {
   getRewardAccent,
   getRewardGap,
   getRewardRequestIcon,
-  getRewardRequestStatusLabel,
-  getRewardRequestSummary,
   getRewardTypeLabel,
   getRewardVisualIcon,
+  groupRewardRequestsByStatus,
   sortRewardsForDisplay
 } from '@/features/child-portal/helpers'
 import type {
   ChildRewardItem,
+  ChildRewardRedemptionItem,
   ChildRewardRequestItem,
   ChildRewardsResponse
 } from '@/features/child-portal/types'
@@ -22,6 +22,33 @@ type ModalStatus = '' | 'success' | 'error'
 
 interface RewardRequestCard extends ChildRewardRequestItem {
   image_url?: string
+}
+
+interface RewardStatusSection {
+  key: 'approved' | 'pending' | 'rejected' | 'fulfilled'
+  label: string
+  tone: 'mint' | 'sky' | 'rose' | 'amber'
+  icon: string
+  emptyIcon: string
+  emptyText: string
+  items: RewardRequestCard[]
+}
+
+type RewardStatusSectionKey = RewardStatusSection['key']
+
+interface StackedPreviewItem {
+  item: RewardRequestCard
+  depth: number
+}
+
+type RequestProgressState = 'complete' | 'current' | 'pending' | 'failed'
+
+interface RequestProgressStep {
+  key: 'submit' | 'review' | 'use'
+  label: string
+  caption: string
+  state: RequestProgressState
+  nextActive?: boolean
 }
 
 const props = defineProps<{
@@ -41,8 +68,22 @@ const emit = defineEmits<{
 }>()
 
 const showRedeemModal = ref(false)
+const activeRequestModalKey = ref<RewardStatusSectionKey | null>(null)
 const activeRedeemId = ref<string | null>(null)
 const modalStatus = ref<{ message: string; type: ModalStatus }>({ message: '', type: '' })
+const stackIndexState = ref<Record<RewardStatusSectionKey, number>>({
+  approved: 0,
+  pending: 0,
+  rejected: 0,
+  fulfilled: 0
+})
+
+const stackGestureState: Record<RewardStatusSectionKey, { startX: number; startY: number; active: boolean }> = {
+  approved: { startX: 0, startY: 0, active: false },
+  pending: { startX: 0, startY: 0, active: false },
+  rejected: { startX: 0, startY: 0, active: false },
+  fulfilled: { startX: 0, startY: 0, active: false }
+}
 
 const wishPresets = [
   { key: 'outing', label: '探险出游', value: '出去玩', icon: 'ph:park-fill', tone: 'sky' },
@@ -81,6 +122,11 @@ function isPresetActive(value: string) {
 }
 
 const rewardCards = computed(() => sortRewardsForDisplay(props.rewardsData?.rewards || [], props.currentPoints))
+const redemptionHistory = computed<ChildRewardRedemptionItem[]>(() => {
+  const items = [...(props.rewardsData?.redemption_history || [])]
+  items.sort((left, right) => toTimestamp(right.requested_at) - toTimestamp(left.requested_at))
+  return items
+})
 
 const rewardAssetMap = computed(() => {
   const map = new Map<string, { image_url?: string; reward_type?: string }>()
@@ -95,6 +141,20 @@ const rewardAssetMap = computed(() => {
       image_url: reward.image_url,
       reward_type: reward.reward_type
     })
+  }
+
+  return map
+})
+
+const pendingRedemptionMap = computed(() => {
+  const map = new Map<string, ChildRewardRedemptionItem>()
+
+  for (const item of redemptionHistory.value) {
+    if (!item.reward_id || item.status !== 'pending' || map.has(item.reward_id)) {
+      continue
+    }
+
+    map.set(item.reward_id, item)
   }
 
   return map
@@ -116,19 +176,83 @@ const requestCards = computed<RewardRequestCard[]>(() => {
   })
 })
 
-const pendingCount = computed(() => requestCards.value.filter((item) => item.status === 'pending').length)
-const usableRequests = computed(() => requestCards.value.filter((item) => item.status === 'approved'))
-const rejectedRequests = computed(() => requestCards.value.filter((item) => item.status === 'rejected'))
-const usedRequests = computed(() => requestCards.value.filter((item) => item.status === 'fulfilled'))
-const redeemableRewards = computed(() => rewardCards.value.filter((item) => getRewardGap(item, props.currentPoints) === 0))
+const requestGroups = computed(() => groupRewardRequestsByStatus(requestCards.value))
+const pendingCount = computed(() => requestGroups.value.pending.length)
+const statusSections = computed<RewardStatusSection[]>(() => [
+  {
+    key: 'approved',
+    label: '待使用',
+    tone: 'mint',
+    icon: 'ph:seal-check-fill',
+    emptyIcon: 'ph:gift-light',
+    emptyText: '现在还没有进入待使用的奖励。',
+    items: requestGroups.value.approved
+  },
+  {
+    key: 'pending',
+    label: '待审核',
+    tone: 'sky',
+    icon: 'ph:hourglass-medium-fill',
+    emptyIcon: 'ph:hourglass-low-light',
+    emptyText: '提交后的新愿望会先在这里等家长审核。',
+    items: requestGroups.value.pending
+  },
+  {
+    key: 'rejected',
+    label: '未通过',
+    tone: 'rose',
+    icon: 'ph:seal-warning-fill',
+    emptyIcon: 'ph:confetti-light',
+    emptyText: '现在没有未通过的奖励。',
+    items: requestGroups.value.rejected
+  },
+  {
+    key: 'fulfilled',
+    label: '已使用',
+    tone: 'amber',
+    icon: 'ph:check-circle-fill',
+    emptyIcon: 'ph:check-fat-light',
+    emptyText: '还没有放进已使用里的奖励。',
+    items: requestGroups.value.fulfilled
+  }
+])
+const activeRequestModalSection = computed(() => {
+  if (!activeRequestModalKey.value) {
+    return null
+  }
+
+  return statusSections.value.find((group) => group.key === activeRequestModalKey.value) || null
+})
+
+function getPendingRedemption(item: ChildRewardItem) {
+  return pendingRedemptionMap.value.get(item.reward_id) || null
+}
+
+function canRedeemReward(item: ChildRewardItem) {
+  return getRewardGap(item, props.currentPoints) === 0 && !getPendingRedemption(item)
+}
+
+const redeemableRewards = computed(() => rewardCards.value.filter((item) => canRedeemReward(item)))
 
 function getRedeemHint(item: ChildRewardItem) {
+  if (getPendingRedemption(item)) {
+    return '这份奖励已经送去家长审核啦，先等等结果。'
+  }
+
   const gap = getRewardGap(item, props.currentPoints)
   if (gap === 0) {
     return '积分已经够啦，现在就能发起兑换。'
   }
 
   return `还差 ${gap} 分，先继续完成任务吧。`
+}
+
+function getRedeemButtonLabel(item: ChildRewardItem) {
+  if (getPendingRedemption(item)) {
+    return '审核中'
+  }
+
+  return getRewardGap(item, props.currentPoints) === 0 ? '立即兑换' : '积分不足'
 }
 
 function openRedeemModal() {
@@ -138,6 +262,14 @@ function openRedeemModal() {
 
 function closeRedeemModal() {
   showRedeemModal.value = false
+}
+
+function openRequestModal(key: RewardStatusSectionKey) {
+  activeRequestModalKey.value = key
+}
+
+function closeRequestModal() {
+  activeRequestModalKey.value = null
 }
 
 function handleRedeem(rewardId: string) {
@@ -155,6 +287,143 @@ function handleRedeem(rewardId: string) {
     }
   })
 }
+
+function getRequestCardDetail(item: RewardRequestCard) {
+  if (item.review_remark) {
+    return item.review_remark
+  }
+
+  if (item.description) {
+    return item.description
+  }
+
+  if (item.status === 'approved') {
+    return '已经通过啦，使用完记得点一下“我已使用”。'
+  }
+
+  if (item.status === 'rejected') {
+    return '这次没有通过，换个方向再试试。'
+  }
+
+  if (item.status === 'fulfilled') {
+    return '这份奖励已经顺利放进已使用里啦。'
+  }
+
+  return '家长正在查看这份申请，耐心等等就会有结果。'
+}
+
+function getRequestRecordTime(item: RewardRequestCard) {
+  return formatDateTime(item.requested_at)
+}
+
+function getRequestProgressSteps(item: RewardRequestCard): RequestProgressStep[] {
+  const status = item.status || 'pending'
+
+  if (status === 'approved') {
+    return [
+      { key: 'submit', label: '提交', caption: '已提交', state: 'complete', nextActive: true },
+      { key: 'review', label: '审核', caption: '已通过', state: 'complete', nextActive: true },
+      { key: 'use', label: '使用', caption: '待使用', state: 'current' }
+    ]
+  }
+
+  if (status === 'fulfilled') {
+    return [
+      { key: 'submit', label: '提交', caption: '已提交', state: 'complete', nextActive: true },
+      { key: 'review', label: '审核', caption: '已通过', state: 'complete', nextActive: true },
+      { key: 'use', label: '使用', caption: '已使用', state: 'current' }
+    ]
+  }
+
+  if (status === 'rejected') {
+    return [
+      { key: 'submit', label: '提交', caption: '已提交', state: 'complete', nextActive: true },
+      { key: 'review', label: '审核', caption: '未通过', state: 'failed', nextActive: false },
+      { key: 'use', label: '使用', caption: '未进入', state: 'pending' }
+    ]
+  }
+
+  return [
+    { key: 'submit', label: '提交', caption: '已提交', state: 'complete', nextActive: true },
+    { key: 'review', label: '审核', caption: '审核中', state: 'current', nextActive: false },
+    { key: 'use', label: '使用', caption: '未开始', state: 'pending' }
+  ]
+}
+
+function getSafeStackIndex(key: RewardStatusSectionKey, total: number) {
+  if (total <= 0) {
+    return 0
+  }
+
+  return Math.min(stackIndexState.value[key] || 0, total - 1)
+}
+
+function setStackIndex(key: RewardStatusSectionKey, nextIndex: number, total: number) {
+  if (total <= 0) {
+    stackIndexState.value[key] = 0
+    return
+  }
+
+  const normalizedIndex = ((nextIndex % total) + total) % total
+  stackIndexState.value[key] = normalizedIndex
+}
+
+function goToNextStackCard(key: RewardStatusSectionKey, total: number) {
+  setStackIndex(key, getSafeStackIndex(key, total) + 1, total)
+}
+
+function getStackPreviewItems(items: RewardRequestCard[], key: RewardStatusSectionKey): StackedPreviewItem[] {
+  const total = items.length
+  const visibleCount = Math.min(total, 3)
+  const activeIndex = getSafeStackIndex(key, total)
+  const previews: StackedPreviewItem[] = []
+
+  for (let depth = visibleCount - 1; depth >= 0; depth -= 1) {
+    previews.push({
+      item: items[(activeIndex + depth) % total]!,
+      depth
+    })
+  }
+
+  return previews
+}
+
+function handleStackTouchStart(key: RewardStatusSectionKey, event: TouchEvent) {
+  if (event.touches.length !== 1) {
+    return
+  }
+
+  const touch = event.touches[0]
+  if (!touch) {
+    return
+  }
+
+  stackGestureState[key].startX = touch.clientX
+  stackGestureState[key].startY = touch.clientY
+  stackGestureState[key].active = true
+}
+
+function handleStackTouchEnd(key: RewardStatusSectionKey, event: TouchEvent, total: number) {
+  const gesture = stackGestureState[key]
+  if (!gesture.active || event.changedTouches.length !== 1 || total <= 1) {
+    gesture.active = false
+    return
+  }
+
+  gesture.active = false
+  const touch = event.changedTouches[0]
+  if (!touch) {
+    return
+  }
+
+  const deltaX = touch.clientX - gesture.startX
+  const deltaY = touch.clientY - gesture.startY
+  if (deltaX > -64 || Math.abs(deltaY) > 48) {
+    return
+  }
+
+  goToNextStackCard(key, total)
+}
 </script>
 
 <template>
@@ -162,215 +431,170 @@ function handleRedeem(rewardId: string) {
     <header class="reward-command__sign">
       <div class="reward-command__hero">
         <span class="reward-command__eyebrow">奖励空间</span>
-        <h2>奖励现在分成三类，一眼就能看懂</h2>
-        <p>待使用、未通过、已使用会分开摆放。待确认的奖励不会混进去，只在上方轻提醒。</p>
+        <h2>努力一点，就有新的奖励</h2>
       </div>
 
-      <div class="reward-command__meta">
-        <div class="reward-command__points">
-          <Icon icon="ph:shooting-star-fill" />
-          <div>
-            <span>当前积分</span>
-            <strong>{{ formatPoints(currentPoints) }}</strong>
-          </div>
-        </div>
-
-        <button type="button" class="reward-command__redeem-entry" @click="openRedeemModal">
-          <span class="reward-command__redeem-copy">
-            <strong>兑换奖励</strong>
-            <small>现在能兑换 {{ redeemableRewards.length }} 个奖励</small>
-          </span>
-          <Icon icon="ph:treasure-chest-fill" />
-        </button>
-
-        <div v-if="pendingCount" class="reward-command__pending-tip">
-          <Icon icon="ph:paper-plane-tilt-fill" />
-          <span>{{ pendingCount }} 个奖励正在等待家长确认</span>
-        </div>
+      <div class="reward-command__latest" v-if="pendingCount > 0">
+        <span>待审核</span>
+        <strong>{{ pendingCount }} 项待审</strong>
+        <p>可兑换 {{ redeemableRewards.length }} 项</p>
       </div>
     </header>
-
-    <section class="reward-command__focus">
-      <article class="focus-card focus-card--mint">
-        <div class="focus-card__top">
-          <Icon icon="ph:seal-check-fill" />
-          <span>待使用</span>
-        </div>
-        <strong>{{ usableRequests.length }}</strong>
-        <p>{{ usableRequests[0]?.title ? `最近可用: ${usableRequests[0].title}` : '还没有进入待使用的奖励。' }}</p>
-      </article>
-
-      <article class="focus-card focus-card--rose">
-        <div class="focus-card__top">
-          <Icon icon="ph:seal-warning-fill" />
-          <span>未通过</span>
-        </div>
-        <strong>{{ rejectedRequests.length }}</strong>
-        <p>{{ rejectedRequests[0]?.review_remark || '未通过的奖励会在这里告诉你原因。' }}</p>
-      </article>
-
-      <article class="focus-card focus-card--amber">
-        <div class="focus-card__top">
-          <Icon icon="ph:check-circle-fill" />
-          <span>已使用</span>
-        </div>
-        <strong>{{ usedRequests.length }}</strong>
-        <p>{{ usedRequests[0]?.title ? `最近使用: ${usedRequests[0].title}` : '已经用过的奖励会收进这里。' }}</p>
-      </article>
-    </section>
 
     <div class="reward-command__layout">
       <div class="reward-command__main">
         <section class="status-board">
-          <div class="status-board__title">
-            <div>
-              <span>奖励记录</span>
-              <h3>状态只保留你最关心的三种</h3>
-            </div>
-            <button type="button" class="status-board__redeem-button" @click="openRedeemModal">
-              兑换奖励
-              <Icon icon="ph:arrow-right-bold" />
-            </button>
-          </div>
+          <div class="status-board__groups">
+            <section
+              v-for="group in statusSections"
+              :key="group.key"
+              class="request-group"
+              :class="`request-group--${group.tone}`"
+            >
+              <button
+                v-if="group.items.length > 1"
+                type="button"
+                class="request-group__view-all"
+                @click="openRequestModal(group.key)"
+              >
+                查看全部
+              </button>
 
-          <div v-if="requestCards.length" class="status-board__groups">
-            <section class="request-group">
-              <div class="request-group__header request-group__header--mint">
-                <Icon icon="ph:seal-check-fill" />
+              <div class="request-group__header" :class="`request-group__header--${group.tone}`">
+                <Icon :icon="group.icon" />
                 <div>
-                  <h4>待使用</h4>
-                  <p>这些奖励已经通过，可以在用完后点一下“我已使用”。</p>
+                  <h4>{{ group.label }}</h4>
                 </div>
-                <span>{{ usableRequests.length }}</span>
+                <span class="request-group__count">{{ group.items.length }}</span>
               </div>
 
-              <div v-if="usableRequests.length" class="request-grid">
-                <article
-                  v-for="item in usableRequests"
-                  :key="item.request_id"
-                  class="request-card request-card--mint"
+              <div v-if="group.items.length" class="stack-preview">
+                <div
+                  class="stack-preview__stage"
+                  @touchstart.passive="handleStackTouchStart(group.key, $event)"
+                  @touchend.passive="handleStackTouchEnd(group.key, $event, group.items.length)"
                 >
-                  <div class="request-card__icon request-card__icon--mint">
-                    <img v-if="item.image_url" :src="item.image_url" :alt="item.title" />
-                    <Icon v-else :icon="getRewardRequestIcon(item.status)" />
-                  </div>
-
-                  <div class="request-card__body">
-                    <div class="request-card__header">
-                      <div class="request-card__title">
-                        <span v-if="item.reward_type" class="request-card__type">{{ getRewardTypeLabel(item.reward_type) }}</span>
-                        <h5>{{ item.title }}</h5>
+                  <div
+                    v-for="preview in getStackPreviewItems(group.items, group.key)"
+                    :key="`${group.key}-${preview.depth}-${preview.item.request_id}`"
+                    class="stack-preview__layer"
+                    :class="[
+                      `stack-preview__layer--depth-${preview.depth}`,
+                      `stack-preview__layer--${group.tone}`,
+                      { 'stack-preview__layer--active': preview.depth === 0 }
+                    ]"
+                  >
+                    <article
+                      v-if="preview.depth === 0"
+                      class="request-card request-card--stack"
+                      :class="`request-card--${group.tone}`"
+                    >
+                      <div class="request-card__side">
+                        <div class="request-card__icon" :class="`request-card__icon--${group.tone}`">
+                          <img v-if="preview.item.image_url" :src="preview.item.image_url" :alt="preview.item.title" />
+                          <Icon v-else :icon="getRewardRequestIcon(preview.item.status)" />
+                        </div>
                       </div>
-                      <span class="request-card__status request-card__status--mint">待使用</span>
-                    </div>
 
-                    <p class="request-card__reason">{{ item.review_remark || '已经准备好了，使用完再把它放进“已使用”。' }}</p>
+                      <div class="request-card__body">
+                        <div class="request-card__topline">
+                          <div class="request-card__meta-strip">
+                            <span v-if="preview.item.reward_type" class="request-card__type">
+                              {{ getRewardTypeLabel(preview.item.reward_type) }}
+                            </span>
+                            <span
+                              class="request-card__time"
+                              :title="`最近记录 ${getRequestRecordTime(preview.item)}`"
+                            >
+                              <Icon icon="ph:clock-countdown-fill" />
+                              <strong>{{ getRequestRecordTime(preview.item) }}</strong>
+                            </span>
+                          </div>
+                        </div>
 
-                    <div class="request-card__footer">
-                      <span class="request-card__summary">{{ getRewardRequestSummary(item) }}</span>
-                      <button
-                        type="button"
-                        class="request-card__action"
-                        :disabled="actionBusy"
-                        @click="emit('markUsed', item.request_id)"
-                      >
-                        我已使用
-                      </button>
+                        <div class="request-card__copy">
+                          <div class="request-card__title">
+                            <h5>{{ preview.item.title }}</h5>
+                          </div>
+
+                          <p class="request-card__reason" :title="getRequestCardDetail(preview.item)">
+                            {{ getRequestCardDetail(preview.item) }}
+                          </p>
+                        </div>
+
+                        <div class="request-card__progress" :class="`request-card__progress--${group.tone}`">
+                          <div
+                            v-for="(step, index) in getRequestProgressSteps(preview.item)"
+                            :key="`${preview.item.request_id}-${step.key}`"
+                            class="request-card__progress-step"
+                            :class="`request-card__progress-step--${step.state}`"
+                          >
+                            <span class="request-card__progress-node">{{ index + 1 }}</span>
+                            <strong>{{ step.label }}</strong>
+                            <span>{{ step.caption }}</span>
+                            <i
+                              v-if="index < 2"
+                              class="request-card__progress-line"
+                              :class="{
+                                'request-card__progress-line--active': step.nextActive
+                              }"
+                            />
+                          </div>
+                        </div>
+
+                        <div class="request-card__actions">
+                          <button
+                            v-if="group.key === 'approved'"
+                            type="button"
+                            class="request-card__confirm"
+                            :disabled="actionBusy"
+                            @click="emit('markUsed', preview.item.request_id)"
+                          >
+                            我完成了
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+
+                    <div
+                      v-else
+                      class="stack-preview__back-card"
+                      :class="`stack-preview__back-card--${group.tone}`"
+                    >
+                      <div class="stack-preview__back-icon" :class="`stack-preview__back-icon--${group.tone}`">
+                        <img v-if="preview.item.image_url" :src="preview.item.image_url" :alt="preview.item.title" />
+                        <Icon v-else :icon="getRewardRequestIcon(preview.item.status)" />
+                      </div>
+                      <div class="stack-preview__back-copy">
+                        <strong>{{ preview.item.title }}</strong>
+                      </div>
                     </div>
                   </div>
-                </article>
+                </div>
+
+                <div class="stack-preview__footer">
+                  <div v-if="group.items.length > 1" class="stack-preview__dots">
+                    <button
+                      v-for="(_, index) in group.items"
+                      :key="`${group.key}-dot-${index}`"
+                      type="button"
+                      class="stack-preview__dot"
+                      :class="{ 'stack-preview__dot--active': index === getSafeStackIndex(group.key, group.items.length) }"
+                      :aria-label="`查看第 ${index + 1} 张卡片`"
+                      @click="setStackIndex(group.key, index, group.items.length)"
+                    />
+                  </div>
+                  <span class="stack-preview__count">
+                    {{ getSafeStackIndex(group.key, group.items.length) + 1 }} / {{ group.items.length }}
+                  </span>
+                </div>
               </div>
 
-              <div v-else class="reward-command__empty reward-command__empty--soft">
-                <Icon icon="ph:gift-light" />
-                <p>现在还没有进入待使用的奖励。</p>
+              <div v-else class="reward-command__empty reward-command__empty--soft reward-command__empty--group">
+                <Icon :icon="group.emptyIcon" />
+                <p>{{ group.emptyText }}</p>
               </div>
             </section>
-
-            <section class="request-group">
-              <div class="request-group__header request-group__header--rose">
-                <Icon icon="ph:seal-warning-fill" />
-                <div>
-                  <h4>未通过</h4>
-                  <p>这次为什么没通过，会直接写在卡片上。</p>
-                </div>
-                <span>{{ rejectedRequests.length }}</span>
-              </div>
-
-              <div v-if="rejectedRequests.length" class="request-grid">
-                <article
-                  v-for="item in rejectedRequests"
-                  :key="item.request_id"
-                  class="request-card request-card--rose"
-                >
-                  <div class="request-card__icon request-card__icon--rose">
-                    <Icon :icon="getRewardRequestIcon(item.status)" />
-                  </div>
-
-                  <div class="request-card__body">
-                    <div class="request-card__header">
-                      <div class="request-card__title">
-                        <span v-if="item.reward_type" class="request-card__type">{{ getRewardTypeLabel(item.reward_type) }}</span>
-                        <h5>{{ item.title }}</h5>
-                      </div>
-                      <span class="request-card__status request-card__status--rose">{{ getRewardRequestStatusLabel(item.status) }}</span>
-                    </div>
-
-                    <p class="request-card__reason">{{ item.review_remark || '这次没有通过，换个方向再试试。' }}</p>
-                  </div>
-                </article>
-              </div>
-
-              <div v-else class="reward-command__empty reward-command__empty--soft">
-                <Icon icon="ph:confetti-light" />
-                <p>现在没有未通过的奖励。</p>
-              </div>
-            </section>
-
-            <section class="request-group">
-              <div class="request-group__header request-group__header--amber">
-                <Icon icon="ph:check-circle-fill" />
-                <div>
-                  <h4>已使用</h4>
-                  <p>已经收下的奖励会安静地放在这里。</p>
-                </div>
-                <span>{{ usedRequests.length }}</span>
-              </div>
-
-              <div v-if="usedRequests.length" class="request-grid">
-                <article
-                  v-for="item in usedRequests"
-                  :key="item.request_id"
-                  class="request-card request-card--amber"
-                >
-                  <div class="request-card__icon request-card__icon--amber">
-                    <Icon :icon="getRewardRequestIcon(item.status)" />
-                  </div>
-
-                  <div class="request-card__body">
-                    <div class="request-card__header">
-                      <div class="request-card__title">
-                        <span v-if="item.reward_type" class="request-card__type">{{ getRewardTypeLabel(item.reward_type) }}</span>
-                        <h5>{{ item.title }}</h5>
-                      </div>
-                      <span class="request-card__status request-card__status--amber">{{ getRewardRequestStatusLabel(item.status) }}</span>
-                    </div>
-
-                    <p class="request-card__reason">{{ item.review_remark || '这份奖励已经顺利使用过啦。' }}</p>
-                  </div>
-                </article>
-              </div>
-
-              <div v-else class="reward-command__empty reward-command__empty--soft">
-                <Icon icon="ph:check-fat-light" />
-                <p>还没有放进已使用里的奖励。</p>
-              </div>
-            </section>
-          </div>
-
-          <div v-else class="reward-command__empty">
-            <Icon icon="ph:gift-light" />
-            <p>你还没有奖励记录，先提交一个愿望或者去兑换现成奖励吧。</p>
           </div>
         </section>
       </div>
@@ -381,16 +605,10 @@ function handleRedeem(rewardId: string) {
             <Icon icon="ph:treasure-chest-fill" />
             <div>
               <h3>兑换奖励入口</h3>
-              <p>现成奖励在这里，提交愿望在下面。</p>
             </div>
           </div>
 
           <div class="vault-preview">
-            <div class="vault-preview__hero">
-              <strong>{{ redeemableRewards.length }}</strong>
-              <span>个奖励现在就能兑换</span>
-            </div>
-
             <ul v-if="redeemableRewards.length" class="vault-preview__list">
               <li v-for="item in redeemableRewards.slice(0, 3)" :key="item.reward_id">
                 <Icon :icon="getRewardVisualIcon(item.reward_type)" />
@@ -411,7 +629,6 @@ function handleRedeem(rewardId: string) {
             <Icon icon="ph:paper-plane-tilt-fill" />
             <div>
               <h3>提交新愿望</h3>
-              <p>想申请一个新的奖励，也可以继续发给家长。</p>
             </div>
           </div>
 
@@ -466,7 +683,7 @@ function handleRedeem(rewardId: string) {
           <div class="redeem-modal__header">
             <span class="redeem-modal__eyebrow">奖励宝库</span>
             <h3>选择现在想兑换的奖励</h3>
-            <p>这里展示的是现成奖励。兑换后会进入家长审核，不会混进“提交新愿望”的记录里。</p>
+            <p>这里展示的是现成奖励。送出的兑换会先显示为“审核中”，不会混进“提交新愿望”的记录里。</p>
 
             <transition name="fade">
               <div v-if="modalStatus.message" class="redeem-modal__alert" :class="`redeem-modal__alert--${modalStatus.type}`">
@@ -507,11 +724,11 @@ function handleRedeem(rewardId: string) {
                   type="button"
                   class="reward-option__button"
                   :class="{ 'reward-option__button--loading': activeRedeemId === item.reward_id }"
-                  :disabled="actionBusy || getRewardGap(item, currentPoints) > 0"
+                  :disabled="actionBusy || !canRedeemReward(item)"
                   @click="handleRedeem(item.reward_id)"
                 >
                   <Icon v-if="activeRedeemId === item.reward_id" icon="ph:spinner-gap-bold" class="loading-spin" />
-                  <span v-else>{{ getRewardGap(item, currentPoints) === 0 ? '立即兑换' : '积分不足' }}</span>
+                  <span v-else>{{ getRedeemButtonLabel(item) }}</span>
                 </button>
               </div>
             </article>
@@ -520,6 +737,95 @@ function handleRedeem(rewardId: string) {
               <Icon icon="ph:treasure-chest-light" />
               <p>宝库里还没有新的奖励。</p>
             </div>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <transition name="fade">
+      <div v-if="activeRequestModalSection" class="redeem-modal-overlay" @click="closeRequestModal">
+        <div class="redeem-modal request-collection-modal" @click.stop>
+          <button type="button" class="redeem-modal__close" @click="closeRequestModal">
+            <Icon icon="ph:x-bold" />
+          </button>
+
+          <div class="redeem-modal__header request-collection-modal__header">
+            <span class="redeem-modal__eyebrow">{{ activeRequestModalSection.label }}</span>
+            <h3>{{ activeRequestModalSection.label }} · 全部卡片</h3>
+            <p>这里会把这个状态里的奖励卡片一次展开，想慢慢看或直接处理都更方便。</p>
+          </div>
+
+          <div class="request-collection-modal__list">
+            <article
+              v-for="item in activeRequestModalSection.items"
+              :key="`${activeRequestModalSection.key}-${item.request_id}`"
+              class="request-card request-card--modal"
+              :class="`request-card--${activeRequestModalSection.tone}`"
+            >
+              <div class="request-card__side">
+                <div class="request-card__icon" :class="`request-card__icon--${activeRequestModalSection.tone}`">
+                  <img v-if="item.image_url" :src="item.image_url" :alt="item.title" />
+                  <Icon v-else :icon="getRewardRequestIcon(item.status)" />
+                </div>
+              </div>
+
+              <div class="request-card__body">
+                <div class="request-card__topline">
+                  <div class="request-card__meta-strip">
+                    <span v-if="item.reward_type" class="request-card__type">
+                      {{ getRewardTypeLabel(item.reward_type) }}
+                    </span>
+                    <span class="request-card__time" :title="`最近记录 ${getRequestRecordTime(item)}`">
+                      <Icon icon="ph:clock-countdown-fill" />
+                      <strong>{{ getRequestRecordTime(item) }}</strong>
+                    </span>
+                  </div>
+                </div>
+
+                <div class="request-card__copy">
+                  <div class="request-card__title">
+                    <h5>{{ item.title }}</h5>
+                  </div>
+
+                  <p class="request-card__reason" :title="getRequestCardDetail(item)">{{ getRequestCardDetail(item) }}</p>
+                </div>
+
+                <div
+                  class="request-card__progress"
+                  :class="`request-card__progress--${activeRequestModalSection.tone}`"
+                >
+                  <div
+                    v-for="(step, index) in getRequestProgressSteps(item)"
+                    :key="`${item.request_id}-${step.key}`"
+                    class="request-card__progress-step"
+                    :class="`request-card__progress-step--${step.state}`"
+                  >
+                    <span class="request-card__progress-node">{{ index + 1 }}</span>
+                    <strong>{{ step.label }}</strong>
+                    <span>{{ step.caption }}</span>
+                    <i
+                      v-if="index < 2"
+                      class="request-card__progress-line"
+                      :class="{
+                        'request-card__progress-line--active': step.nextActive
+                      }"
+                    />
+                  </div>
+                </div>
+
+                <div class="request-card__actions">
+                  <button
+                    v-if="activeRequestModalSection.key === 'approved'"
+                    type="button"
+                    class="request-card__confirm"
+                    :disabled="actionBusy"
+                    @click="emit('markUsed', item.request_id)"
+                  >
+                    我完成了
+                  </button>
+                </div>
+              </div>
+            </article>
           </div>
         </div>
       </div>
@@ -543,7 +849,7 @@ function handleRedeem(rewardId: string) {
 }
 
 .reward-command__hero,
-.reward-command__meta {
+.reward-command__latest {
   position: relative;
   z-index: 1;
 }
@@ -556,21 +862,21 @@ function handleRedeem(rewardId: string) {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-width: 660px;
+  max-width: 620px;
 
   h2 {
     margin: 0;
     font-size: clamp(28px, 4vw, 38px);
-    line-height: 1.06;
+    line-height: 1.08;
     font-weight: 900;
   }
 
   p {
     margin: 0;
-    max-width: 560px;
     font-size: 15px;
-    line-height: 1.75;
+    line-height: 1.7;
     color: rgba(123, 45, 77, 0.82);
+    max-width: 540px;
   }
 }
 
@@ -585,97 +891,30 @@ function handleRedeem(rewardId: string) {
   letter-spacing: 0.06em;
 }
 
-.reward-command__meta {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-width: min(280px, 100%);
-}
-
-.reward-command__points {
+.reward-command__latest {
   @include theme.surface-card(18px 20px, 24px);
-  display: flex;
-  align-items: center;
-  gap: 14px;
-
-  svg {
-    font-size: 34px;
-    color: #ff9d00;
-  }
+  min-width: min(240px, 100%);
 
   span {
     display: block;
     font-size: 13px;
-    font-weight: 800;
-    color: #8b5670;
+    font-weight: 900;
+    color: #8e4d65;
   }
 
   strong {
     display: block;
-    margin-top: 4px;
-    font-size: 32px;
-    line-height: 1;
-    color: #8a2d51;
-  }
-}
-
-.reward-command__redeem-entry {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px 18px;
-  border: none;
-  border-radius: 22px;
-  background: linear-gradient(135deg, #7cc7ff 0%, #55a7ff 45%, #9be5e1 100%);
-  color: white;
-  box-shadow: 0 12px 24px rgba(77, 132, 203, 0.22);
-  cursor: pointer;
-  text-align: left;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-
-  svg {
-    font-size: 34px;
-    flex-shrink: 0;
+    margin-top: 8px;
+    font-size: 24px;
+    line-height: 1.15;
+    color: #7b2d4d;
   }
 
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 16px 28px rgba(77, 132, 203, 0.24);
-  }
-}
-
-.reward-command__redeem-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-
-  strong {
-    font-size: 17px;
-    line-height: 1.2;
-    font-weight: 900;
-  }
-
-  small {
+  p {
+    margin: 8px 0 0;
     font-size: 13px;
-    opacity: 0.9;
-  }
-}
-
-.reward-command__pending-tip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  width: fit-content;
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: rgba(124, 199, 255, 0.16);
-  color: #2b6a9b;
-  font-size: 13px;
-  font-weight: 800;
-
-  svg {
-    font-size: 18px;
+    line-height: 1.65;
+    color: #945f74;
   }
 }
 
@@ -797,15 +1036,48 @@ function handleRedeem(rewardId: string) {
 }
 
 .status-board__groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.request-group {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  min-height: 320px;
+  padding: 20px;
+  border-radius: 30px;
+  border: 1px solid rgba(200, 212, 228, 0.4);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 250, 255, 0.92) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.request-group--mint {
+  border-color: rgba(86, 204, 118, 0.18);
+  background: linear-gradient(180deg, rgba(238, 255, 242, 0.96) 0%, rgba(255, 255, 255, 0.94) 42%);
+}
+
+.request-group--sky {
+  border-color: rgba(105, 184, 255, 0.18);
+  background: linear-gradient(180deg, rgba(236, 247, 255, 0.96) 0%, rgba(255, 255, 255, 0.94) 42%);
+}
+
+.request-group--rose {
+  border-color: rgba(255, 137, 164, 0.18);
+  background: linear-gradient(180deg, rgba(255, 241, 245, 0.96) 0%, rgba(255, 255, 255, 0.94) 42%);
+}
+
+.request-group--amber {
+  border-color: rgba(255, 184, 71, 0.18);
+  background: linear-gradient(180deg, rgba(255, 247, 228, 0.96) 0%, rgba(255, 255, 255, 0.94) 42%);
 }
 
 .request-group__header,
 .side-panel__title {
   @include theme.title-pill(linear-gradient(135deg, #ffd89d 0%, #ffb86d 100%), #7a4300);
   margin-bottom: 18px;
+  max-width: calc(100% - 112px);
 
   h3,
   h4 {
@@ -820,17 +1092,6 @@ function handleRedeem(rewardId: string) {
     font-weight: 700;
     opacity: 0.82;
   }
-
-  span:last-child {
-    min-width: 30px;
-    height: 30px;
-    padding: 0 9px;
-    border-radius: 999px;
-    display: grid;
-    place-items: center;
-    background: rgba(255, 255, 255, 0.34);
-    font-size: 14px;
-  }
 }
 
 .request-group__header--mint,
@@ -842,25 +1103,218 @@ function handleRedeem(rewardId: string) {
 .request-group__header--rose,
 .side-panel__title--rose { @include theme.title-pill(linear-gradient(135deg, #ffd2dc 0%, #ff9bb0 100%), #8e2d4f); }
 
-.request-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
+.request-group__view-all {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  padding: 7px 12px;
+  min-height: 32px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #365471;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 8px 16px rgba(91, 114, 140, 0.08);
 }
 
-.request-grid--usable {
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+.request-group__count {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 9px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.34);
+  font-size: 14px;
+}
+
+.stack-preview {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.stack-preview__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.stack-preview__stage {
+  position: relative;
+  flex: 1;
+  min-height: 292px;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.stack-preview__layer {
+  position: absolute;
+  inset: 0;
+  transition: transform 0.28s ease, opacity 0.28s ease;
+}
+
+.stack-preview__layer--depth-0 {
+  z-index: 3;
+}
+
+.stack-preview__layer--depth-1 {
+  z-index: 2;
+  transform: translateY(14px) scale(0.97);
+  opacity: 0.92;
+  pointer-events: none;
+}
+
+.stack-preview__layer--depth-2 {
+  z-index: 1;
+  transform: translateY(28px) scale(0.94);
+  opacity: 0.76;
+  pointer-events: none;
+}
+
+.stack-preview__back-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: end;
+  gap: 12px;
+  height: 100%;
+  padding: 18px;
+  border-radius: 26px;
+  border: 1px solid rgba(196, 210, 226, 0.26);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(247, 251, 255, 0.94) 100%);
+  box-shadow: 0 12px 18px rgba(96, 118, 143, 0.05);
+}
+
+.stack-preview__back-card--mint {
+  border-color: rgba(86, 204, 118, 0.18);
+}
+
+.stack-preview__back-card--sky {
+  border-color: rgba(105, 184, 255, 0.18);
+}
+
+.stack-preview__back-card--rose {
+  border-color: rgba(255, 137, 164, 0.18);
+}
+
+.stack-preview__back-card--amber {
+  border-color: rgba(255, 184, 71, 0.18);
+}
+
+.stack-preview__back-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font-size: 22px;
+  color: white;
+}
+
+.stack-preview__back-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.stack-preview__back-icon--mint { background: linear-gradient(135deg, #a8edaf 0%, #4dbf75 100%); }
+.stack-preview__back-icon--amber,
+.stack-preview__back-icon--sky { background: linear-gradient(135deg, #9fe1ff 0%, #649cff 100%); }
+.stack-preview__back-icon--rose { background: linear-gradient(135deg, #ffb8b0 0%, #f2856a 100%); }
+
+.stack-preview__back-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+
+  strong {
+    font-size: 15px;
+    line-height: 1.3;
+    color: #27415a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.stack-preview__dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.stack-preview__dot {
+  width: 10px;
+  height: 10px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(123, 147, 172, 0.26);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+
+  &:hover {
+    transform: scale(1.08);
+  }
+}
+
+.stack-preview__dot--active {
+  background: linear-gradient(135deg, #6bbcff 0%, #4d7cff 100%);
+}
+
+.stack-preview__count {
+  font-size: 12px;
+  font-weight: 900;
+  color: #6a8298;
 }
 
 .request-card {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 16px;
-  padding: 18px;
+  align-items: stretch;
+  padding: 16px;
   border-radius: 26px;
   border: 2px solid rgba(196, 210, 226, 0.18);
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 251, 255, 0.94) 100%);
   box-shadow: 0 12px 18px rgba(96, 118, 143, 0.08);
+}
+
+.request-card--stack {
+  position: relative;
+  height: 100%;
+  min-height: 292px;
+}
+
+.request-card--stack .request-card__title h5,
+.request-card--stack .request-card__reason {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.request-card--stack .request-card__title h5 {
+  -webkit-line-clamp: 2;
+}
+
+.request-card--stack .request-card__reason {
+  -webkit-line-clamp: 2;
+  min-height: calc(14px * 1.7 * 2);
+  cursor: help;
+}
+
+.request-card--modal {
+  min-height: 220px;
 }
 
 .request-card--mint {
@@ -884,12 +1338,21 @@ function handleRedeem(rewardId: string) {
   place-items: center;
   font-size: 28px;
   color: white;
+  overflow: hidden;
 }
 
 .request-card__icon img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.request-card__side {
+  width: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .request-card__icon--mint { background: linear-gradient(135deg, #a8edaf 0%, #4dbf75 100%); }
@@ -899,23 +1362,91 @@ function handleRedeem(rewardId: string) {
 
 .request-card__body {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   min-width: 0;
 }
 
-.request-card__header {
+.request-card__topline {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
+  min-height: 32px;
+}
+
+.request-card--stack .request-card__topline,
+.request-card--modal .request-card__topline {
+  min-height: 32px;
+}
+
+.request-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-height: 44px;
+  padding-top: 6px;
+  margin-top: auto;
+}
+
+.request-card--stack .request-card__actions {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  min-height: 0;
+  padding-top: 0;
+  margin-top: 0;
+  z-index: 2;
+}
+
+.request-card__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.request-card__meta-strip {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.request-card__time {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(234, 241, 248, 0.92);
+  color: #5d7490;
+  font-size: 12px;
+  font-weight: 900;
+
+  svg {
+    flex-shrink: 0;
+    font-size: 14px;
+    color: #6d86a2;
+  }
+
+  strong {
+    display: block;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 1.2;
+    color: #4f6784;
+    font-weight: 900;
+  }
 }
 
 .request-card__title {
   min-width: 0;
 
   h5 {
-    margin: 8px 0 0;
+    margin: 0;
     font-size: 20px;
     line-height: 1.15;
     color: #27384d;
@@ -933,21 +1464,6 @@ function handleRedeem(rewardId: string) {
   font-size: 12px;
   font-weight: 900;
 }
-
-.request-card__status {
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
-  padding: 7px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.request-card__status--mint { background: rgba(86, 204, 118, 0.14); color: #258145; }
-.request-card__status--amber,
-.request-card__status--sky { background: rgba(105, 184, 255, 0.14); color: #2e5a8d; }
-.request-card__status--rose { background: rgba(255, 137, 164, 0.14); color: #b5355d; }
 
 .request-card__snapshot {
   display: grid;
@@ -983,27 +1499,175 @@ function handleRedeem(rewardId: string) {
   color: #607892;
 }
 
-.request-card__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: auto;
+.request-card__progress {
+  --request-progress-fill-start: rgba(182, 241, 191, 0.9);
+  --request-progress-fill-end: rgba(109, 210, 133, 0.96);
+  --request-progress-current-start: rgba(205, 246, 212, 0.94);
+  --request-progress-current-end: rgba(109, 210, 133, 0.98);
+  --request-progress-border: rgba(104, 190, 131, 0.46);
+  --request-progress-text: #24593a;
+  --request-progress-caption: #4f7f62;
+  --request-progress-line: linear-gradient(90deg, rgba(112, 194, 138, 0.84) 0%, rgba(109, 210, 133, 0.82) 100%);
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  min-height: 92px;
+  padding: 12px 10px 6px;
+  border-radius: 18px;
+  background: rgba(246, 249, 253, 0.9);
 }
 
-.request-card__summary {
-  display: inline-flex;
-  width: fit-content;
-  padding: 7px 12px;
+.request-card__progress--mint {
+  --request-progress-fill-start: rgba(182, 241, 191, 0.9);
+  --request-progress-fill-end: rgba(109, 210, 133, 0.96);
+  --request-progress-current-start: rgba(205, 246, 212, 0.94);
+  --request-progress-current-end: rgba(109, 210, 133, 0.98);
+  --request-progress-border: rgba(104, 190, 131, 0.46);
+  --request-progress-text: #24593a;
+  --request-progress-caption: #4f7f62;
+  --request-progress-line: linear-gradient(90deg, rgba(112, 194, 138, 0.84) 0%, rgba(109, 210, 133, 0.82) 100%);
+  background: linear-gradient(180deg, rgba(241, 255, 244, 0.96) 0%, rgba(247, 251, 255, 0.94) 100%);
+}
+
+.request-card__progress--sky {
+  --request-progress-fill-start: rgba(191, 229, 255, 0.96);
+  --request-progress-fill-end: rgba(108, 167, 255, 0.98);
+  --request-progress-current-start: rgba(214, 239, 255, 0.98);
+  --request-progress-current-end: rgba(108, 167, 255, 0.98);
+  --request-progress-border: rgba(112, 179, 246, 0.42);
+  --request-progress-text: #173f71;
+  --request-progress-caption: #3a6fba;
+  --request-progress-line: linear-gradient(90deg, rgba(122, 194, 255, 0.84) 0%, rgba(108, 167, 255, 0.82) 100%);
+  background: linear-gradient(180deg, rgba(239, 248, 255, 0.96) 0%, rgba(247, 251, 255, 0.94) 100%);
+}
+
+.request-card__progress--rose {
+  --request-progress-fill-start: rgba(255, 220, 227, 0.96);
+  --request-progress-fill-end: rgba(255, 156, 177, 0.98);
+  --request-progress-current-start: rgba(255, 233, 238, 0.98);
+  --request-progress-current-end: rgba(255, 156, 177, 0.98);
+  --request-progress-border: rgba(239, 138, 161, 0.44);
+  --request-progress-text: #8d2f4e;
+  --request-progress-caption: #b04f6d;
+  --request-progress-line: linear-gradient(90deg, rgba(247, 159, 179, 0.84) 0%, rgba(239, 138, 161, 0.82) 100%);
+  background: linear-gradient(180deg, rgba(255, 244, 247, 0.96) 0%, rgba(249, 250, 253, 0.94) 100%);
+}
+
+.request-card__progress--amber {
+  --request-progress-fill-start: rgba(255, 236, 180, 0.96);
+  --request-progress-fill-end: rgba(255, 190, 92, 0.98);
+  --request-progress-current-start: rgba(255, 243, 208, 0.98);
+  --request-progress-current-end: rgba(255, 190, 92, 0.98);
+  --request-progress-border: rgba(232, 171, 73, 0.44);
+  --request-progress-text: #7c5310;
+  --request-progress-caption: #ab7b2f;
+  --request-progress-line: linear-gradient(90deg, rgba(255, 206, 118, 0.84) 0%, rgba(255, 190, 92, 0.82) 100%);
+  background: linear-gradient(180deg, rgba(255, 248, 234, 0.96) 0%, rgba(249, 250, 253, 0.94) 100%);
+}
+
+.request-card__progress-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  text-align: center;
+
+  strong,
+  span {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  strong {
+    font-size: 12px;
+    line-height: 1.2;
+    color: #57718c;
+    font-weight: 900;
+  }
+
+  span {
+    font-size: 11px;
+    line-height: 1.2;
+    color: #87a0b9;
+    font-weight: 800;
+  }
+}
+
+.request-card__progress-node {
+  width: 26px;
+  height: 26px;
   border-radius: 999px;
-  background: rgba(255, 226, 194, 0.34);
-  color: #8d5c1d;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(150, 170, 193, 0.4);
+  background: rgba(255, 255, 255, 0.92);
+  color: #6f88a3;
   font-size: 12px;
   font-weight: 900;
+  position: relative;
+  z-index: 1;
 }
 
-.request-card__action {
-  padding: 11px 16px;
+.request-card__progress-line {
+  position: absolute;
+  top: 13px;
+  left: calc(50% + 18px);
+  width: calc(100% - 12px);
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(188, 201, 216, 0.42);
+}
+
+.request-card__progress-step--complete .request-card__progress-node {
+  border-color: var(--request-progress-border);
+  background: linear-gradient(135deg, var(--request-progress-fill-start) 0%, var(--request-progress-fill-end) 100%);
+  color: var(--request-progress-text);
+}
+
+.request-card__progress-step--current .request-card__progress-node {
+  border-color: var(--request-progress-border);
+  background: linear-gradient(135deg, var(--request-progress-current-start) 0%, var(--request-progress-current-end) 100%);
+  color: var(--request-progress-text);
+}
+
+.request-card__progress-step--failed .request-card__progress-node {
+  border-color: rgba(242, 128, 150, 0.44);
+  background: linear-gradient(135deg, rgba(255, 216, 224, 0.96) 0%, rgba(255, 138, 166, 0.98) 100%);
+  color: #8d2f4e;
+}
+
+.request-card__progress-step--complete strong,
+.request-card__progress-step--current strong,
+.request-card__progress-step--failed strong {
+  color: #334e69;
+}
+
+.request-card__progress-step--complete span {
+  color: var(--request-progress-caption);
+}
+
+.request-card__progress-step--current span {
+  color: var(--request-progress-caption);
+}
+
+.request-card__progress-step--failed span {
+  color: #b04f6d;
+}
+
+.request-card__progress-line--active {
+  background: var(--request-progress-line);
+}
+
+.request-card__confirm {
+  min-width: 96px;
+  height: 42px;
+  padding: 0 16px;
   border: none;
   border-radius: 16px;
   background: linear-gradient(135deg, #61df82 0%, #2fb35f 100%);
@@ -1012,6 +1676,21 @@ function handleRedeem(rewardId: string) {
   font-weight: 900;
   box-shadow: 0 8px 0 rgba(47, 179, 95, 0.24);
   cursor: pointer;
+  white-space: nowrap;
+
+  &:disabled {
+    opacity: 0.58;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+}
+
+.request-card--stack .request-card__confirm {
+  min-width: 88px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 14px;
+  font-size: 13px;
 }
 
 .vault-preview {
@@ -1230,7 +1909,9 @@ function handleRedeem(rewardId: string) {
   position: relative;
   width: min(980px, 100%);
   max-height: min(88vh, 920px);
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: 28px;
   border-radius: 30px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(247, 251, 255, 0.95) 100%);
@@ -1254,9 +1935,11 @@ function handleRedeem(rewardId: string) {
 
 .redeem-modal__header {
   display: flex;
+  flex-shrink: 0;
   flex-direction: column;
   gap: 10px;
   margin-bottom: 22px;
+  padding-right: 52px;
 
   h3 {
     margin: 0;
@@ -1301,7 +1984,60 @@ function handleRedeem(rewardId: string) {
 
 .redeem-modal__list {
   display: grid;
+  flex: 1;
   gap: 14px;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 12px;
+  margin-right: -12px;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 151, 184, 0.62) rgba(214, 228, 242, 0.26);
+}
+
+.redeem-modal__list::-webkit-scrollbar,
+.request-collection-modal__list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.redeem-modal__list::-webkit-scrollbar-track,
+.request-collection-modal__list::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(214, 228, 242, 0.26);
+}
+
+.redeem-modal__list::-webkit-scrollbar-thumb,
+.request-collection-modal__list::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(146, 177, 209, 0.82) 0%, rgba(108, 143, 180, 0.9) 100%);
+  background-clip: padding-box;
+}
+
+.redeem-modal__list::-webkit-scrollbar-thumb:hover,
+.request-collection-modal__list::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(128, 163, 201, 0.94) 0%, rgba(91, 128, 170, 0.98) 100%);
+  background-clip: padding-box;
+}
+
+.request-collection-modal {
+  width: min(1040px, 100%);
+}
+
+.request-collection-modal__list {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 12px;
+  margin-right: -12px;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 151, 184, 0.62) rgba(214, 228, 242, 0.26);
 }
 
 .reward-option {
@@ -1426,6 +2162,10 @@ function handleRedeem(rewardId: string) {
   min-height: 160px;
 }
 
+.reward-command__empty--group {
+  flex: 1;
+}
+
 .reward-command__empty--modal {
   min-height: 180px;
 }
@@ -1446,13 +2186,16 @@ function handleRedeem(rewardId: string) {
 }
 
 @include theme.respond-max(tablet) {
-  .reward-command__sign {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
   .reward-command__focus,
   .reward-command__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .status-board__groups {
+    grid-template-columns: 1fr;
+  }
+
+  .request-collection-modal__list {
     grid-template-columns: 1fr;
   }
 
@@ -1466,9 +2209,36 @@ function handleRedeem(rewardId: string) {
 }
 
 @include theme.respond-max(phone) {
+  .reward-command__latest {
+    width: 100%;
+  }
+
+  .request-group {
+    min-height: auto;
+  }
+
+  .request-group__header,
+  .side-panel__title {
+    max-width: calc(100% - 104px);
+  }
+
+  .request-group__view-all {
+    top: 18px;
+    right: 18px;
+    padding: 6px 11px;
+    min-height: 30px;
+    font-size: 11px;
+  }
+
+  .stack-preview__footer {
+    flex-wrap: wrap;
+  }
+
+  .stack-preview__stage {
+    min-height: 304px;
+  }
+
   .status-board__title,
-  .request-card__header,
-  .request-card__footer,
   .reward-option__header {
     flex-direction: column;
     align-items: flex-start;
@@ -1500,6 +2270,10 @@ function handleRedeem(rewardId: string) {
     line-height: 1.65;
   }
 
+  .reward-command__latest {
+    padding: 14px 16px;
+  }
+
   .focus-card strong {
     font-size: 28px;
   }
@@ -1507,6 +2281,28 @@ function handleRedeem(rewardId: string) {
   .status-board,
   .side-panel {
     padding: 18px 16px;
+  }
+
+  .request-group {
+    padding: 18px 16px;
+    border-radius: 24px;
+  }
+
+  .request-group__header,
+  .side-panel__title {
+    max-width: calc(100% - 92px);
+  }
+
+  .request-group__view-all {
+    top: 18px;
+    right: 16px;
+    padding: 6px 10px;
+    min-height: 28px;
+    font-size: 11px;
+  }
+
+  .stack-preview__stage {
+    min-height: 304px;
   }
 
   .request-card,
